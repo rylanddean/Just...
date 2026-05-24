@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import BackgroundTasks
 
 @main
 struct JustEllipsisApp: App {
@@ -10,6 +11,11 @@ struct JustEllipsisApp: App {
         WindowGroup {
             RootView()
                 .modelContainer(container)
+        }
+        .backgroundTask(.appRefresh(PrefetchService.backgroundTaskID)) {
+            let actor = PrefetchActor(modelContainer: container)
+            await actor.prefetch(max: 3)
+            PrefetchService.scheduleNextBackgroundTask()
         }
     }
 

@@ -19,9 +19,15 @@ struct RootView: View {
         }
         .tint(AppTheme.accent)
         .preferredColorScheme(.dark)
-        .task { processPendingLinks() }
+        .task {
+            processPendingLinks()
+            PrefetchService.prefetchInProcess(container: context.container)
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { processPendingLinks() }
+            if phase == .active {
+                processPendingLinks()
+                PrefetchService.prefetchInProcess(container: context.container)
+            }
         }
     }
 

@@ -39,6 +39,10 @@ targets:
         CFBundleDisplayName: "Just…"
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.rylandean.justellipsis.prefetch
+        UIBackgroundModes:
+          - fetch
         UILaunchScreen: {}
         NSMicrophoneUsageDescription: "Voice reflections are transcribed on-device. Audio never leaves your phone."
         NSSpeechRecognitionUsageDescription: "Speech recognition powers voice reflections. All recognition is on-device."

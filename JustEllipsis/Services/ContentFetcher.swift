@@ -63,12 +63,21 @@ struct ContentFetcher: Sendable {
 
         if let cached = cachedHTML, !cached.isEmpty {
             let content = try strip(html: cached, sourceURL: url, knownDomain: domain, theme: theme)
+            if content.estimatedWordCount < 50 {
+                throw FetchError.emptyContent
+            }
             return FetchResult(content: content, rawHTML: cached)
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, response) = try await URLSession.shared.data(from: url)
+        if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+            throw FetchError.httpError(http.statusCode)
+        }
         let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
         let content = try strip(html: html, sourceURL: url, knownDomain: domain, theme: theme)
+        if content.estimatedWordCount < 50 {
+            throw FetchError.emptyContent
+        }
         return FetchResult(content: content, rawHTML: html)
     }
 
@@ -80,15 +89,19 @@ struct ContentFetcher: Sendable {
         let pageTitle = (try? doc.title()) ?? sourceURL.host ?? "Untitled"
         let domain = knownDomain ?? extractDomain(from: sourceURL)
 
-        // Remove noise elements
+        // Remove noise elements.
+        // Use [class~=word] (whitespace-delimited word match) not [class*=word]
+        // (substring match) to avoid false positives — e.g. [class*=ad] would
+        // strip "leading-relaxed", "shadow-md", "gradient-*", "headline", etc.
         let noiseSelectors = [
             "img", "video", "figure", "picture", "iframe",
             "nav", "header", "footer", "aside",
             "script", "style", "noscript",
-            "[class*=ad]", "[class*=banner]", "[class*=social]",
+            "[class~=ad]", "[class*=advert]", "[class*=adsense]", "[class*=adsbygoogle]",
+            "[class*=banner]", "[class*=social]",
             "[class*=comment]", "[class*=related]", "[class*=share]",
             "[class*=subscribe]", "[class*=newsletter]",
-            "[id*=ad]", "[id*=sidebar]", "[id*=comments]"
+            "[id*=advertisement]", "[id*=adsense]", "[id*=sidebar]", "[id*=comments]"
         ]
         for sel in noiseSelectors {
             if let elements = try? doc.select(sel) {
@@ -167,5 +180,6 @@ struct ContentFetcher: Sendable {
     enum FetchError: Error {
         case invalidURL
         case emptyContent
+        case httpError(Int)
     }
 }

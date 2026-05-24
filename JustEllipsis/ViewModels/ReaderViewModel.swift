@@ -7,13 +7,13 @@ import Observation
 final class ReaderViewModel {
 
     var content: StrippedContent?
-    var isLoading: Bool = false
+    var isLoading: Bool = true
     var error: Error?
     var readProgress: Double = 0.0   // 0.0–1.0, driven by WKWebView scroll position
 
     func load(link: QueuedLink, context: ModelContext) async {
-        isLoading = true
         error = nil
+        isLoading = true
 
         // Capture primitives before any await so we don't send the model object
         // across the actor boundary.
@@ -35,12 +35,35 @@ final class ReaderViewModel {
             }
             if link.cachedHTML == nil {
                 link.cachedHTML = result.rawHTML
+                link.prefetchState = .ready
             }
             try? context.save()
 
             if #available(iOS 26, *), IntelligenceService.isAvailable {
                 await generateSummary(for: result.content.body)
             }
+        } catch let fetchError as ContentFetcher.FetchError {
+            if case .emptyContent = fetchError {
+                // Cached HTML was too sparse — clear it so "Try again" fetches fresh.
+                link.cachedHTML = nil
+                link.prefetchState = .pending
+                try? context.save()
+            }
+            self.error = fetchError
+        } catch {
+            self.error = error
+        }
+        isLoading = false
+    }
+
+    func loadURL(_ urlString: String) async {
+        error = nil
+        isLoading = true
+        let themeRaw = UserDefaults.standard.string(forKey: ReaderTheme.defaultsKey) ?? "ember"
+        let theme = ReaderTheme(rawValue: themeRaw) ?? .ember
+        do {
+            let result = try await ContentFetcher.fetch(urlString: urlString, theme: theme)
+            content = result.content
         } catch {
             self.error = error
         }

@@ -136,6 +136,7 @@ struct BrainEntryRow: View {
 struct BrainEntryDetail: View {
     let entry: BrainEntry
     @Environment(\.dismiss) private var dismiss
+    @State private var showReread = false
 
     var body: some View {
         NavigationStack {
@@ -178,10 +179,17 @@ struct BrainEntryDetail: View {
                     Button("Done") { dismiss() }
                         .foregroundStyle(AppTheme.accent)
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Re-read") { showReread = true }
+                        .foregroundStyle(AppTheme.accent)
+                }
             }
             .toolbarBackground(AppTheme.background, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .presentationBackground(AppTheme.background)
+        .fullScreenCover(isPresented: $showReread) {
+            RereadView(url: entry.url, domain: entry.domain)
+        }
     }
 }

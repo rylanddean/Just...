@@ -22,10 +22,10 @@ struct ReaderView: View {
 
             if viewModel.isLoading {
                 loadingView
-            } else if let error = viewModel.error {
-                errorView(error)
             } else if let content = viewModel.content {
                 articleView(content)
+            } else if let error = viewModel.error {
+                errorBannerView(error)
             }
         }
         .task {
@@ -54,30 +54,109 @@ struct ReaderView: View {
         }
     }
 
-    private func errorView(_ error: Error) -> some View {
-        VStack(spacing: 20) {
-            Text("Couldn't load this article.")
-                .font(AppTheme.sansSerif(16, weight: .medium))
-                .foregroundStyle(theme.heading)
-
-            Text(error.localizedDescription)
-                .font(AppTheme.sansSerif(13))
-                .foregroundStyle(theme.text.opacity(0.5))
-                .multilineTextAlignment(.center)
-
-            HStack(spacing: 16) {
-                Button("Retry") {
-                    Task { await viewModel.load(link: link, context: context) }
+    private func errorBannerView(_ error: Error) -> some View {
+        VStack(spacing: 0) {
+            // Chrome — identical structure to articleView so dismiss is always reachable
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(theme.text.opacity(0.5))
                 }
-                .font(AppTheme.sansSerif(14, weight: .medium))
-                .foregroundStyle(theme.accent)
+                .buttonStyle(.plain)
 
-                Button("Close") { dismiss() }
-                    .font(AppTheme.sansSerif(14))
-                    .foregroundStyle(theme.text.opacity(0.5))
+                Spacer()
+
+                Text(link.domain ?? domainFromURL(link.url))
+                    .font(AppTheme.sansSerif(12, weight: .medium))
+                    .foregroundStyle(theme.text.opacity(0.4))
+
+                Spacer()
+
+                Button {
+                    UIPasteboard.general.string = link.url
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 14))
+                        .foregroundStyle(theme.text.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, AppTheme.pagePadding)
+            .padding(.vertical, 12)
+            .background(theme.bg)
+
+            Rectangle()
+                .fill(theme.text.opacity(0.08))
+                .frame(height: 1)
+
+            // Error banner
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: 15))
+                    .foregroundStyle(theme.text.opacity(0.35))
+                    .padding(.top, 1)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Couldn't load this link.")
+                        .font(AppTheme.sansSerif(14, weight: .medium))
+                        .foregroundStyle(theme.heading)
+
+                    Text(friendlyErrorMessage(for: error))
+                        .font(AppTheme.sansSerif(13))
+                        .foregroundStyle(theme.text.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+            }
+            .padding(AppTheme.pagePadding)
+            .background(theme.text.opacity(0.05))
+
+            Button("Try again") {
+                Task { await viewModel.load(link: link, context: context) }
+            }
+            .font(AppTheme.sansSerif(14, weight: .medium))
+            .foregroundStyle(theme.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, AppTheme.pagePadding)
+            .padding(.top, 20)
+
+            Spacer()
+        }
+    }
+
+    private func friendlyErrorMessage(for error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "No connection. Try again when you're online."
+            case .timedOut, .cannotConnectToHost, .cannotFindHost:
+                return "The server didn't respond. Try again later."
+            default:
+                return "Something went wrong. Try again later."
             }
         }
-        .padding(AppTheme.pagePadding)
+        if let fetchError = error as? ContentFetcher.FetchError {
+            switch fetchError {
+            case .invalidURL:
+                return "This doesn't appear to be a valid link."
+            case .emptyContent:
+                return "This link didn't return readable content. It may be paywalled or require JavaScript."
+            case .httpError(let code) where code == 404:
+                return "This link no longer exists."
+            case .httpError(let code) where code >= 400 && code < 500:
+                return "This link isn't publicly accessible. It may require a login."
+            case .httpError:
+                return "The server returned an error. Try again later."
+            }
+        }
+        return "Something went wrong. Try again later."
+    }
+
+    private func domainFromURL(_ raw: String) -> String {
+        guard let url = URL(string: raw) else { return raw }
+        return ContentFetcher.extractDomain(from: url)
     }
 
     private func articleView(_ content: StrippedContent) -> some View {
@@ -105,12 +184,23 @@ struct ReaderView: View {
 
                 Spacer()
 
-                // Gesture is the primary path — button is muted for accessibility
-                Button("Done") {
-                    openReflect(content: content)
+                HStack(spacing: 16) {
+                    Button {
+                        UIPasteboard.general.string = link.url
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 13))
+                            .foregroundStyle(theme.text.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Gesture is the primary path — button is muted for accessibility
+                    Button("Done") {
+                        openReflect(content: content)
+                    }
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(theme.text.opacity(0.5))
                 }
-                .font(AppTheme.sansSerif(14))
-                .foregroundStyle(theme.text.opacity(0.5))
             }
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 12)

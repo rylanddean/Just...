@@ -21,20 +21,38 @@ struct HomeView: View {
                 if queue.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 10) {
-                            StreakHeader(streak: streak, isAtRisk: isAtRisk)
+                    VStack(spacing: 0) {
+                        StreakHeader(streak: streak, isAtRisk: isAtRisk)
 
+                        List {
                             ForEach(queue) { link in
                                 LinkCard(link: link) {
                                     activeLink = link
                                 }
-                                .padding(.horizontal, AppTheme.pagePadding)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: 5,
+                                    leading: AppTheme.pagePadding,
+                                    bottom: 5,
+                                    trailing: AppTheme.pagePadding
+                                ))
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        deleteLink(link)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    .tint(AppTheme.danger)
+                                }
                             }
                         }
-                        .padding(.bottom, 32)
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .scrollIndicators(.hidden)
+                        .contentMargins(.bottom, 32, for: .scrollContent)
                     }
-                    .scrollIndicators(.hidden)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .navigationTitle("Just…")
@@ -72,6 +90,13 @@ struct HomeView: View {
         .fullScreenCover(item: $activeLink) { link in
             ReaderView(link: link)
         }
+    }
+
+    // MARK: - Actions
+
+    private func deleteLink(_ link: QueuedLink) {
+        context.delete(link)
+        try? context.save()
     }
 
     // MARK: - Empty State

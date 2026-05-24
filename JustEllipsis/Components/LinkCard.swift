@@ -7,6 +7,8 @@ struct LinkCard: View {
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .center, spacing: 12) {
+                FaviconView(domain: link.domain ?? domainFromURL(link.url))
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(link.title ?? link.url)
                         .font(AppTheme.sansSerif(15, weight: .medium))
@@ -21,19 +23,65 @@ struct LinkCard: View {
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AppTheme.textFaint)
+                if link.prefetchState == .invalid {
+                    Image(systemName: "exclamationmark.circle")
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.textFaint)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AppTheme.textFaint)
+                }
             }
             .padding(AppTheme.cardPadding)
             .background(AppTheme.surface)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            Button {
+                UIPasteboard.general.string = link.url
+            } label: {
+                Label("Copy link", systemImage: "doc.on.doc")
+            }
+        }
     }
 
     private func domainFromURL(_ raw: String) -> String {
         guard let url = URL(string: raw) else { return raw }
         return ContentFetcher.extractDomain(from: url)
+    }
+}
+
+// MARK: - Favicon
+
+private struct FaviconView: View {
+    let domain: String
+
+    private var faviconURL: URL? {
+        URL(string: "https://icons.duckduckgo.com/ip3/\(domain).ico")
+    }
+
+    var body: some View {
+        AsyncImage(url: faviconURL) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            default:
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(AppTheme.textFaint.opacity(0.12))
+                    .frame(width: 28, height: 28)
+                    .overlay {
+                        Text(domain.prefix(1).uppercased())
+                            .font(AppTheme.sansSerif(13, weight: .medium))
+                            .foregroundStyle(AppTheme.textFaint)
+                    }
+            }
+        }
+        .frame(width: 28, height: 28)
     }
 }

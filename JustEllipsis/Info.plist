@@ -26,6 +26,14 @@
 	<string>Voice reflections are transcribed on-device. Audio never leaves your phone.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Speech recognition powers voice reflections. All recognition is on-device.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.rylandean.justellipsis.prefetch</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiresFullScreen</key>
