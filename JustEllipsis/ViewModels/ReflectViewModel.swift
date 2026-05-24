@@ -57,11 +57,18 @@ final class ReflectViewModel {
         context: ModelContext
     ) -> Bool {
         guard !isSaved else { return false }
+        // Insert into the context BEFORE writing properties. SwiftData has a known
+        // iOS 17 issue where values written to the unmanaged backing store are
+        // silently dropped when the object is later handed to the context.
+        context.insert(entry)
         let reflection = text.trimmingCharacters(in: .whitespacesAndNewlines)
         entry.reflection = reflection.isEmpty ? nil : reflection
         entry.reflectionMode = reflection.isEmpty ? nil : mode.rawValue
         entry.reflectionSeconds = secondsSpent
-        persistEntry(entry, context: context)
+        try? context.save()
+        timer?.invalidate()
+        timer = nil
+        isSaved = true
         return true
     }
 
@@ -69,18 +76,14 @@ final class ReflectViewModel {
     @discardableResult
     func skip(entry: BrainEntry, context: ModelContext) -> Bool {
         guard !isSaved else { return false }
+        context.insert(entry)
         entry.reflection = nil
         entry.reflectionMode = nil
         entry.reflectionSeconds = 60 - secondsRemaining
-        persistEntry(entry, context: context)
-        return true
-    }
-
-    private func persistEntry(_ entry: BrainEntry, context: ModelContext) {
-        context.insert(entry)
         try? context.save()
         timer?.invalidate()
         timer = nil
         isSaved = true
+        return true
     }
 }

@@ -8,6 +8,7 @@ struct ReflectView: View {
     var onComplete: () -> Void
 
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = ReflectViewModel()
     @State private var voiceRecognizer = VoiceRecognizer()
     @State private var reflectionMode: ReflectionMode = .typed
@@ -57,6 +58,7 @@ struct ReflectView: View {
         .onChange(of: viewModel.secondsRemaining) { _, rem in
             if rem == 0 {
                 if viewModel.save(entry: entry, mode: reflectionMode, secondsSpent: secondsSpent, context: context) {
+                    dismiss()
                     onComplete()
                 }
             }
@@ -138,6 +140,7 @@ struct ReflectView: View {
                     secondsSpent: secondsSpent,
                     context: context
                 ) {
+                    dismiss()
                     onComplete()
                 }
             }
@@ -158,6 +161,7 @@ struct ReflectView: View {
             Button("Skip") {
                 voiceRecognizer.stopListening()
                 if viewModel.skip(entry: entry, context: context) {
+                    dismiss()
                     onComplete()
                 }
             }

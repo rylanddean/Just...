@@ -35,7 +35,6 @@ struct ReaderView: View {
             ReflectView(entry: entry, link: link, theme: theme, onComplete: {
                 viewModel.markAsRead(link: link, context: context)
                 updateReadingDay()
-                pendingEntry = nil
                 dismiss()
             })
         }
