@@ -132,7 +132,7 @@ struct ReflectView: View {
 
     private var bottomBar: some View {
         HStack {
-            Button("Save") {
+            Button {
                 voiceRecognizer.stopListening()
                 if viewModel.save(
                     entry: entry,
@@ -143,18 +143,19 @@ struct ReflectView: View {
                     dismiss()
                     onComplete()
                 }
+            } label: {
+                Text("Save")
+                    .font(AppTheme.sansSerif(15, weight: .semibold))
+                    .foregroundStyle(theme.isLight ? .white : theme.bg)
+                    .frame(height: 44)
+                    .frame(maxWidth: .infinity)
             }
-            .font(AppTheme.sansSerif(15, weight: .semibold))
-            .foregroundStyle(theme.isLight ? .white : theme.bg)
-            .frame(height: 44)
-            .frame(maxWidth: .infinity)
             .background(
                 viewModel.text.trimmingCharacters(in: .whitespaces).isEmpty
                     ? theme.accent.opacity(0.3)
                     : theme.accent
             )
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .contentShape(RoundedRectangle(cornerRadius: 10))
             .disabled(viewModel.text.trimmingCharacters(in: .whitespaces).isEmpty)
 
             Spacer().frame(width: 16)
