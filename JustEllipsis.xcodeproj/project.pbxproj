@@ -21,6 +21,7 @@
 		55A0A2EBE317C3AC1EF10C03 /* JustEllipsisShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		56DE24619050B42942363268 /* ContentFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */; };
 		65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC480E509A335B23D95C2896 /* StreakHeader.swift */; };
+		E79F70D4000E475EA297D7A1 /* ActivityChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E867EC8098A463F83D42B87 /* ActivityChart.swift */; };
 		6F55A95F2635E6E07C126DC7 /* ContentFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */; };
 		71051F154C5F1E8E4C32F3A8 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */; };
 		76F62BE4703D8F0E5CC5248E /* VoiceInputButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 942735D0240A787024FC990A /* VoiceInputButton.swift */; };
@@ -114,6 +115,7 @@
 		BD6345AF40A371C990B21023 /* IntelligenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligenceService.swift; sourceTree = "<group>"; };
 		BDA108705DC55D44129CFA2E /* AddLinkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLinkView.swift; sourceTree = "<group>"; };
 		C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFetcher.swift; sourceTree = "<group>"; };
+		9E867EC8098A463F83D42B87 /* ActivityChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityChart.swift; sourceTree = "<group>"; };
 		CC480E509A335B23D95C2896 /* StreakHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakHeader.swift; sourceTree = "<group>"; };
 		CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakEngine.swift; sourceTree = "<group>"; };
 		D92347D5631A1D698929B76D /* BrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainView.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 		B78A4D24EC4DD42C15221A6A /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				9E867EC8098A463F83D42B87 /* ActivityChart.swift */,
 				E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */,
 				A42F62308F8EC6615789E6A4 /* CountdownRing.swift */,
 				46A719D305320A1D2B22BA50 /* LinkCard.swift */,
@@ -432,6 +435,7 @@
 				7C28C1742A5A65634AE19449 /* SettingsView.swift in Sources */,
 				3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */,
 				65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */,
+				E79F70D4000E475EA297D7A1 /* ActivityChart.swift in Sources */,
 				76F62BE4703D8F0E5CC5248E /* VoiceInputButton.swift in Sources */,
 				ECDF27D55E95C0FA4B62D3CC /* VoiceRecognizer.swift in Sources */,
 			);

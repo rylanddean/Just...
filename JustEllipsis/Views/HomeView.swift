@@ -6,12 +6,15 @@ struct HomeView: View {
     @Query(sort: \QueuedLink.sortOrder) private var queue: [QueuedLink]
     @Query private var readingDays: [ReadingDay]
 
+    @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
+
     @State private var showAddLink: Bool = false
     @State private var showSettings: Bool = false
     @State private var activeLink: QueuedLink?
 
-    private var streak: Int { StreakEngine.calculateStreak(from: readingDays).current }
-    private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays) }
+    private var streak: Int { StreakEngine.calculateStreak(from: readingDays, minReads: minReadsPerDay).current }
+    private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays, minReads: minReadsPerDay) }
+    private var recentActivity: [Bool] { StreakEngine.recentActivity(days: readingDays, count: 7, minReads: minReadsPerDay) }
 
     var body: some View {
         NavigationStack {
@@ -22,7 +25,7 @@ struct HomeView: View {
                     emptyState
                 } else {
                     VStack(spacing: 0) {
-                        StreakHeader(streak: streak, isAtRisk: isAtRisk)
+                        StreakHeader(streak: streak, isAtRisk: isAtRisk, recentActivity: recentActivity)
 
                         List {
                             ForEach(queue) { link in
@@ -103,7 +106,7 @@ struct HomeView: View {
 
     private var emptyState: some View {
         VStack(spacing: 20) {
-            StreakHeader(streak: streak, isAtRisk: isAtRisk)
+            StreakHeader(streak: streak, isAtRisk: isAtRisk, recentActivity: recentActivity)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer()

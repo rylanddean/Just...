@@ -3,9 +3,10 @@ import SwiftUI
 struct StreakHeader: View {
     let streak: Int
     let isAtRisk: Bool
+    let recentActivity: [Bool]
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
+        HStack(alignment: .center, spacing: 6) {
             Text(streak > 0 ? "\(streak)" : "—")
                 .font(AppTheme.sansSerif(42, weight: .semibold))
                 .foregroundStyle(isAtRisk && streak > 0 ? AppTheme.danger : AppTheme.heading)
@@ -28,6 +29,8 @@ struct StreakHeader: View {
             .animation(.easeInOut(duration: 0.25), value: isAtRisk)
 
             Spacer()
+
+            ActivityChart(days: recentActivity)
         }
         .padding(.horizontal, AppTheme.pagePadding)
         .padding(.top, 16)
@@ -37,9 +40,12 @@ struct StreakHeader: View {
 
 #Preview {
     VStack {
-        StreakHeader(streak: 14, isAtRisk: false)
-        StreakHeader(streak: 7, isAtRisk: true)
-        StreakHeader(streak: 0, isAtRisk: false)
+        StreakHeader(streak: 14, isAtRisk: false,
+                    recentActivity: [true, true, true, true, true, true, true])
+        StreakHeader(streak: 7, isAtRisk: true,
+                    recentActivity: [false, true, true, false, true, true, false])
+        StreakHeader(streak: 0, isAtRisk: false,
+                    recentActivity: [false, false, false, false, false, false, false])
     }
     .background(AppTheme.background)
 }

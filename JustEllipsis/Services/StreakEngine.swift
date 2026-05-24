@@ -17,8 +17,8 @@ struct StreakEngine: Sendable {
 
     // MARK: - Streak Calculation
 
-    static func calculateStreak(from days: [ReadingDay]) -> (current: Int, longest: Int) {
-        let active = days.filter { $0.linksRead > 0 }
+    static func calculateStreak(from days: [ReadingDay], minReads: Int = 1) -> (current: Int, longest: Int) {
+        let active = days.filter { $0.linksRead >= minReads }
         guard !active.isEmpty else { return (0, 0) }
 
         let sorted = active.sorted { lhs, rhs in
@@ -54,16 +54,30 @@ struct StreakEngine: Sendable {
         return (current, max(current, longestRun(sorted)))
     }
 
-    static func hasReadToday(days: [ReadingDay]) -> Bool {
+    static func hasReadToday(days: [ReadingDay], minReads: Int = 1) -> Bool {
         let t = logicalDay()
-        return days.contains { $0.year == t.year && $0.month == t.month && $0.day == t.day && $0.linksRead > 0 }
+        return days.contains { $0.year == t.year && $0.month == t.month && $0.day == t.day && $0.linksRead >= minReads }
     }
 
-    /// True when the user hasn't read yet today and yesterday's entry is missing.
-    static func isStreakAtRisk(days: [ReadingDay]) -> Bool {
-        guard !hasReadToday(days: days) else { return false }
-        let streak = calculateStreak(from: days)
+    /// True when the user hasn't met the daily minimum today and has an active streak to protect.
+    static func isStreakAtRisk(days: [ReadingDay], minReads: Int = 1) -> Bool {
+        guard !hasReadToday(days: days, minReads: minReads) else { return false }
+        let streak = calculateStreak(from: days, minReads: minReads)
         return streak.current > 0
+    }
+
+    // MARK: - Recent Activity
+
+    /// Returns `count` booleans oldest-first (index 0 = `count-1` days ago, last = today).
+    /// `true` means the user read at least one link that logical day.
+    static func recentActivity(days: [ReadingDay], count: Int, minReads: Int = 1) -> [Bool] {
+        let today = logicalDay()
+        return (0..<count).map { offset in
+            let target = offsetDay(today, by: -(count - 1 - offset))
+            return days.contains {
+                $0.year == target.year && $0.month == target.month && $0.day == target.day && $0.linksRead >= minReads
+            }
+        }
     }
 
     // MARK: - Helpers

@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
+    @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
 
     private var selectedTheme: ReaderTheme {
         ReaderTheme(rawValue: themeRaw) ?? .ember
@@ -15,6 +16,7 @@ struct SettingsView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 32) {
+                        streakSection
                         themeSection
                     }
                     .padding(AppTheme.pagePadding)
@@ -35,6 +37,60 @@ struct SettingsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
+    }
+
+    // MARK: - Streak Section
+
+    private var streakSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("STREAK")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(AppTheme.textFaint)
+                .tracking(2)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Reads per day")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(AppTheme.heading)
+                    Text("Minimum to count the day.")
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(AppTheme.textFaint)
+                }
+
+                Spacer()
+
+                HStack(spacing: 0) {
+                    Button {
+                        if minReadsPerDay > 1 { minReadsPerDay -= 1 }
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(minReadsPerDay > 1 ? AppTheme.accent : AppTheme.textFaint)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.plain)
+
+                    Text("\(minReadsPerDay)")
+                        .font(AppTheme.sansSerif(17, weight: .semibold))
+                        .foregroundStyle(AppTheme.heading)
+                        .monospacedDigit()
+                        .frame(minWidth: 28, alignment: .center)
+
+                    Button {
+                        if minReadsPerDay < 5 { minReadsPerDay += 1 }
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(minReadsPerDay < 5 ? AppTheme.accent : AppTheme.textFaint)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .background(AppTheme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
     }
 
     // MARK: - Theme Section

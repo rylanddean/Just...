@@ -86,6 +86,104 @@ struct StreakEngineTests {
         #expect(result.longest == 2)
     }
 
+    // MARK: - Recent Activity
+
+    func makeDay(daysAgo: Int, links: Int = 1) -> ReadingDay {
+        let cal = Calendar.current
+        let date = cal.date(byAdding: .day, value: -daysAgo, to: Date())!
+        let c = cal.dateComponents([.year, .month, .day], from: date)
+        let d = ReadingDay(year: c.year!, month: c.month!, day: c.day!)
+        d.linksRead = links
+        return d
+    }
+
+    @Test("Empty days returns all false")
+    func recentActivityEmpty() {
+        let result = StreakEngine.recentActivity(days: [], count: 7)
+        #expect(result == Array(repeating: false, count: 7))
+    }
+
+    @Test("Today read sets last element true, rest false")
+    func recentActivityTodayOnly() {
+        let result = StreakEngine.recentActivity(days: [makeDay(daysAgo: 0)], count: 7)
+        #expect(result.last == true)
+        #expect(result.dropLast().allSatisfy { !$0 })
+    }
+
+    @Test("Full week returns all true")
+    func recentActivityFullWeek() {
+        let days = (0..<7).map { makeDay(daysAgo: $0) }
+        #expect(StreakEngine.recentActivity(days: days, count: 7) == Array(repeating: true, count: 7))
+    }
+
+    @Test("Partial week maps to correct positions")
+    func recentActivityPartialWeek() {
+        // today (daysAgo=0) → index 6, two days ago (daysAgo=2) → index 4
+        let days = [makeDay(daysAgo: 0), makeDay(daysAgo: 2)]
+        let result = StreakEngine.recentActivity(days: days, count: 7)
+        #expect(result[6] == true)
+        #expect(result[4] == true)
+        #expect(result[5] == false)
+        #expect(result[3] == false)
+    }
+
+    @Test("Days outside the window are excluded")
+    func recentActivityOldDayIgnored() {
+        let days = [makeDay(daysAgo: 7), makeDay(daysAgo: 10)]
+        let result = StreakEngine.recentActivity(days: days, count: 7)
+        #expect(result == Array(repeating: false, count: 7))
+    }
+
+    @Test("Logical day used — entry for logical today at index count-1")
+    func recentActivityUsesLogicalDay() {
+        let today = StreakEngine.logicalDay()
+        let d = ReadingDay(year: today.year, month: today.month, day: today.day)
+        d.linksRead = 3
+        let result = StreakEngine.recentActivity(days: [d], count: 7)
+        #expect(result[6] == true)
+    }
+
+    // MARK: - minReads threshold
+
+    @Test("Day with fewer reads than minReads does not count")
+    func minReadsThresholdMiss() {
+        let day = makeDay(daysAgo: 0, links: 1)
+        let result = StreakEngine.recentActivity(days: [day], count: 7, minReads: 2)
+        #expect(result[6] == false)
+    }
+
+    @Test("Day meeting minReads exactly counts")
+    func minReadsThresholdExact() {
+        let day = makeDay(daysAgo: 0, links: 3)
+        let result = StreakEngine.recentActivity(days: [day], count: 7, minReads: 3)
+        #expect(result[6] == true)
+    }
+
+    @Test("Streak breaks when minReads not met")
+    func minReadsBreaksStreak() {
+        // today and yesterday each have only 1 read; require 2
+        let days = [makeDay(daysAgo: 0, links: 1), makeDay(daysAgo: 1, links: 1)]
+        let result = StreakEngine.calculateStreak(from: days, minReads: 2)
+        #expect(result.current == 0)
+    }
+
+    @Test("Streak counts when minReads met")
+    func minReadsBuildsStreak() {
+        let days = [makeDay(daysAgo: 0, links: 2), makeDay(daysAgo: 1, links: 3)]
+        let result = StreakEngine.calculateStreak(from: days, minReads: 2)
+        #expect(result.current == 2)
+    }
+
+    @Test("isStreakAtRisk respects minReads")
+    func minReadsAtRisk() {
+        // read today but only 1 link; require 2 — not at risk because today counts, streak is alive
+        // Actually: hasReadToday with minReads=2 returns false → check if at risk
+        let today = makeDay(daysAgo: 0, links: 1)
+        let yesterday = makeDay(daysAgo: 1, links: 2)
+        // streak is 1 (yesterday met threshold), today hasn't met it yet
+        #expect(StreakEngine.isStreakAtRisk(days: [today, yesterday], minReads: 2) == true)
+    }
+
     // MARK: - At Risk
 
     @Test("hasReadToday is false when no entry for today")
