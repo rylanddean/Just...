@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VoiceInputButton: View {
     @Binding var isListening: Bool
+    var accent: Color = AppTheme.readerAccent
     let onToggle: () -> Void
 
     @State private var wavePhase: Double = 0
@@ -10,12 +11,12 @@ struct VoiceInputButton: View {
         Button(action: onToggle) {
             ZStack {
                 Circle()
-                    .fill(isListening ? AppTheme.readerAccent.opacity(0.15) : AppTheme.surface)
+                    .fill(isListening ? accent.opacity(0.15) : AppTheme.surface)
                     .frame(width: 48, height: 48)
                     .overlay {
                         Circle()
                             .stroke(
-                                isListening ? AppTheme.readerAccent : AppTheme.separator,
+                                isListening ? accent : AppTheme.separator,
                                 lineWidth: 1.5
                             )
                     }
@@ -25,7 +26,7 @@ struct VoiceInputButton: View {
                     HStack(spacing: 3) {
                         ForEach(0..<4, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(AppTheme.readerAccent)
+                                .fill(accent)
                                 .frame(width: 3, height: barHeight(for: i))
                                 .animation(
                                     .easeInOut(duration: 0.5)

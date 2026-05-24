@@ -19,9 +19,11 @@ final class ReaderViewModel {
         // across the actor boundary.
         let urlString = link.url
         let cachedHTML = link.cachedHTML
+        let themeRaw = UserDefaults.standard.string(forKey: ReaderTheme.defaultsKey) ?? "ember"
+        let theme = ReaderTheme(rawValue: themeRaw) ?? .ember
 
         do {
-            let result = try await ContentFetcher.fetch(urlString: urlString, cachedHTML: cachedHTML)
+            let result = try await ContentFetcher.fetch(urlString: urlString, cachedHTML: cachedHTML, theme: theme)
             content = result.content
 
             // Write back to model on @MainActor (we're already here)

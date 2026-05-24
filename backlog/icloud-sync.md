@@ -1,6 +1,6 @@
 # iCloud Sync
 
-**Tier:** Premium  
+**Tier:** Free  
 **Effort:** L  
 **Status:** Backlog
 
@@ -49,7 +49,7 @@ Users who save links on one device and want to read on another lose queue contin
 
 ## Acceptance Criteria
 
-- [ ] Toggle in Settings; requires Premium
+- [ ] Toggle in Settings; available to all users
 - [ ] Queue, Brain entries, and reading days sync across two devices on the same Apple ID
 - [ ] `cachedHTML` is not synced — fetched fresh on secondary devices
 - [ ] Offline writes queue locally and sync on reconnect

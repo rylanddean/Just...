@@ -10,9 +10,6 @@ struct JustEllipsisApp: App {
         WindowGroup {
             RootView()
                 .modelContainer(container)
-                .task {
-                    await PremiumStore.shared.refreshStatus()
-                }
         }
     }
 

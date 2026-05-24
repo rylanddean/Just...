@@ -3,6 +3,7 @@ import WebKit
 
 struct ReaderWebView: UIViewRepresentable {
     let html: String
+    var theme: ReaderTheme = .ember
     var onScrollProgress: (Double) -> Void = { _ in }
     var onNearBottom: (Bool) -> Void = { _ in }
     var onOverScrollDelta: (CGFloat) -> Void = { _ in }
@@ -22,9 +23,9 @@ struct ReaderWebView: UIViewRepresentable {
         config.websiteDataStore = .nonPersistent()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.scrollView.delegate = context.coordinator
-        webView.backgroundColor = UIColor(AppTheme.background)
+        webView.backgroundColor = UIColor(theme.bg)
         webView.isOpaque = false
-        webView.scrollView.backgroundColor = UIColor(AppTheme.background)
+        webView.scrollView.backgroundColor = UIColor(theme.bg)
         webView.scrollView.showsVerticalScrollIndicator = false
         webView.navigationDelegate = context.coordinator
         return webView
@@ -35,6 +36,9 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onNearBottom = onNearBottom
         context.coordinator.onOverScrollDelta = onOverScrollDelta
         context.coordinator.onReflectTrigger = onReflectTrigger
+        let bgColor = UIColor(theme.bg)
+        webView.backgroundColor = bgColor
+        webView.scrollView.backgroundColor = bgColor
         if context.coordinator.loadedHTML != html {
             context.coordinator.loadedHTML = html
             context.coordinator.didTrigger = false

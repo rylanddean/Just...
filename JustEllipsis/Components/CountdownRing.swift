@@ -4,6 +4,7 @@ struct CountdownRing: View {
     let total: Int
     let remaining: Int
     let isPaused: Bool
+    var accent: Color = AppTheme.readerAccent
 
     private var fraction: Double {
         guard total > 0 else { return 0 }
@@ -20,7 +21,7 @@ struct CountdownRing: View {
             Circle()
                 .trim(from: 0, to: fraction)
                 .stroke(
-                    isPaused ? AppTheme.readerAccent.opacity(0.4) : AppTheme.readerAccent,
+                    isPaused ? accent.opacity(0.4) : accent,
                     style: StrokeStyle(lineWidth: 3, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))

@@ -4,6 +4,7 @@ import SwiftData
 struct ReflectView: View {
     let entry: BrainEntry
     let link: QueuedLink
+    var theme: ReaderTheme = .ember
     var onComplete: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -18,7 +19,7 @@ struct ReflectView: View {
 
     var body: some View {
         ZStack {
-            AppTheme.background.ignoresSafeArea()
+            theme.bg.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 topBar
@@ -61,19 +62,24 @@ struct ReflectView: View {
                 viewModel.save(entry: entry, mode: reflectionMode, secondsSpent: secondsSpent, context: context)
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(theme.colorScheme)
     }
 
     // MARK: - Subviews
 
     private var topBar: some View {
         HStack {
-            CountdownRing(total: 60, remaining: viewModel.secondsRemaining, isPaused: isPaused)
+            CountdownRing(
+                total: 60,
+                remaining: viewModel.secondsRemaining,
+                isPaused: isPaused,
+                accent: theme.accent
+            )
 
             Spacer()
 
             if voiceRecognizer.isAvailable {
-                VoiceInputButton(isListening: $voiceRecognizer.isListening) {
+                VoiceInputButton(isListening: $voiceRecognizer.isListening, accent: theme.accent) {
                     if voiceRecognizer.isListening {
                         voiceRecognizer.stopListening()
                         reflectionMode = .typed
@@ -95,7 +101,7 @@ struct ReflectView: View {
     private var articleTitle: some View {
         Text(entry.title)
             .font(AppTheme.sansSerif(13))
-            .foregroundStyle(AppTheme.textFaint)
+            .foregroundStyle(theme.text.opacity(0.5))
             .lineLimit(1)
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.bottom, 20)
@@ -106,7 +112,7 @@ struct ReflectView: View {
             if viewModel.text.isEmpty {
                 Text(placeholder)
                     .font(AppTheme.serif(20))
-                    .foregroundStyle(AppTheme.textFaint.opacity(0.5))
+                    .foregroundStyle(theme.text.opacity(0.35))
                     .allowsHitTesting(false)
                     .padding(.top, 8)
                     .padding(.leading, 4)
@@ -114,10 +120,10 @@ struct ReflectView: View {
 
             TextEditor(text: $viewModel.text)
                 .font(AppTheme.serif(20))
-                .foregroundStyle(AppTheme.text)
+                .foregroundStyle(theme.text)
                 .scrollContentBackground(.hidden)
                 .background(.clear)
-                .tint(AppTheme.readerAccent)
+                .tint(theme.accent)
                 .focused($textFocused)
                 .frame(minHeight: 120)
         }
@@ -135,13 +141,13 @@ struct ReflectView: View {
                 )
             }
             .font(AppTheme.sansSerif(15, weight: .semibold))
-            .foregroundStyle(AppTheme.background)
+            .foregroundStyle(theme.isLight ? .white : theme.bg)
             .frame(height: 44)
             .frame(maxWidth: .infinity)
             .background(
                 viewModel.text.trimmingCharacters(in: .whitespaces).isEmpty
-                    ? AppTheme.readerAccent.opacity(0.3)
-                    : AppTheme.readerAccent
+                    ? theme.accent.opacity(0.3)
+                    : theme.accent
             )
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .disabled(viewModel.text.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -153,7 +159,7 @@ struct ReflectView: View {
                 viewModel.skip(entry: entry, context: context)
             }
             .font(AppTheme.sansSerif(13))
-            .foregroundStyle(AppTheme.textFaint)
+            .foregroundStyle(theme.text.opacity(0.5))
         }
     }
 }

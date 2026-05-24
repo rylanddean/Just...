@@ -1,6 +1,6 @@
 # Typography Settings
 
-**Tier:** Premium (font family), Free (font size)  
+**Tier:** Free  
 **Effort:** M  
 **Status:** Backlog
 
@@ -10,7 +10,7 @@ Allow users to choose their reading font in Settings, and adjust font size inlin
 
 ## Why
 
-Reading comfort is personal. Some users find serif fonts slower to process at small sizes; others find sans-serif cold for long-form text. Font size is an accessibility need as much as a preference. Offering two axes of control — family and size — is the most meaningful typographic personalisation the reader can offer. Font size is free because it is an accessibility feature. Font family is a premium aesthetic choice.
+Reading comfort is personal. Some users find serif fonts slower to process at small sizes; others find sans-serif cold for long-form text. Offering two axes of control — family and size — is the most meaningful typographic personalisation the reader can offer.
 
 ---
 
@@ -26,7 +26,7 @@ Reading comfort is personal. Some users find serif fonts slower to process at sm
 
 Lora and Literata are open-source (SIL Open Font License). Bundled in the app to avoid a network dependency. Total addition: ~420kb.
 
-Georgia is the default and always free. New York, SF, Lora, and Literata require Premium.
+Georgia is the default. All five font families are available to all users.
 
 ---
 
@@ -54,8 +54,7 @@ Georgia is the default and always free. New York, SF, Lora, and Literata require
 ## Acceptance Criteria
 
 - [ ] 5 font families available in Settings → Reader → Font
-- [ ] Georgia is default and accessible without Premium
-- [ ] Other families require Premium; tapping shows premium sheet
+- [ ] Georgia is default; all 5 font families selectable immediately
 - [ ] Font size +/- buttons visible in reader top bar
 - [ ] Font size range 16–28px persists across sessions
 - [ ] Pinch-to-zoom enabled; snaps to step on release

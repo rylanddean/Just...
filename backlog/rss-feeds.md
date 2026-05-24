@@ -1,6 +1,6 @@
 # RSS Feeds + AI Daily Picks
 
-**Tier:** Premium  
+**Tier:** Free  
 **Effort:** XL  
 **Status:** Backlog
 
@@ -106,4 +106,4 @@ The current save loop requires manual link discovery. For power readers, this fr
 - [ ] `RSSArticle` records older than 7 days are pruned
 - [ ] Feed pause and unsubscribe work via swipe/long-press
 - [ ] Paywalled articles show "Open in Safari" fallback
-- [ ] Feature requires Premium — browsing directory is free, subscribing is gated
+- [ ] Feature available to all users

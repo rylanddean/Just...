@@ -1,6 +1,6 @@
 # Thought Threads
 
-**Tier:** Premium  
+**Tier:** Free  
 **Effort:** M  
 **Status:** Backlog — Original Feature
 

@@ -1,6 +1,6 @@
 # Reader Themes
 
-**Tier:** Premium  
+**Tier:** Free  
 **Effort:** M  
 **Status:** Backlog
 
@@ -10,7 +10,7 @@ A settings panel where users choose from 6 carefully designed reading themes. Ea
 
 ## Why
 
-Reading in the same environment every day builds a ritual. Custom themes let users make that environment personally theirs — a small act of ownership that increases commitment to the habit. The product proposal already scopes this as a premium feature. Offering 6 well-considered presets (not a raw colour picker) keeps the product opinionated while delivering real personalisation.
+Reading in the same environment every day builds a ritual. Custom themes let users make that environment personally theirs — a small act of ownership that increases commitment to the habit. Offering 6 well-considered presets (not a raw colour picker) keeps the product opinionated while delivering real personalisation.
 
 ---
 
@@ -33,8 +33,7 @@ All six themes pass WCAG AA contrast for their body text / background pairs. Sep
 
 **Access:** Settings → Reader → Theme.  
 **Preview:** Each theme tile shows a 3-line live text preview — users see exactly how articles will look before selecting.  
-**Default state:** Ember is the default for all users, including free tier (it is the current experience).  
-**Gating:** Selecting any theme other than Ember shows a premium unlock sheet if the user hasn't purchased.  
+**Default state:** Ember is the default. All themes are available to all users.  
 **Instant apply:** No restart required. The WKWebView re-injects CSS immediately on selection.
 
 ---
@@ -55,8 +54,7 @@ All six themes pass WCAG AA contrast for their body text / background pairs. Sep
 
 - [ ] 6 theme tiles in Settings with accurate live text preview
 - [ ] Selected theme persists across app restarts
-- [ ] Ember is default and always accessible without Premium
-- [ ] Non-Ember selection on free tier shows premium prompt, does not apply theme
+- [ ] Ember is default; all 6 themes selectable immediately
 - [ ] Theme change takes effect immediately — no reload or restart required
 - [ ] Light themes do not break the status bar or navigation chrome
 - [ ] WKWebView re-renders with new CSS variables on theme change

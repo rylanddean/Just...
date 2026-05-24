@@ -19,57 +19,62 @@ struct ContentFetcher: Sendable {
 
     // MARK: - Reader CSS (injected into WKWebView)
 
-    static let readerCSS = """
-    :root {
-      --bg: #0C0A08;
-      --text: #C8B898;
-      --accent: #E8A83E;
+    static func readerCSS(for theme: ReaderTheme) -> String {
+        let codeBg = theme.isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)"
+        let colorScheme = theme.isLight ? "light" : "dark"
+        return """
+        :root {
+          --bg: \(theme.bgHex);
+          --text: \(theme.textHex);
+          --accent: \(theme.accentHex);
+          color-scheme: \(colorScheme);
+        }
+        * { box-sizing: border-box; }
+        body {
+          background: var(--bg);
+          color: var(--text);
+          font-family: 'Georgia', serif;
+          font-size: 20px;
+          line-height: 1.85;
+          max-width: 680px;
+          margin: 0 auto;
+          padding: 32px 24px 80px;
+        }
+        h1, h2, h3, h4 { color: \(theme.headingHex); font-weight: 600; }
+        a { color: var(--accent); text-decoration: none; }
+        blockquote {
+          border-left: 2px solid var(--accent);
+          padding-left: 20px;
+          margin-left: 0;
+          opacity: 0.8;
+        }
+        pre, code { background: \(codeBg); border-radius: 4px; padding: 2px 6px; }
+        img, video, figure, picture { display: none; }
+        """
     }
-    * { box-sizing: border-box; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Georgia', serif;
-      font-size: 20px;
-      line-height: 1.85;
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 32px 24px 80px;
-    }
-    h1, h2, h3, h4 { color: #F5ECD7; font-weight: 600; }
-    a { color: var(--accent); text-decoration: none; }
-    blockquote {
-      border-left: 2px solid var(--accent);
-      padding-left: 20px;
-      margin-left: 0;
-      opacity: 0.8;
-    }
-    pre, code { background: rgba(255,255,255,0.05); border-radius: 4px; padding: 2px 6px; }
-    img, video, figure, picture { display: none; }
-    """
 
     // MARK: - Fetch
 
     /// Fetch and strip a URL. Pass `cachedHTML` if the raw HTML is already stored on disk.
     /// Returns the stripped content AND the raw HTML to cache (the caller writes it back to the model).
-    static func fetch(urlString: String, cachedHTML: String? = nil) async throws -> FetchResult {
+    static func fetch(urlString: String, cachedHTML: String? = nil, theme: ReaderTheme = .ember) async throws -> FetchResult {
         guard let url = URL(string: urlString) else { throw FetchError.invalidURL }
         let domain = extractDomain(from: url)
 
         if let cached = cachedHTML, !cached.isEmpty {
-            let content = try strip(html: cached, sourceURL: url, knownDomain: domain)
+            let content = try strip(html: cached, sourceURL: url, knownDomain: domain, theme: theme)
             return FetchResult(content: content, rawHTML: cached)
         }
 
         let (data, _) = try await URLSession.shared.data(from: url)
         let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
-        let content = try strip(html: html, sourceURL: url, knownDomain: domain)
+        let content = try strip(html: html, sourceURL: url, knownDomain: domain, theme: theme)
         return FetchResult(content: content, rawHTML: html)
     }
 
     // MARK: - Strip
 
-    static func strip(html: String, sourceURL: URL, knownDomain: String? = nil) throws -> StrippedContent {
+    static func strip(html: String, sourceURL: URL, knownDomain: String? = nil, theme: ReaderTheme = .ember) throws -> StrippedContent {
         let doc = try SwiftSoup.parse(html, sourceURL.absoluteString)
 
         let pageTitle = (try? doc.title()) ?? sourceURL.host ?? "Untitled"
@@ -103,7 +108,7 @@ struct ContentFetcher: Sendable {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>\(readerCSS)</style>
+          <style>\(readerCSS(for: theme))</style>
         </head>
         <body>\(articleHTML)</body>
         </html>

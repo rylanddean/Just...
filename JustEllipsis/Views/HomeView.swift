@@ -7,6 +7,7 @@ struct HomeView: View {
     @Query private var readingDays: [ReadingDay]
 
     @State private var showAddLink: Bool = false
+    @State private var showSettings: Bool = false
     @State private var activeLink: QueuedLink?
 
     private var streak: Int { StreakEngine.calculateStreak(from: readingDays).current }
@@ -39,6 +40,16 @@ struct HomeView: View {
             .navigationTitle("Just…")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 16))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                }
+
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showAddLink = true
@@ -54,6 +65,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showAddLink) {
             AddLinkView()
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
         }
         .fullScreenCover(item: $activeLink) { link in
             ReaderView(link: link)
