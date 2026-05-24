@@ -1,9 +1,6 @@
 import Foundation
 import SwiftData
 import Observation
-import os
-
-private let logger = Logger(subsystem: "com.rylandean.justellipsis", category: "Reflect")
 
 enum ReflectionMode: String {
     case typed = "typed"
@@ -59,53 +56,31 @@ final class ReflectViewModel {
         secondsSpent: Int,
         context: ModelContext
     ) -> Bool {
-        logger.debug("save() called — isSaved=\(self.isSaved), textLength=\(self.text.count)")
-        guard !isSaved else {
-            logger.warning("save() guard tripped — isSaved already true, returning false")
-            return false
-        }
-        logger.debug("inserting entry into context")
+        guard !isSaved else { return false }
         context.insert(entry)
         let reflection = text.trimmingCharacters(in: .whitespacesAndNewlines)
         entry.reflection = reflection.isEmpty ? nil : reflection
         entry.reflectionMode = reflection.isEmpty ? nil : mode.rawValue
         entry.reflectionSeconds = secondsSpent
-        logger.debug("calling context.save()")
-        do {
-            try context.save()
-            logger.debug("context.save() succeeded")
-        } catch {
-            logger.error("context.save() FAILED: \(error)")
-        }
+        try? context.save()
         timer?.invalidate()
         timer = nil
         isSaved = true
-        logger.debug("save() complete — returning true")
         return true
     }
 
     /// Returns true if the skip actually ran (false if already saved — caller should ignore).
     @discardableResult
     func skip(entry: BrainEntry, context: ModelContext) -> Bool {
-        logger.debug("skip() called — isSaved=\(self.isSaved)")
-        guard !isSaved else {
-            logger.warning("skip() guard tripped — isSaved already true, returning false")
-            return false
-        }
+        guard !isSaved else { return false }
         context.insert(entry)
         entry.reflection = nil
         entry.reflectionMode = nil
         entry.reflectionSeconds = 60 - secondsRemaining
-        do {
-            try context.save()
-            logger.debug("skip context.save() succeeded")
-        } catch {
-            logger.error("skip context.save() FAILED: \(error)")
-        }
+        try? context.save()
         timer?.invalidate()
         timer = nil
         isSaved = true
-        logger.debug("skip() complete — returning true")
         return true
     }
 }
