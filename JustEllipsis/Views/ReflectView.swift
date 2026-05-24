@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let logger = Logger(subsystem: "com.rylandean.justellipsis", category: "Reflect")
 
 struct ReflectView: View {
     let entry: BrainEntry
@@ -43,6 +46,7 @@ struct ReflectView: View {
             }
         }
         .onAppear {
+            logger.debug("ReflectView appeared")
             viewModel.startCountdown()
         }
         .onChange(of: textFocused) { _, focused in
@@ -57,9 +61,13 @@ struct ReflectView: View {
         }
         .onChange(of: viewModel.secondsRemaining) { _, rem in
             if rem == 0 {
+                logger.debug("timer expired — triggering auto-save")
                 if viewModel.save(entry: entry, mode: reflectionMode, secondsSpent: secondsSpent, context: context) {
+                    logger.debug("auto-save succeeded — calling dismiss()")
                     dismiss()
+                    logger.debug("calling onComplete() from timer path")
                     onComplete()
+                    logger.debug("onComplete() returned")
                 }
             }
         }
@@ -133,6 +141,8 @@ struct ReflectView: View {
     private var bottomBar: some View {
         HStack {
             Button("Save") {
+                let trimmed = viewModel.text.trimmingCharacters(in: .whitespaces)
+                logger.debug("Save tapped — text='\(trimmed)', isSaved=\(viewModel.isSaved)")
                 voiceRecognizer.stopListening()
                 if viewModel.save(
                     entry: entry,
@@ -140,8 +150,13 @@ struct ReflectView: View {
                     secondsSpent: secondsSpent,
                     context: context
                 ) {
+                    logger.debug("save() returned true — calling dismiss()")
                     dismiss()
+                    logger.debug("calling onComplete()")
                     onComplete()
+                    logger.debug("onComplete() returned")
+                } else {
+                    logger.warning("save() returned false — button tap did nothing")
                 }
             }
             .font(AppTheme.sansSerif(15, weight: .semibold))
@@ -159,8 +174,10 @@ struct ReflectView: View {
             Spacer().frame(width: 16)
 
             Button("Skip") {
+                logger.debug("Skip tapped")
                 voiceRecognizer.stopListening()
                 if viewModel.skip(entry: entry, context: context) {
+                    logger.debug("skip() returned true — calling dismiss()")
                     dismiss()
                     onComplete()
                 }

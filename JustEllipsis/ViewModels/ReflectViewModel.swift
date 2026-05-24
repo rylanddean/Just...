@@ -1,6 +1,9 @@
 import Foundation
 import SwiftData
 import Observation
+import os
+
+private let logger = Logger(subsystem: "com.rylandean.justellipsis", category: "Reflect")
 
 enum ReflectionMode: String {
     case typed = "typed"
@@ -56,34 +59,53 @@ final class ReflectViewModel {
         secondsSpent: Int,
         context: ModelContext
     ) -> Bool {
-        guard !isSaved else { return false }
-        // Insert into the context BEFORE writing properties. SwiftData has a known
-        // iOS 17 issue where values written to the unmanaged backing store are
-        // silently dropped when the object is later handed to the context.
+        logger.debug("save() called — isSaved=\(self.isSaved), textLength=\(self.text.count)")
+        guard !isSaved else {
+            logger.warning("save() guard tripped — isSaved already true, returning false")
+            return false
+        }
+        logger.debug("inserting entry into context")
         context.insert(entry)
         let reflection = text.trimmingCharacters(in: .whitespacesAndNewlines)
         entry.reflection = reflection.isEmpty ? nil : reflection
         entry.reflectionMode = reflection.isEmpty ? nil : mode.rawValue
         entry.reflectionSeconds = secondsSpent
-        try? context.save()
+        logger.debug("calling context.save()")
+        do {
+            try context.save()
+            logger.debug("context.save() succeeded")
+        } catch {
+            logger.error("context.save() FAILED: \(error)")
+        }
         timer?.invalidate()
         timer = nil
         isSaved = true
+        logger.debug("save() complete — returning true")
         return true
     }
 
     /// Returns true if the skip actually ran (false if already saved — caller should ignore).
     @discardableResult
     func skip(entry: BrainEntry, context: ModelContext) -> Bool {
-        guard !isSaved else { return false }
+        logger.debug("skip() called — isSaved=\(self.isSaved)")
+        guard !isSaved else {
+            logger.warning("skip() guard tripped — isSaved already true, returning false")
+            return false
+        }
         context.insert(entry)
         entry.reflection = nil
         entry.reflectionMode = nil
         entry.reflectionSeconds = 60 - secondsRemaining
-        try? context.save()
+        do {
+            try context.save()
+            logger.debug("skip context.save() succeeded")
+        } catch {
+            logger.error("skip context.save() FAILED: \(error)")
+        }
         timer?.invalidate()
         timer = nil
         isSaved = true
+        logger.debug("skip() complete — returning true")
         return true
     }
 }
