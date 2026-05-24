@@ -54,12 +54,11 @@ struct ReflectView: View {
         .onChange(of: voiceRecognizer.transcript) { _, t in
             if voiceRecognizer.isListening { viewModel.text = t }
         }
-        .onChange(of: viewModel.isSaved) { _, saved in
-            if saved { onComplete() }
-        }
         .onChange(of: viewModel.secondsRemaining) { _, rem in
             if rem == 0 {
-                viewModel.save(entry: entry, mode: reflectionMode, secondsSpent: secondsSpent, context: context)
+                if viewModel.save(entry: entry, mode: reflectionMode, secondsSpent: secondsSpent, context: context) {
+                    onComplete()
+                }
             }
         }
         .preferredColorScheme(theme.colorScheme)
@@ -133,12 +132,14 @@ struct ReflectView: View {
         HStack {
             Button("Save") {
                 voiceRecognizer.stopListening()
-                viewModel.save(
+                if viewModel.save(
                     entry: entry,
                     mode: reflectionMode,
                     secondsSpent: secondsSpent,
                     context: context
-                )
+                ) {
+                    onComplete()
+                }
             }
             .font(AppTheme.sansSerif(15, weight: .semibold))
             .foregroundStyle(theme.isLight ? .white : theme.bg)
@@ -156,7 +157,9 @@ struct ReflectView: View {
 
             Button("Skip") {
                 voiceRecognizer.stopListening()
-                viewModel.skip(entry: entry, context: context)
+                if viewModel.skip(entry: entry, context: context) {
+                    onComplete()
+                }
             }
             .font(AppTheme.sansSerif(13))
             .foregroundStyle(theme.text.opacity(0.5))

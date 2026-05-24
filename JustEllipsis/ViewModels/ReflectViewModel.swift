@@ -48,26 +48,32 @@ final class ReflectViewModel {
 
     // MARK: - Persist
 
+    /// Returns true if the save actually ran (false if already saved — caller should ignore).
+    @discardableResult
     func save(
         entry: BrainEntry,
         mode: ReflectionMode,
         secondsSpent: Int,
         context: ModelContext
-    ) {
-        guard !isSaved else { return }
+    ) -> Bool {
+        guard !isSaved else { return false }
         let reflection = text.trimmingCharacters(in: .whitespacesAndNewlines)
         entry.reflection = reflection.isEmpty ? nil : reflection
         entry.reflectionMode = reflection.isEmpty ? nil : mode.rawValue
         entry.reflectionSeconds = secondsSpent
         persistEntry(entry, context: context)
+        return true
     }
 
-    func skip(entry: BrainEntry, context: ModelContext) {
-        guard !isSaved else { return }
+    /// Returns true if the skip actually ran (false if already saved — caller should ignore).
+    @discardableResult
+    func skip(entry: BrainEntry, context: ModelContext) -> Bool {
+        guard !isSaved else { return false }
         entry.reflection = nil
         entry.reflectionMode = nil
         entry.reflectionSeconds = 60 - secondsRemaining
         persistEntry(entry, context: context)
+        return true
     }
 
     private func persistEntry(_ entry: BrainEntry, context: ModelContext) {
