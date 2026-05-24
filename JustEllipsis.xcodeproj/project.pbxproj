@@ -1,0 +1,752 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		02D548CD6FBF8D61C9A919E4 /* ReflectViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDA3E54FDEF2BEF53809AB3 /* ReflectViewModel.swift */; };
+		0395E0DD27E8DDF39E9D392B /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A693417E50D769C81214D035 /* RootView.swift */; };
+		1A8F7B7E1F4EF583D9485183 /* IntelligenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6345AF40A371C990B21023 /* IntelligenceService.swift */; };
+		1D290063695771738CCDABD9 /* BrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D92347D5631A1D698929B76D /* BrainView.swift */; };
+		1EF4B07C3A097A2542059DCA /* PendingLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD402C01934293F01520002 /* PendingLinkStore.swift */; };
+		2344727D36DCEF1C39989C66 /* LinkCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46A719D305320A1D2B22BA50 /* LinkCard.swift */; };
+		25AC66CE65822836CC940ED8 /* BrainViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */; };
+		286F5A0E2A4A563D35F90F73 /* CountdownRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42F62308F8EC6615789E6A4 /* CountdownRing.swift */; };
+		3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */; };
+		5200F218FCDCDE23A0BFB0A5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F138A6A626CF6CF070B7A67E /* Assets.xcassets */; };
+		55A0A2EBE317C3AC1EF10C03 /* JustEllipsisShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		56DE24619050B42942363268 /* ContentFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */; };
+		65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC480E509A335B23D95C2896 /* StreakHeader.swift */; };
+		6F55A95F2635E6E07C126DC7 /* ContentFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */; };
+		71051F154C5F1E8E4C32F3A8 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */; };
+		76F62BE4703D8F0E5CC5248E /* VoiceInputButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 942735D0240A787024FC990A /* VoiceInputButton.swift */; };
+		77F8A704F081AFC3671D2168 /* ReflectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F232598215B53DB59A71324A /* ReflectView.swift */; };
+		78CA24460077DABBF1C0A10A /* BrainOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */; };
+		7ED49FF7C07BFE3CB2929B46 /* ReadingDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB7BE8457A65678C63AA04B /* ReadingDay.swift */; };
+		854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711256DA53620D4C746AC36F /* HomeView.swift */; };
+		864F3C0E8B0F3F5097EC15B4 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D03466EC4C3263BF1837381 /* ShareViewController.swift */; };
+		8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */; };
+		942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD402C01934293F01520002 /* PendingLinkStore.swift */; };
+		949A68996476CD7276C0382C /* AddLinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA108705DC55D44129CFA2E /* AddLinkView.swift */; };
+		963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FFDB49A234476554B1FE83 /* QueuedLink.swift */; };
+		A683565502BA61332A25F23B /* BrainEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5FFE2DFE392AFFCF9E68E21 /* BrainEngineTests.swift */; };
+		ADEF75807293AFD73AACF68E /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 646F64DBC62E5B05B45AC067 /* ReaderView.swift */; };
+		B2F38D292704272C04A106AC /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369CC02046EDB9D512264A8B /* AppTheme.swift */; };
+		B564A9798D0457D85A3D73AE /* BrainEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8881FBE57095A67C1C24497 /* BrainEntry.swift */; };
+		B89A122322A35304859319F6 /* AddLinkIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */; };
+		CC99FBCD2E1EA422F4EC7E0D /* StreakEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */; };
+		D89468FBE0FFDD4EB0D92C67 /* ReaderWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */; };
+		DD02AE6A59A40525EDF2B464 /* PremiumStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A765C05D71D9C3E3BA41FB0 /* PremiumStore.swift */; };
+		E2EB2EA9151BA6D2E9C5700B /* BrainEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E031427BDE66D20C2190203 /* BrainEngine.swift */; };
+		E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = F70788F7020E27CA19E61A12 /* SwiftSoup */; };
+		ECDF27D55E95C0FA4B62D3CC /* VoiceRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90157767297C98DEF89BB58C /* VoiceRecognizer.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3863781D27C4D8A4B12F40F5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 719776280667C2E356BAA398 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0B22B2BD222A2112071A54FE;
+			remoteInfo = JustEllipsis;
+		};
+		922AEE6E56E4DAB54517A517 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 719776280667C2E356BAA398 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 16DBE1A265CA7C974E3E08D0;
+			remoteInfo = JustEllipsisShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F4536CCB4DB8274930CB72B8 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				55A0A2EBE317C3AC1EF10C03 /* JustEllipsisShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0BF00220CD317D19590E03E1 /* JustEllipsisShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsisShareExtension.entitlements; sourceTree = "<group>"; };
+		11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakEngineTests.swift; sourceTree = "<group>"; };
+		1CDA3E54FDEF2BEF53809AB3 /* ReflectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectViewModel.swift; sourceTree = "<group>"; };
+		1FB7BE8457A65678C63AA04B /* ReadingDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingDay.swift; sourceTree = "<group>"; };
+		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		369CC02046EDB9D512264A8B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
+		3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFetcherTests.swift; sourceTree = "<group>"; };
+		3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLinkIntent.swift; sourceTree = "<group>"; };
+		46A719D305320A1D2B22BA50 /* LinkCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkCard.swift; sourceTree = "<group>"; };
+		646F64DBC62E5B05B45AC067 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
+		6DD402C01934293F01520002 /* PendingLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingLinkStore.swift; sourceTree = "<group>"; };
+		711256DA53620D4C746AC36F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		79111AB1E05BBF6590D197DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		80160876D84DBAF018BB717D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8A765C05D71D9C3E3BA41FB0 /* PremiumStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumStore.swift; sourceTree = "<group>"; };
+		8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = JustEllipsisTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		90157767297C98DEF89BB58C /* VoiceRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRecognizer.swift; sourceTree = "<group>"; };
+		942735D0240A787024FC990A /* VoiceInputButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceInputButton.swift; sourceTree = "<group>"; };
+		9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustEllipsisApp.swift; sourceTree = "<group>"; };
+		9E031427BDE66D20C2190203 /* BrainEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEngine.swift; sourceTree = "<group>"; };
+		A42F62308F8EC6615789E6A4 /* CountdownRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownRing.swift; sourceTree = "<group>"; };
+		A693417E50D769C81214D035 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		BD6345AF40A371C990B21023 /* IntelligenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligenceService.swift; sourceTree = "<group>"; };
+		BDA108705DC55D44129CFA2E /* AddLinkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLinkView.swift; sourceTree = "<group>"; };
+		C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFetcher.swift; sourceTree = "<group>"; };
+		CC480E509A335B23D95C2896 /* StreakHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakHeader.swift; sourceTree = "<group>"; };
+		CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakEngine.swift; sourceTree = "<group>"; };
+		D92347D5631A1D698929B76D /* BrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainView.swift; sourceTree = "<group>"; };
+		E3FFDB49A234476554B1FE83 /* QueuedLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedLink.swift; sourceTree = "<group>"; };
+		E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainOrb.swift; sourceTree = "<group>"; };
+		E5FFE2DFE392AFFCF9E68E21 /* BrainEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEngineTests.swift; sourceTree = "<group>"; };
+		EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWebView.swift; sourceTree = "<group>"; };
+		ED7FFE6597C651A7C460DFB1 /* JustEllipsis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsis.entitlements; sourceTree = "<group>"; };
+		F138A6A626CF6CF070B7A67E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F232598215B53DB59A71324A /* ReflectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectView.swift; sourceTree = "<group>"; };
+		F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainViewModel.swift; sourceTree = "<group>"; };
+		F8881FBE57095A67C1C24497 /* BrainEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEntry.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C1E347FA44472AE63F164780 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		00A27E9E2443676616BB4BD1 /* JustEllipsisTests */ = {
+			isa = PBXGroup;
+			children = (
+				E5FFE2DFE392AFFCF9E68E21 /* BrainEngineTests.swift */,
+				3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */,
+				79111AB1E05BBF6590D197DA /* Info.plist */,
+				11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */,
+			);
+			path = JustEllipsisTests;
+			sourceTree = "<group>";
+		};
+		09052ACB65A733352A46C93F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */,
+				75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */,
+				8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0CAA8BED2F81700F4AF24EA5 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				9E031427BDE66D20C2190203 /* BrainEngine.swift */,
+				C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */,
+				BD6345AF40A371C990B21023 /* IntelligenceService.swift */,
+				8A765C05D71D9C3E3BA41FB0 /* PremiumStore.swift */,
+				CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */,
+				90157767297C98DEF89BB58C /* VoiceRecognizer.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		32B5DDD82C4818F2088B88D6 = {
+			isa = PBXGroup;
+			children = (
+				91899AD1B13D711403952D59 /* JustEllipsis */,
+				D5FD1F14C7E7CDC97B936E02 /* JustEllipsisShareExtension */,
+				00A27E9E2443676616BB4BD1 /* JustEllipsisTests */,
+				D01443C8E42567BA7DFBEDC1 /* Shared */,
+				09052ACB65A733352A46C93F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		8CC770824E4E5DD65F9EC56C /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F8881FBE57095A67C1C24497 /* BrainEntry.swift */,
+				E3FFDB49A234476554B1FE83 /* QueuedLink.swift */,
+				1FB7BE8457A65678C63AA04B /* ReadingDay.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		91899AD1B13D711403952D59 /* JustEllipsis */ = {
+			isa = PBXGroup;
+			children = (
+				F138A6A626CF6CF070B7A67E /* Assets.xcassets */,
+				80160876D84DBAF018BB717D /* Info.plist */,
+				ED7FFE6597C651A7C460DFB1 /* JustEllipsis.entitlements */,
+				C16C350B918C133AD38DE5C6 /* App */,
+				B78A4D24EC4DD42C15221A6A /* Components */,
+				8CC770824E4E5DD65F9EC56C /* Models */,
+				0CAA8BED2F81700F4AF24EA5 /* Services */,
+				B7B678AC34C133454B34C861 /* ViewModels */,
+				A94777B86EDA9F6FC9C0C836 /* Views */,
+			);
+			path = JustEllipsis;
+			sourceTree = "<group>";
+		};
+		A94777B86EDA9F6FC9C0C836 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BDA108705DC55D44129CFA2E /* AddLinkView.swift */,
+				D92347D5631A1D698929B76D /* BrainView.swift */,
+				711256DA53620D4C746AC36F /* HomeView.swift */,
+				646F64DBC62E5B05B45AC067 /* ReaderView.swift */,
+				F232598215B53DB59A71324A /* ReflectView.swift */,
+				A693417E50D769C81214D035 /* RootView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B78A4D24EC4DD42C15221A6A /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */,
+				A42F62308F8EC6615789E6A4 /* CountdownRing.swift */,
+				46A719D305320A1D2B22BA50 /* LinkCard.swift */,
+				EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */,
+				CC480E509A335B23D95C2896 /* StreakHeader.swift */,
+				942735D0240A787024FC990A /* VoiceInputButton.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		B7B678AC34C133454B34C861 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */,
+				3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */,
+				1CDA3E54FDEF2BEF53809AB3 /* ReflectViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		C16C350B918C133AD38DE5C6 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				369CC02046EDB9D512264A8B /* AppTheme.swift */,
+				9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		D01443C8E42567BA7DFBEDC1 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				6DD402C01934293F01520002 /* PendingLinkStore.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		D5FD1F14C7E7CDC97B936E02 /* JustEllipsisShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */,
+				2582F111A71090C5631859A3 /* Info.plist */,
+				0BF00220CD317D19590E03E1 /* JustEllipsisShareExtension.entitlements */,
+				2D03466EC4C3263BF1837381 /* ShareViewController.swift */,
+			);
+			path = JustEllipsisShareExtension;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0B22B2BD222A2112071A54FE /* JustEllipsis */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28BC68D259D3D619261A3DF1 /* Build configuration list for PBXNativeTarget "JustEllipsis" */;
+			buildPhases = (
+				C06D0C176F670EDE6DF31E75 /* Sources */,
+				2A511DD35CC01024EAD74BEC /* Resources */,
+				C1E347FA44472AE63F164780 /* Frameworks */,
+				F4536CCB4DB8274930CB72B8 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4C1D3B278476C3CCE6B81858 /* PBXTargetDependency */,
+			);
+			name = JustEllipsis;
+			packageProductDependencies = (
+				F70788F7020E27CA19E61A12 /* SwiftSoup */,
+			);
+			productName = JustEllipsis;
+			productReference = 35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */;
+			productType = "com.apple.product-type.application";
+		};
+		16DBE1A265CA7C974E3E08D0 /* JustEllipsisShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7B7E04FF264847ECF35B1E28 /* Build configuration list for PBXNativeTarget "JustEllipsisShareExtension" */;
+			buildPhases = (
+				849D8157F9F1DDED542F1CD8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JustEllipsisShareExtension;
+			packageProductDependencies = (
+			);
+			productName = JustEllipsisShareExtension;
+			productReference = 75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		36799AF5621258DD12197858 /* JustEllipsisTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5ED6FEEBFD6E443F5171B1EC /* Build configuration list for PBXNativeTarget "JustEllipsisTests" */;
+			buildPhases = (
+				E64E0B829C80ADE67E3370B2 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4882B9591A9B226D6CEB2116 /* PBXTargetDependency */,
+			);
+			name = JustEllipsisTests;
+			packageProductDependencies = (
+			);
+			productName = JustEllipsisTests;
+			productReference = 8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		719776280667C2E356BAA398 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					36799AF5621258DD12197858 = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 8EF2A111D1A68DF3E4B64FE8 /* Build configuration list for PBXProject "JustEllipsis" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 32B5DDD82C4818F2088B88D6;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8222FD94D8EAF8C1A1D1EDAA /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 09052ACB65A733352A46C93F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0B22B2BD222A2112071A54FE /* JustEllipsis */,
+				16DBE1A265CA7C974E3E08D0 /* JustEllipsisShareExtension */,
+				36799AF5621258DD12197858 /* JustEllipsisTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2A511DD35CC01024EAD74BEC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5200F218FCDCDE23A0BFB0A5 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		849D8157F9F1DDED542F1CD8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B89A122322A35304859319F6 /* AddLinkIntent.swift in Sources */,
+				1EF4B07C3A097A2542059DCA /* PendingLinkStore.swift in Sources */,
+				864F3C0E8B0F3F5097EC15B4 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C06D0C176F670EDE6DF31E75 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				949A68996476CD7276C0382C /* AddLinkView.swift in Sources */,
+				B2F38D292704272C04A106AC /* AppTheme.swift in Sources */,
+				E2EB2EA9151BA6D2E9C5700B /* BrainEngine.swift in Sources */,
+				B564A9798D0457D85A3D73AE /* BrainEntry.swift in Sources */,
+				78CA24460077DABBF1C0A10A /* BrainOrb.swift in Sources */,
+				1D290063695771738CCDABD9 /* BrainView.swift in Sources */,
+				25AC66CE65822836CC940ED8 /* BrainViewModel.swift in Sources */,
+				56DE24619050B42942363268 /* ContentFetcher.swift in Sources */,
+				286F5A0E2A4A563D35F90F73 /* CountdownRing.swift in Sources */,
+				854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */,
+				1A8F7B7E1F4EF583D9485183 /* IntelligenceService.swift in Sources */,
+				8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */,
+				2344727D36DCEF1C39989C66 /* LinkCard.swift in Sources */,
+				942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */,
+				DD02AE6A59A40525EDF2B464 /* PremiumStore.swift in Sources */,
+				963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */,
+				ADEF75807293AFD73AACF68E /* ReaderView.swift in Sources */,
+				71051F154C5F1E8E4C32F3A8 /* ReaderViewModel.swift in Sources */,
+				D89468FBE0FFDD4EB0D92C67 /* ReaderWebView.swift in Sources */,
+				7ED49FF7C07BFE3CB2929B46 /* ReadingDay.swift in Sources */,
+				77F8A704F081AFC3671D2168 /* ReflectView.swift in Sources */,
+				02D548CD6FBF8D61C9A919E4 /* ReflectViewModel.swift in Sources */,
+				0395E0DD27E8DDF39E9D392B /* RootView.swift in Sources */,
+				3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */,
+				65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */,
+				76F62BE4703D8F0E5CC5248E /* VoiceInputButton.swift in Sources */,
+				ECDF27D55E95C0FA4B62D3CC /* VoiceRecognizer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E64E0B829C80ADE67E3370B2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A683565502BA61332A25F23B /* BrainEngineTests.swift in Sources */,
+				6F55A95F2635E6E07C126DC7 /* ContentFetcherTests.swift in Sources */,
+				CC99FBCD2E1EA422F4EC7E0D /* StreakEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4882B9591A9B226D6CEB2116 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0B22B2BD222A2112071A54FE /* JustEllipsis */;
+			targetProxy = 3863781D27C4D8A4B12F40F5 /* PBXContainerItemProxy */;
+		};
+		4C1D3B278476C3CCE6B81858 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 16DBE1A265CA7C974E3E08D0 /* JustEllipsisShareExtension */;
+			targetProxy = 922AEE6E56E4DAB54517A517 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		41F2237914769AF6B7B51893 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsis/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		52921418960A3A98C4F1F9E3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = JustEllipsisTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsistests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustEllipsis.app/JustEllipsis";
+			};
+			name = Release;
+		};
+		54856E8C500BBB362E41276D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5E026F75C5EFD2AD266C1A7B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.shareextension;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6466C756602AB6D418157CA9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsis/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8A55B08FED2041FF55BD43F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.shareextension;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B6C6CD9D8865BDA4BE804DE1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = JustEllipsisTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsistests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JustEllipsis.app/JustEllipsis";
+			};
+			name = Debug;
+		};
+		DC71C658670690E0FE0E3DE5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		28BC68D259D3D619261A3DF1 /* Build configuration list for PBXNativeTarget "JustEllipsis" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				41F2237914769AF6B7B51893 /* Debug */,
+				6466C756602AB6D418157CA9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5ED6FEEBFD6E443F5171B1EC /* Build configuration list for PBXNativeTarget "JustEllipsisTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6C6CD9D8865BDA4BE804DE1 /* Debug */,
+				52921418960A3A98C4F1F9E3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7B7E04FF264847ECF35B1E28 /* Build configuration list for PBXNativeTarget "JustEllipsisShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E026F75C5EFD2AD266C1A7B /* Debug */,
+				8A55B08FED2041FF55BD43F8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8EF2A111D1A68DF3E4B64FE8 /* Build configuration list for PBXProject "JustEllipsis" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				54856E8C500BBB362E41276D /* Debug */,
+				DC71C658670690E0FE0E3DE5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8222FD94D8EAF8C1A1D1EDAA /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F70788F7020E27CA19E61A12 /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8222FD94D8EAF8C1A1D1EDAA /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 719776280667C2E356BAA398 /* Project object */;
+}
