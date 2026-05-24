@@ -8,6 +8,8 @@ struct ReaderView: View {
 
     @State private var viewModel = ReaderViewModel()
     @State private var pendingEntry: BrainEntry?
+    @State private var isNearBottom = false
+    @State private var overScrollDelta: CGFloat = 0
 
     var body: some View {
         ZStack {
@@ -24,8 +26,6 @@ struct ReaderView: View {
         .task {
             await viewModel.load(link: link, context: context)
         }
-        // Use item: so the entry is passed directly into the closure —
-        // no bool/optional race condition that produces an empty black cover.
         .fullScreenCover(item: $pendingEntry) { entry in
             ReflectView(entry: entry, link: link, onComplete: {
                 viewModel.markAsRead(link: link, context: context)
@@ -77,7 +77,7 @@ struct ReaderView: View {
 
     private func articleView(_ content: StrippedContent) -> some View {
         VStack(spacing: 0) {
-            // Top chrome: domain + read time
+            // Top chrome: domain + read time, muted fallback Done
             HStack {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
@@ -100,11 +100,12 @@ struct ReaderView: View {
 
                 Spacer()
 
+                // Gesture is the primary path — button is muted for accessibility
                 Button("Done") {
                     openReflect(content: content)
                 }
-                .font(AppTheme.sansSerif(14, weight: .medium))
-                .foregroundStyle(AppTheme.readerAccent)
+                .font(AppTheme.sansSerif(14))
+                .foregroundStyle(AppTheme.textFaint)
             }
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 12)
@@ -119,11 +120,67 @@ struct ReaderView: View {
             }
             .frame(height: 1)
 
-            // Article content
-            ReaderWebView(html: content.body) { progress in
-                viewModel.readProgress = progress
+            // Article + pull indicator overlay
+            ZStack(alignment: .bottom) {
+                ReaderWebView(
+                    html: content.body,
+                    onScrollProgress: { progress in
+                        viewModel.readProgress = progress
+                    },
+                    onNearBottom: { near in
+                        withAnimation(.easeIn(duration: 0.2)) {
+                            isNearBottom = near
+                        }
+                    },
+                    onOverScrollDelta: { delta in
+                        if delta == 0 {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                overScrollDelta = 0
+                            }
+                        } else {
+                            overScrollDelta = delta
+                        }
+                    },
+                    onReflectTrigger: {
+                        openReflect(content: content)
+                    }
+                )
+
+                if isNearBottom {
+                    pullIndicator
+                        .transition(.opacity)
+                }
             }
         }
+    }
+
+    private var pullIndicator: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppTheme.readerAccent)
+                .offset(y: -min(overScrollDelta / 80 * 10, 10))
+
+            Text("reflect")
+                .font(AppTheme.sansSerif(10))
+                .foregroundStyle(AppTheme.textFaint)
+                .tracking(2)
+
+            Rectangle()
+                .fill(AppTheme.readerAccent.opacity(0.45))
+                .frame(height: 1)
+        }
+        .padding(.top, 20)
+        .padding(.bottom, 20)
+        .frame(maxWidth: .infinity)
+        .background {
+            LinearGradient(
+                colors: [.clear, AppTheme.background.opacity(0.96)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Actions
@@ -131,12 +188,11 @@ struct ReaderView: View {
     private func openReflect(content: StrippedContent) {
         let entry = BrainEntry(url: link.url, title: content.title, domain: content.domain)
         entry.wordCount = content.estimatedWordCount
-        pendingEntry = entry   // non-nil → cover is presented immediately
+        pendingEntry = entry
     }
 
     private func updateReadingDay() {
         let logical = StreakEngine.logicalDay()
-        // #Predicate requires local constants — it doesn't support tuple member access
         let y = logical.year, m = logical.month, d = logical.day
         let fetchDescriptor = FetchDescriptor<ReadingDay>(
             predicate: #Predicate { $0.year == y && $0.month == m && $0.day == d }
