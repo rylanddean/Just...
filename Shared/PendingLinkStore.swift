@@ -8,16 +8,19 @@ struct PendingLinkStore {
     private static let key = "pendingLinks"
 
     /// Called by the Share Extension after the user shares a URL.
-    static func append(urlString: String) {
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+    /// Returns true if the URL was newly queued, false if it was already present.
+    @discardableResult
+    static func append(urlString: String) -> Bool {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return false }
         var pending = defaults.stringArray(forKey: key) ?? []
-        guard !pending.contains(urlString) else { return }
+        guard !pending.contains(urlString) else { return false }
         pending.append(urlString)
         defaults.set(pending, forKey: key)
         // Force an immediate disk write — the extension process is killed as soon
         // as completeRequest fires, so in-memory UserDefaults data would be lost
         // without this call.
         defaults.synchronize()
+        return true
     }
 
     /// Called by the main app on launch / foreground. Returns all pending URLs and clears the queue.

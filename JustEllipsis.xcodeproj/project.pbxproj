@@ -40,6 +40,7 @@
 		B2F38D292704272C04A106AC /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369CC02046EDB9D512264A8B /* AppTheme.swift */; };
 		B564A9798D0457D85A3D73AE /* BrainEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8881FBE57095A67C1C24497 /* BrainEntry.swift */; };
 		B89A122322A35304859319F6 /* AddLinkIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */; };
+		C5E3510BA0839FE572FE05A4 /* ShareFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC763198DE4280198397A77F /* ShareFeedbackView.swift */; };
 		CC99FBCD2E1EA422F4EC7E0D /* StreakEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */; };
 		D89468FBE0FFDD4EB0D92C67 /* ReaderWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */; };
 		E2EB2EA9151BA6D2E9C5700B /* BrainEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E031427BDE66D20C2190203 /* BrainEngine.swift */; };
@@ -109,6 +110,7 @@
 		A42F62308F8EC6615789E6A4 /* CountdownRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownRing.swift; sourceTree = "<group>"; };
 		A4958A7DF6F86097742050CA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A693417E50D769C81214D035 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		AC763198DE4280198397A77F /* ShareFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareFeedbackView.swift; sourceTree = "<group>"; };
 		BD6345AF40A371C990B21023 /* IntelligenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligenceService.swift; sourceTree = "<group>"; };
 		BDA108705DC55D44129CFA2E /* AddLinkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLinkView.swift; sourceTree = "<group>"; };
 		C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFetcher.swift; sourceTree = "<group>"; };
@@ -271,6 +273,7 @@
 				3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */,
 				2582F111A71090C5631859A3 /* Info.plist */,
 				0BF00220CD317D19590E03E1 /* JustEllipsisShareExtension.entitlements */,
+				AC763198DE4280198397A77F /* ShareFeedbackView.swift */,
 				2D03466EC4C3263BF1837381 /* ShareViewController.swift */,
 			);
 			path = JustEllipsisShareExtension;
@@ -392,6 +395,7 @@
 			files = (
 				B89A122322A35304859319F6 /* AddLinkIntent.swift in Sources */,
 				1EF4B07C3A097A2542059DCA /* PendingLinkStore.swift in Sources */,
+				C5E3510BA0839FE572FE05A4 /* ShareFeedbackView.swift in Sources */,
 				864F3C0E8B0F3F5097EC15B4 /* ShareViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
