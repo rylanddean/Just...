@@ -32,7 +32,7 @@ struct ReaderView: View {
             await viewModel.load(link: link, context: context)
         }
         .fullScreenCover(item: $pendingEntry) { entry in
-            ReflectView(entry: entry, link: link, theme: theme, onComplete: {
+            ReflectView(entry: entry, link: link, theme: theme, prompt: viewModel.generatedPrompt, onComplete: {
                 viewModel.markAsRead(link: link, context: context)
                 updateReadingDay()
                 dismiss()

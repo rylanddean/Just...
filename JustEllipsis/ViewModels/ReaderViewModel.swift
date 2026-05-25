@@ -10,6 +10,7 @@ final class ReaderViewModel {
     var isLoading: Bool = true
     var error: Error?
     var readProgress: Double = 0.0   // 0.0–1.0, driven by WKWebView scroll position
+    var generatedPrompt: String? = nil
 
     func load(link: QueuedLink, context: ModelContext) async {
         error = nil
@@ -79,9 +80,7 @@ final class ReaderViewModel {
 
     @available(iOS 26, *)
     private func generateSummary(for body: String) async {
-        // Summary is cached on BrainEntry after reflect saves; here we just
-        // pre-warm it so ReflectView can pick it up immediately.
-        // We store it transiently on this ViewModel until it is persisted.
-        _ = try? await IntelligenceService.summarize(body)
+        guard let summary = try? await IntelligenceService.summarize(body) else { return }
+        generatedPrompt = try? await IntelligenceService.reflectPrompt(for: summary)
     }
 }

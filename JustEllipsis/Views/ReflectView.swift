@@ -5,6 +5,7 @@ struct ReflectView: View {
     let entry: BrainEntry
     let link: QueuedLink
     var theme: ReaderTheme = .ember
+    var prompt: String? = nil
     var onComplete: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -12,7 +13,7 @@ struct ReflectView: View {
     @State private var viewModel = ReflectViewModel()
     @State private var voiceRecognizer = VoiceRecognizer()
     @State private var reflectionMode: ReflectionMode = .typed
-    @State private var placeholder: String = IntelligenceService.randomFallbackPrompt()
+    @State private var placeholder: String = ""
     @FocusState private var textFocused: Bool
 
     private var secondsSpent: Int { 60 - viewModel.secondsRemaining }
@@ -43,6 +44,7 @@ struct ReflectView: View {
             }
         }
         .onAppear {
+            placeholder = prompt ?? IntelligenceService.randomFallbackPrompt()
             viewModel.startCountdown()
         }
         .onChange(of: textFocused) { _, focused in
