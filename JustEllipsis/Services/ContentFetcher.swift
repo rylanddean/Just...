@@ -30,6 +30,7 @@ struct ContentFetcher: Sendable {
           color-scheme: \(colorScheme);
         }
         * { box-sizing: border-box; }
+        html { background: var(--bg); }
         body {
           background: var(--bg);
           color: var(--text);

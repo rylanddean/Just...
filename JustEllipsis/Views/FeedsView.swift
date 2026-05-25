@@ -3,6 +3,7 @@ import SwiftData
 
 struct FeedsView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(AppRouter.self) private var router
     @Query(sort: \RSSFeed.title) private var feeds: [RSSFeed]
 
@@ -15,47 +16,42 @@ struct FeedsView: View {
     @State private var feedToRename: RSSFeed?
     @State private var renameText = ""
     @State private var showRenameSheet = false
-
+    @State private var selectedFeed: RSSFeed?
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppTheme.background.ignoresSafeArea()
-
-                if feeds.isEmpty {
-                    emptyState
-                } else {
-                    feedList
-                }
-            }
-            .navigationTitle("Feeds")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showDirectory = true
-                    } label: {
-                        Text("Browse")
-                            .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.accent)
+        Group {
+            if sizeClass == .regular {
+                NavigationSplitView {
+                    feedSidebar
+                        .navigationTitle("Feeds")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar { feedToolbarItems }
+                        .toolbarBackground(AppTheme.background, for: .navigationBar)
+                        .toolbarColorScheme(.dark, for: .navigationBar)
+                } detail: {
+                    if let feed = selectedFeed {
+                        FeedDetailView(feed: feed)
+                    } else {
+                        AppTheme.background.ignoresSafeArea()
                     }
                 }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        pasteURL = ""
-                        customFeedName = ""
-                        addError = nil
-                        showAddByURL = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(AppTheme.accent)
+            } else {
+                NavigationStack {
+                    ZStack {
+                        AppTheme.background.ignoresSafeArea()
+                        if feeds.isEmpty {
+                            emptyState
+                        } else {
+                            feedList
+                        }
                     }
+                    .navigationTitle("Feeds")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { feedToolbarItems }
+                    .toolbarBackground(AppTheme.background, for: .navigationBar)
+                    .toolbarColorScheme(.dark, for: .navigationBar)
                 }
             }
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .sheet(isPresented: $showAddByURL) {
             addByURLSheet
@@ -78,7 +74,48 @@ struct FeedsView: View {
         }
     }
 
-    // MARK: - Feed list
+    // MARK: - iPad sidebar
+
+    private var feedSidebar: some View {
+        ZStack {
+            AppTheme.background.ignoresSafeArea()
+            if feeds.isEmpty {
+                emptyState
+            } else {
+                List(selection: $selectedFeed) {
+                    ForEach(feeds) { feed in
+                        FeedRow(feed: feed)
+                            .tag(feed)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(
+                                top: 5,
+                                leading: AppTheme.pagePadding,
+                                bottom: 5,
+                                trailing: AppTheme.pagePadding
+                            ))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    unsubscribe(feed)
+                                } label: {
+                                    Label("Unsubscribe", systemImage: "trash")
+                                }
+                                .tint(AppTheme.danger)
+                            }
+                            .contextMenu {
+                                feedContextMenu(for: feed)
+                            }
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollIndicators(.hidden)
+                .contentMargins(.bottom, 32, for: .scrollContent)
+            }
+        }
+    }
+
+    // MARK: - iPhone feed list
 
     private var feedList: some View {
         List {
@@ -103,37 +140,7 @@ struct FeedsView: View {
                     .tint(AppTheme.danger)
                 }
                 .contextMenu {
-                    Button {
-                        renameText = feed.title
-                        feedToRename = feed
-                        showRenameSheet = true
-                    } label: {
-                        Label("Rename", systemImage: "pencil")
-                    }
-
-                    if feed.isPaused {
-                        Button {
-                            feed.isPaused = false
-                            try? context.save()
-                        } label: {
-                            Label("Resume", systemImage: "play.circle")
-                        }
-                    } else {
-                        Button {
-                            feed.isPaused = true
-                            try? context.save()
-                        } label: {
-                            Label("Pause", systemImage: "pause.circle")
-                        }
-                    }
-
-                    Divider()
-
-                    Button(role: .destructive) {
-                        unsubscribe(feed)
-                    } label: {
-                        Label("Unsubscribe", systemImage: "trash")
-                    }
+                    feedContextMenu(for: feed)
                 }
             }
         }
@@ -141,6 +148,71 @@ struct FeedsView: View {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .contentMargins(.bottom, 32, for: .scrollContent)
+    }
+
+    // MARK: - Shared context menu
+
+    @ViewBuilder
+    private func feedContextMenu(for feed: RSSFeed) -> some View {
+        Button {
+            renameText = feed.title
+            feedToRename = feed
+            showRenameSheet = true
+        } label: {
+            Label("Rename", systemImage: "pencil")
+        }
+
+        if feed.isPaused {
+            Button {
+                feed.isPaused = false
+                try? context.save()
+            } label: {
+                Label("Resume", systemImage: "play.circle")
+            }
+        } else {
+            Button {
+                feed.isPaused = true
+                try? context.save()
+            } label: {
+                Label("Pause", systemImage: "pause.circle")
+            }
+        }
+
+        Divider()
+
+        Button(role: .destructive) {
+            unsubscribe(feed)
+        } label: {
+            Label("Unsubscribe", systemImage: "trash")
+        }
+    }
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var feedToolbarItems: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                showDirectory = true
+            } label: {
+                Text("Browse")
+                    .font(AppTheme.sansSerif(15))
+                    .foregroundStyle(AppTheme.accent)
+            }
+        }
+
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                pasteURL = ""
+                customFeedName = ""
+                addError = nil
+                showAddByURL = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+        }
     }
 
     // MARK: - Empty state
@@ -365,6 +437,7 @@ struct FeedsView: View {
     }
 
     private func unsubscribe(_ feed: RSSFeed) {
+        if selectedFeed?.id == feed.id { selectedFeed = nil }
         context.delete(feed)
         try? context.save()
     }
@@ -456,7 +529,7 @@ private struct FeedRow: View {
                         .foregroundStyle(AppTheme.textFaint)
 
                     if let fetched = feed.lastFetchedAt {
-                        Text(fetched, style: .relative)
+                        Text(fetched.formatted(.relative(presentation: .named)))
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(AppTheme.textFaint)
                     } else {

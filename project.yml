@@ -49,13 +49,22 @@ targets:
         UIBackgroundModes:
           - fetch
           - processing
+          - remote-notification
         UILaunchScreen: {}
         NSMicrophoneUsageDescription: "Voice reflections are transcribed on-device. Audio never leaves your phone."
         NSSpeechRecognitionUsageDescription: "Speech recognition powers voice reflections. All recognition is on-device."
         ITSAppUsesNonExemptEncryption: false
         UIRequiresFullScreen: false
+        UIDeviceFamily:
+          - 1
+          - 2
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     entitlements:
       path: JustEllipsis/JustEllipsis.entitlements
       properties:

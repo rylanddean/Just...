@@ -5,6 +5,7 @@ struct ReaderView: View {
     let link: QueuedLink
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     @State private var viewModel = ReaderViewModel()
@@ -17,28 +18,51 @@ struct ReaderView: View {
     }
 
     var body: some View {
-        ZStack {
-            theme.bg.ignoresSafeArea()
+        reflectPresentation {
+            ZStack {
+                theme.bg.ignoresSafeArea()
 
-            if viewModel.isLoading {
-                loadingView
-            } else if let content = viewModel.content {
-                articleView(content)
-            } else if let error = viewModel.error {
-                errorBannerView(error)
+                if viewModel.isLoading {
+                    loadingView
+                } else if let content = viewModel.content {
+                    articleView(content)
+                } else if let error = viewModel.error {
+                    errorBannerView(error)
+                }
             }
+            .task {
+                await viewModel.load(link: link, context: context)
+            }
+            .preferredColorScheme(theme.colorScheme)
         }
-        .task {
-            await viewModel.load(link: link, context: context)
+    }
+
+    // MARK: - Reflect presentation (fullScreenCover on iPhone, sheet on iPad)
+
+    @ViewBuilder
+    private func reflectPresentation<V: View>(@ViewBuilder content: () -> V) -> some View {
+        if sizeClass == .regular {
+            content()
+                .sheet(item: $pendingEntry) { entry in
+                    reflectView(for: entry)
+                        .presentationDetents([.medium, .large])
+                        .frame(maxWidth: 540)
+                        .presentationBackground(theme.bg)
+                }
+        } else {
+            content()
+                .fullScreenCover(item: $pendingEntry) { entry in
+                    reflectView(for: entry)
+                }
         }
-        .fullScreenCover(item: $pendingEntry) { entry in
-            ReflectView(entry: entry, link: link, theme: theme, prompt: viewModel.generatedPrompt, onComplete: {
-                viewModel.markAsRead(link: link, context: context)
-                updateReadingDay()
-                dismiss()
-            })
-        }
-        .preferredColorScheme(theme.colorScheme)
+    }
+
+    private func reflectView(for entry: BrainEntry) -> some View {
+        ReflectView(entry: entry, link: link, theme: theme, prompt: viewModel.generatedPrompt, onComplete: {
+            viewModel.markAsRead(link: link, context: context)
+            updateReadingDay()
+            dismiss()
+        })
     }
 
     // MARK: - Subviews

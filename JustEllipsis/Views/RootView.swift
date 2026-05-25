@@ -37,11 +37,13 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .task {
             processPendingLinks()
+            RSSFetchService.fetchInProcess(container: context.container)
             PrefetchService.prefetchInProcess(container: context.container)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 processPendingLinks()
+                RSSFetchService.fetchInProcess(container: context.container)
                 PrefetchService.prefetchInProcess(container: context.container)
             }
         }
