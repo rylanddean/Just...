@@ -46,6 +46,24 @@ extension IntelligenceService {
         throw IntelligenceError.unavailable
     }
 
+    // MARK: Feed Item Summary (two sentences, shown in FeedDetailView)
+
+    static func summarizeFeedItem(title: String, description: String) async throws -> String {
+        let input = description.isEmpty ? title : "\(title)\n\n\(description)"
+        let prompt = """
+        Summarize this article snippet in exactly two calm, direct sentences. \
+        No bullet points. No preamble. No "This article…" opener. \
+        Just the key idea in plain prose.
+
+        \(input.prefix(2000))
+        """
+        // Replace with LanguageModelSession when FoundationModels is available:
+        // let session = LanguageModelSession()
+        // return try await session.respond(to: prompt).content
+        _ = prompt
+        throw IntelligenceError.unavailable
+    }
+
     // MARK: Contextual Reflect Prompt
 
     static func reflectPrompt(for summary: String) async throws -> String {
@@ -62,6 +80,30 @@ extension IntelligenceService {
         // return result.question
         _ = prompt
         throw IntelligenceError.unavailable
+    }
+
+    // MARK: Article Relevance Scoring (used by RSSRecommendationEngine)
+
+    // Returns a relevance score from 0–10 for an article title against a reader profile.
+    // Profile is the newline-joined string of "title: reflection" pairs from last 30 Brain entries.
+    static func scoreRelevance(articleTitle: String, readerProfile: String) async -> Int {
+        let prompt = """
+        You are scoring how relevant an article is to a reader's interests.
+
+        Reader's interests (inferred from their reading history):
+        \(readerProfile.prefix(3000))
+
+        Article title: "\(articleTitle)"
+
+        Reply with a single integer from 0 to 10. Nothing else.
+        0 = completely irrelevant. 10 = perfectly matched.
+        """
+        // Replace with LanguageModelSession when FoundationModels is available:
+        // let session = LanguageModelSession()
+        // let response = try? await session.respond(to: prompt)
+        // return Int(response?.content.trimmingCharacters(in: .whitespaces) ?? "0") ?? 0
+        _ = prompt
+        return 5
     }
 
     // MARK: Errors

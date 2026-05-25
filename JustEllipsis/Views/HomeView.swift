@@ -5,6 +5,8 @@ struct HomeView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \QueuedLink.sortOrder) private var queue: [QueuedLink]
     @Query private var readingDays: [ReadingDay]
+    @Query private var feeds: [RSSFeed]
+    @Query private var brainEntries: [BrainEntry]
 
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
 
@@ -15,6 +17,9 @@ struct HomeView: View {
     private var streak: Int { StreakEngine.calculateStreak(from: readingDays, minReads: minReadsPerDay).current }
     private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays, minReads: minReadsPerDay) }
     private var recentActivity: [Bool] { StreakEngine.recentActivity(days: readingDays, count: 7, minReads: minReadsPerDay) }
+
+    private var picks: [QueuedLink] { queue.filter { $0.source == .aiPick } }
+    private var manual: [QueuedLink] { queue.filter { $0.source != .aiPick } }
 
     var body: some View {
         NavigationStack {
@@ -28,7 +33,52 @@ struct HomeView: View {
                         StreakHeader(streak: streak, isAtRisk: isAtRisk, recentActivity: recentActivity)
 
                         List {
-                            ForEach(queue) { link in
+                            // Picked for you section
+                            if !picks.isEmpty {
+                                Section {
+                                    if !feeds.isEmpty && brainEntries.count < 5 {
+                                        Text("Read more to improve your picks.")
+                                            .font(AppTheme.sansSerif(12))
+                                            .foregroundStyle(AppTheme.textFaint)
+                                            .listRowBackground(Color.clear)
+                                            .listRowSeparator(.hidden)
+                                            .listRowInsets(EdgeInsets(
+                                                top: 0,
+                                                leading: AppTheme.pagePadding,
+                                                bottom: 4,
+                                                trailing: AppTheme.pagePadding
+                                            ))
+                                    }
+
+                                    ForEach(picks) { link in
+                                        LinkCard(link: link) {
+                                            activeLink = link
+                                        }
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(EdgeInsets(
+                                            top: 5,
+                                            leading: AppTheme.pagePadding,
+                                            bottom: 5,
+                                            trailing: AppTheme.pagePadding
+                                        ))
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                deleteLink(link)
+                                            } label: {
+                                                Label("Remove", systemImage: "trash")
+                                            }
+                                            .tint(AppTheme.danger)
+                                        }
+                                    }
+                                } header: {
+                                    picksHeader
+                                }
+                                .listSectionSeparator(.hidden)
+                            }
+
+                            // Manual queue
+                            ForEach(manual) { link in
                                 LinkCard(link: link) {
                                     activeLink = link
                                 }
@@ -95,6 +145,27 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Picks header
+
+    private var picksHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "dot.radiowaves.left.and.right")
+                .font(.system(size: 10))
+                .foregroundStyle(AppTheme.readerAccent)
+
+            Text("FROM YOUR FEEDS")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(AppTheme.readerAccent)
+                .kerning(2)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .listRowInsets(EdgeInsets())
+        .background(AppTheme.background)
+    }
+
     // MARK: - Actions
 
     private func deleteLink(_ link: QueuedLink) {
@@ -112,11 +183,11 @@ struct HomeView: View {
             Spacer()
 
             VStack(spacing: 12) {
-                Text("Your queue is empty.")
+                Text("Nothing to read.")
                     .font(AppTheme.sansSerif(18, weight: .medium))
                     .foregroundStyle(AppTheme.heading)
 
-                Text("Add a link to start reading.")
+                Text(feeds.isEmpty ? "Add a link to start reading." : "Add a link or wait for your picks.")
                     .font(AppTheme.sansSerif(14))
                     .foregroundStyle(AppTheme.textFaint)
             }

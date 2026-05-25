@@ -12,6 +12,11 @@ struct RootView: View {
                     Label("Queue", systemImage: "list.bullet")
                 }
 
+            FeedsView()
+                .tabItem {
+                    Label("Feeds", systemImage: "dot.radiowaves.left.and.right")
+                }
+
             BrainView()
                 .tabItem {
                     Label("Brain", systemImage: "brain.head.profile")

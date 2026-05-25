@@ -36,6 +36,17 @@ struct LinkCard: View {
             .padding(AppTheme.cardPadding)
             .background(AppTheme.surface)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+            .overlay(alignment: .topTrailing) {
+                if link.source.isRSSPick {
+                    Image(systemName: "dot.radiowaves.left.and.right")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(AppTheme.background)
+                        .padding(4)
+                        .background(AppTheme.readerAccent)
+                        .clipShape(Circle())
+                        .offset(x: 5, y: -5)
+                }
+            }
         }
         .buttonStyle(.plain)
         .contextMenu {
