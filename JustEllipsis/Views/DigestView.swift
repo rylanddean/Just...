@@ -26,11 +26,17 @@ struct DigestView: View {
     }
 
     private var todayArticles: [RSSArticle] {
-        articles.filter { Calendar.current.isDateInToday($0.publishedAt) }
+        var seen = Set<String>()
+        return articles
+            .filter { Calendar.current.isDateInToday($0.publishedAt) }
+            .filter { seen.insert($0.url).inserted }
     }
 
     private var yesterdayArticles: [RSSArticle] {
-        articles.filter { Calendar.current.isDateInYesterday($0.publishedAt) }
+        var seen = Set<String>()
+        return articles
+            .filter { Calendar.current.isDateInYesterday($0.publishedAt) }
+            .filter { seen.insert($0.url).inserted }
     }
 
     // Returns nil when the Brain doesn't yet have enough signal (< 5 entries).
@@ -38,7 +44,15 @@ struct DigestView: View {
 
     private var recommendations: [RSSArticle]? {
         guard brainEntries.count >= 5 else { return nil }
-        let candidates = articles.filter { !queuedURLs.contains($0.url) && !brainURLs.contains($0.url) }
+        // Exclude anything already shown in the Today or Yesterday sections so the
+        // same article never appears in two places at once.
+        let shownURLs = Set(todayArticles.map { $0.url })
+            .union(yesterdayArticles.map { $0.url })
+        let candidates = articles.filter {
+            !queuedURLs.contains($0.url) &&
+            !brainURLs.contains($0.url) &&
+            !shownURLs.contains($0.url)
+        }
         guard !candidates.isEmpty else { return nil }
 
         let keywords = brainKeywords()

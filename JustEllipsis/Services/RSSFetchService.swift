@@ -181,13 +181,20 @@ actor RSSFetchActor {
     // MARK: - Private
 
     private func store(articles: [ParsedArticle], feedID: UUID) {
-        let descriptor = FetchDescriptor<RSSArticle>(
-            predicate: #Predicate { $0.feedID == feedID }
+        // Check existing URLs globally — not just for this feed — so the same URL
+        // syndicated by two subscribed feeds never creates duplicate RSSArticle rows.
+        let existingURLs = Set(
+            (try? modelContext.fetch(FetchDescriptor<RSSArticle>()))?.map { $0.url } ?? []
         )
-        let existing = Set((try? modelContext.fetch(descriptor))?.map { $0.url } ?? [])
+
+        // Also deduplicate within the incoming batch itself (handles malformed feeds
+        // that repeat the same <link> across multiple items).
+        var seenInBatch = Set<String>()
 
         var inserted = 0
-        for article in articles where !existing.contains(article.url) {
+        for article in articles {
+            guard !existingURLs.contains(article.url),
+                  seenInBatch.insert(article.url).inserted else { continue }
             let record = RSSArticle(
                 feedID: feedID,
                 url: article.url,

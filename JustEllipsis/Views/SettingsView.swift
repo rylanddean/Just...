@@ -8,9 +8,15 @@ struct SettingsView: View {
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
     @AppStorage(JustEllipsisApp.iCloudSyncKey) private var iCloudSyncEnabled: Bool = false
 
+    // MARK: - Dialog state
+
+    private enum DialogKind: Identifiable {
+        case clearStreak, resetEverything
+        var id: Self { self }
+    }
+
     @State private var versionTapCount = 0
-    @State private var showClearStreakDialog = false
-    @State private var showFullResetDialog = false
+    @State private var activeDialog: DialogKind? = nil
 
     private var selectedTheme: ReaderTheme {
         ReaderTheme(rawValue: themeRaw) ?? .ember
@@ -61,24 +67,27 @@ struct SettingsView: View {
         }
         .preferredColorScheme(.dark)
         .confirmationDialog(
-            "Clear streak?",
-            isPresented: $showClearStreakDialog,
-            titleVisibility: .visible
-        ) {
-            Button("Clear streak", role: .destructive) { clearStreak() }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Your reading streak and daily history will be deleted.")
-        }
-        .confirmationDialog(
-            "Reset everything?",
-            isPresented: $showFullResetDialog,
-            titleVisibility: .visible
-        ) {
-            Button("Reset everything", role: .destructive) { resetEverything() }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Your queue, Brain, streak, and feeds will be deleted. This cannot be undone.")
+            activeDialog == .clearStreak ? "Clear streak?" : "Reset everything?",
+            isPresented: Binding(get: { activeDialog != nil },
+                                 set: { if !$0 { activeDialog = nil } }),
+            titleVisibility: .visible,
+            presenting: activeDialog
+        ) { dialog in
+            switch dialog {
+            case .clearStreak:
+                Button("Clear streak", role: .destructive) { clearStreak() }
+                Button("Cancel", role: .cancel) { }
+            case .resetEverything:
+                Button("Reset everything", role: .destructive) { resetEverything() }
+                Button("Cancel", role: .cancel) { }
+            }
+        } message: { dialog in
+            switch dialog {
+            case .clearStreak:
+                Text("Your reading streak and daily history will be deleted.")
+            case .resetEverything:
+                Text("Your queue, Brain, streak, and feeds will be deleted. This cannot be undone.")
+            }
         }
     }
 
@@ -228,7 +237,7 @@ struct SettingsView: View {
                 .tracking(2)
 
             Button {
-                showFullResetDialog = true
+                activeDialog = .resetEverything
             } label: {
                 HStack {
                     Spacer()
@@ -255,7 +264,7 @@ struct SettingsView: View {
         Button {
             versionTapCount += 1
             if versionTapCount >= 10 {
-                showClearStreakDialog = true
+                activeDialog = .clearStreak
                 versionTapCount = 0
             }
         } label: {
