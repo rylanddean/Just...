@@ -9,31 +9,50 @@ struct RSSFetchService {
 
     static let backgroundTaskID = "com.rylandean.justellipsis.rssfetch"
 
+    // UserDefaults keys — read here and written by SettingsView via @AppStorage.
+    static let fetchHourKey   = "rss.fetchHour"
+    static let fetchMinuteKey = "rss.fetchMinute"
+    static let defaultFetchHour   = 7
+    static let defaultFetchMinute = 0
+
     static func scheduleNextBackgroundTask() {
+        let hour   = UserDefaults.standard.object(forKey: fetchHourKey)   as? Int ?? defaultFetchHour
+        let minute = UserDefaults.standard.object(forKey: fetchMinuteKey) as? Int ?? defaultFetchMinute
+
+        let cal = Calendar.current
+        var components = cal.dateComponents([.year, .month, .day], from: Date())
+        components.hour   = hour
+        components.minute = minute
+
         let request = BGProcessingTaskRequest(identifier: backgroundTaskID)
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = false
-        // Aim for a 7AM fetch so picks are ready when the user wakes
-        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        components.hour = 7
-        components.minute = 0
-        if let today7AM = Calendar.current.date(from: components),
-           today7AM > Date() {
-            request.earliestBeginDate = today7AM
+
+        if let todayTarget = cal.date(from: components), todayTarget > Date() {
+            // Target time is still ahead today — use it.
+            request.earliestBeginDate = todayTarget
         } else {
-            // Already past 7AM — schedule for tomorrow
-            request.earliestBeginDate = Date(timeIntervalSinceNow: 20 * 60 * 60)
+            // Already past today's target — schedule for the same time tomorrow.
+            let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date())) ?? Date()
+            var tomorrowComponents = cal.dateComponents([.year, .month, .day], from: tomorrow)
+            tomorrowComponents.hour   = hour
+            tomorrowComponents.minute = minute
+            request.earliestBeginDate = cal.date(from: tomorrowComponents)
+                ?? Date(timeIntervalSinceNow: 24 * 60 * 60)
         }
+
         try? BGTaskScheduler.shared.submit(request)
     }
 
-    // Called from in-process refresh (e.g. when user opens Feeds tab)
+    // Called from in-process refresh (e.g. when user opens Feeds tab).
+    // Pruning is intentionally omitted here — it runs once daily via performDailyJob
+    // in the background task. Running it here would delete articles older than 7 days
+    // that were just fetched, making infrequently-updated feeds appear empty.
     @MainActor
     static func fetchInProcess(container: ModelContainer) {
         Task.detached(priority: .background) {
             let actor = RSSFetchActor(modelContainer: container)
             await actor.fetchAll()
-            await actor.pruneOldArticles()
             await actor.summarizePendingArticles()
         }
     }
@@ -107,9 +126,9 @@ actor RSSFetchActor {
         }
     }
 
-    // Prune articles older than 7 days that haven't been promoted to the queue.
+    // Prune articles older than 30 days that haven't been promoted to the queue.
     func pruneOldArticles() async {
-        let cutoff = Date(timeIntervalSinceNow: -7 * 24 * 60 * 60)
+        let cutoff = Date(timeIntervalSinceNow: -30 * 24 * 60 * 60)
         let descriptor = FetchDescriptor<RSSArticle>(
             predicate: #Predicate { $0.publishedAt < cutoff && !$0.isQueued }
         )

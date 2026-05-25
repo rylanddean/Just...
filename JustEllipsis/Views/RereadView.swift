@@ -4,17 +4,16 @@ struct RereadView: View {
     let url: String
     let domain: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var appTheme
 
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
-    @State private var viewModel = ReaderViewModel()
+    private var readerTheme: ReaderTheme { ReaderTheme(rawValue: themeRaw) ?? .ember }
 
-    private var theme: ReaderTheme {
-        ReaderTheme(rawValue: themeRaw) ?? .ember
-    }
+    @State private var viewModel = ReaderViewModel()
 
     var body: some View {
         ZStack {
-            theme.bg.ignoresSafeArea()
+            appTheme.background.ignoresSafeArea()
 
             if viewModel.isLoading {
                 loadingView
@@ -27,7 +26,7 @@ struct RereadView: View {
         .task {
             await viewModel.loadURL(url)
         }
-        .preferredColorScheme(theme.colorScheme)
+        .preferredColorScheme(appTheme.colorScheme)
     }
 
     // MARK: - Subviews
@@ -35,10 +34,10 @@ struct RereadView: View {
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .tint(theme.accent)
+                .tint(appTheme.accent)
             Text("Fetching article…")
                 .font(AppTheme.sansSerif(13))
-                .foregroundStyle(theme.text.opacity(0.5))
+                .foregroundStyle(appTheme.text.opacity(0.5))
         }
     }
 
@@ -48,7 +47,7 @@ struct RereadView: View {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
                 }
                 .buttonStyle(.plain)
 
@@ -57,11 +56,11 @@ struct RereadView: View {
                 VStack(spacing: 1) {
                     Text(content.domain)
                         .font(AppTheme.sansSerif(12, weight: .medium))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
 
                     Text("\(content.estimatedReadingMinutes) min read")
                         .font(AppTheme.sansSerif(10))
-                        .foregroundStyle(theme.text.opacity(0.3))
+                        .foregroundStyle(appTheme.text.opacity(0.3))
                 }
 
                 Spacer()
@@ -71,21 +70,21 @@ struct RereadView: View {
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 13))
-                        .foregroundStyle(theme.text.opacity(0.4))
+                        .foregroundStyle(appTheme.text.opacity(0.4))
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 12)
-            .background(theme.bg)
+            .background(appTheme.background)
 
             Rectangle()
-                .fill(theme.text.opacity(0.08))
+                .fill(appTheme.text.opacity(0.08))
                 .frame(height: 1)
 
             ReaderWebView(
                 html: content.body,
-                theme: theme,
+                theme: readerTheme,
                 onScrollProgress: { _ in },
                 onNearBottom: { _ in },
                 onOverScrollDelta: { _ in },
@@ -100,7 +99,7 @@ struct RereadView: View {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
                 }
                 .buttonStyle(.plain)
 
@@ -108,7 +107,7 @@ struct RereadView: View {
 
                 Text(domain)
                     .font(AppTheme.sansSerif(12, weight: .medium))
-                    .foregroundStyle(theme.text.opacity(0.4))
+                    .foregroundStyle(appTheme.text.opacity(0.4))
 
                 Spacer()
 
@@ -117,45 +116,45 @@ struct RereadView: View {
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 14))
-                        .foregroundStyle(theme.text.opacity(0.4))
+                        .foregroundStyle(appTheme.text.opacity(0.4))
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 12)
-            .background(theme.bg)
+            .background(appTheme.background)
 
             Rectangle()
-                .fill(theme.text.opacity(0.08))
+                .fill(appTheme.text.opacity(0.08))
                 .frame(height: 1)
 
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "exclamationmark.circle")
                     .font(.system(size: 15))
-                    .foregroundStyle(theme.text.opacity(0.35))
+                    .foregroundStyle(appTheme.text.opacity(0.35))
                     .padding(.top, 1)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Couldn't load this link.")
                         .font(AppTheme.sansSerif(14, weight: .medium))
-                        .foregroundStyle(theme.heading)
+                        .foregroundStyle(appTheme.heading)
 
                     Text(friendlyErrorMessage(for: error))
                         .font(AppTheme.sansSerif(13))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
             }
             .padding(AppTheme.pagePadding)
-            .background(theme.text.opacity(0.05))
+            .background(appTheme.text.opacity(0.05))
 
             Button("Try again") {
                 Task { await viewModel.loadURL(url) }
             }
             .font(AppTheme.sansSerif(14, weight: .medium))
-            .foregroundStyle(theme.accent)
+            .foregroundStyle(appTheme.accent)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.top, 20)

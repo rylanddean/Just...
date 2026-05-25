@@ -4,6 +4,8 @@ struct LinkCard: View {
     let link: QueuedLink
     let onTap: () -> Void
 
+    @Environment(\.appTheme) private var appTheme
+
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .center, spacing: 12) {
@@ -12,13 +14,13 @@ struct LinkCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(link.title ?? link.url)
                         .font(AppTheme.sansSerif(15, weight: .medium))
-                        .foregroundStyle(AppTheme.heading)
+                        .foregroundStyle(appTheme.heading)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
 
                     Text(link.domain ?? domainFromURL(link.url))
                         .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                 }
 
                 Spacer()
@@ -26,23 +28,23 @@ struct LinkCard: View {
                 if link.prefetchState == .invalid {
                     Image(systemName: "exclamationmark.circle")
                         .font(.system(size: 13))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                 }
             }
             .padding(AppTheme.cardPadding)
-            .background(AppTheme.surface)
+            .background(appTheme.surface)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
             .overlay(alignment: .topTrailing) {
                 if link.source.isRSSPick {
                     Image(systemName: "dot.radiowaves.left.and.right")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(AppTheme.background)
+                        .foregroundStyle(appTheme.background)
                         .padding(4)
-                        .background(AppTheme.readerAccent)
+                        .background(appTheme.accent)
                         .clipShape(Circle())
                         .offset(x: 5, y: -5)
                 }
@@ -63,4 +65,3 @@ struct LinkCard: View {
         return ContentFetcher.extractDomain(from: url)
     }
 }
-

@@ -5,11 +5,13 @@ struct StreakHeader: View {
     let isAtRisk: Bool
     let recentActivity: [Bool]
 
+    @Environment(\.appTheme) private var appTheme
+
     var body: some View {
         HStack(alignment: .center, spacing: 6) {
             Text(streak > 0 ? "\(streak)" : "—")
                 .font(AppTheme.sansSerif(42, weight: .semibold))
-                .foregroundStyle(isAtRisk && streak > 0 ? AppTheme.danger : AppTheme.heading)
+                .foregroundStyle(isAtRisk && streak > 0 ? AppTheme.danger : appTheme.heading)
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .animation(.spring(duration: 0.4), value: streak)
@@ -17,7 +19,7 @@ struct StreakHeader: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("day streak")
                     .font(AppTheme.sansSerif(13))
-                    .foregroundStyle(AppTheme.textFaint)
+                    .foregroundStyle(appTheme.textFaint)
 
                 if isAtRisk && streak > 0 {
                     Text("read today to keep it")
@@ -47,5 +49,5 @@ struct StreakHeader: View {
         StreakHeader(streak: 0, isAtRisk: false,
                     recentActivity: [false, false, false, false, false, false, false])
     }
-    .background(AppTheme.background)
+    .background(AppTheme().background)
 }

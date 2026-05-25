@@ -4,7 +4,8 @@ struct CountdownRing: View {
     let total: Int
     let remaining: Int
     let isPaused: Bool
-    var accent: Color = AppTheme.readerAccent
+
+    @Environment(\.appTheme) private var appTheme
 
     private var fraction: Double {
         guard total > 0 else { return 0 }
@@ -15,13 +16,13 @@ struct CountdownRing: View {
         ZStack {
             // Track
             Circle()
-                .stroke(AppTheme.separator, lineWidth: 3)
+                .stroke(appTheme.separator, lineWidth: 3)
 
             // Active arc
             Circle()
                 .trim(from: 0, to: fraction)
                 .stroke(
-                    isPaused ? accent.opacity(0.4) : accent,
+                    isPaused ? appTheme.accent.opacity(0.4) : appTheme.accent,
                     style: StrokeStyle(lineWidth: 3, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -30,7 +31,7 @@ struct CountdownRing: View {
             // Seconds label
             Text(isPaused ? "…" : "\(remaining)")
                 .font(AppTheme.sansSerif(16, weight: .medium))
-                .foregroundStyle(fraction < 0.2 ? AppTheme.danger : AppTheme.textFaint)
+                .foregroundStyle(fraction < 0.2 ? AppTheme.danger : appTheme.textFaint)
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .animation(.easeInOut(duration: 0.3), value: isPaused)
@@ -47,5 +48,5 @@ struct CountdownRing: View {
         CountdownRing(total: 60, remaining: 30, isPaused: true)
     }
     .padding()
-    .background(AppTheme.background)
+    .background(AppTheme().background)
 }

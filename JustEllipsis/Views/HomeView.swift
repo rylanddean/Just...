@@ -3,6 +3,7 @@ import SwiftData
 
 struct HomeView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.appTheme) private var appTheme
     @Query(sort: \QueuedLink.sortOrder) private var queue: [QueuedLink]
     @Query private var readingDays: [ReadingDay]
     @Query private var feeds: [RSSFeed]
@@ -24,7 +25,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppTheme.background.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 if queue.isEmpty {
                     emptyState
@@ -39,7 +40,7 @@ struct HomeView: View {
                                     if !feeds.isEmpty && brainEntries.count < 5 {
                                         Text("Read more to improve your picks.")
                                             .font(AppTheme.sansSerif(12))
-                                            .foregroundStyle(AppTheme.textFaint)
+                                            .foregroundStyle(appTheme.textFaint)
                                             .listRowBackground(Color.clear)
                                             .listRowSeparator(.hidden)
                                             .listRowInsets(EdgeInsets(
@@ -117,7 +118,7 @@ struct HomeView: View {
                     } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 16))
-                            .foregroundStyle(AppTheme.accent)
+                            .foregroundStyle(appTheme.accent)
                     }
                 }
 
@@ -127,12 +128,12 @@ struct HomeView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(AppTheme.accent)
+                            .foregroundStyle(appTheme.accent)
                     }
                 }
             }
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
         }
         .sheet(isPresented: $showAddLink) {
             AddLinkView()
@@ -151,11 +152,11 @@ struct HomeView: View {
         HStack(spacing: 6) {
             Image(systemName: "dot.radiowaves.left.and.right")
                 .font(.system(size: 10))
-                .foregroundStyle(AppTheme.readerAccent)
+                .foregroundStyle(appTheme.accent)
 
             Text("FROM YOUR FEEDS")
                 .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(AppTheme.readerAccent)
+                .foregroundStyle(appTheme.accent)
                 .kerning(2)
         }
         .padding(.horizontal, AppTheme.pagePadding)
@@ -163,13 +164,12 @@ struct HomeView: View {
         .padding(.bottom, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .listRowInsets(EdgeInsets())
-        .background(AppTheme.background)
+        .background(appTheme.background)
     }
 
     // MARK: - Actions
 
     private func deleteLink(_ link: QueuedLink) {
-        // Reset the RSS article's queued flag so it can be re-added from the feed.
         let url = link.url
         let descriptor = FetchDescriptor<RSSArticle>(
             predicate: #Predicate { $0.url == url }
@@ -193,11 +193,11 @@ struct HomeView: View {
             VStack(spacing: 12) {
                 Text("Nothing to read.")
                     .font(AppTheme.sansSerif(18, weight: .medium))
-                    .foregroundStyle(AppTheme.heading)
+                    .foregroundStyle(appTheme.heading)
 
                 Text(feeds.isEmpty ? "Add a link to start reading." : "Add a link or wait for your picks.")
                     .font(AppTheme.sansSerif(14))
-                    .foregroundStyle(AppTheme.textFaint)
+                    .foregroundStyle(appTheme.textFaint)
             }
 
             Spacer()
@@ -209,11 +209,11 @@ struct HomeView: View {
                     Spacer()
                     Text("Add a link")
                         .font(AppTheme.sansSerif(15, weight: .semibold))
-                        .foregroundStyle(AppTheme.background)
+                        .foregroundStyle(appTheme.background)
                     Spacer()
                 }
                 .frame(height: 48)
-                .background(AppTheme.accent)
+                .background(appTheme.accent)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)

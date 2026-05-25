@@ -5,6 +5,7 @@ struct FeedDirectoryView: View {
     let onSubscribe: (FeedDirectoryItem) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var appTheme
     @State private var selectedCategory: String = "All"
     @State private var searchText = ""
 
@@ -34,7 +35,7 @@ struct FeedDirectoryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppTheme.background.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     categoryPicker
@@ -44,7 +45,7 @@ struct FeedDirectoryView: View {
                         Spacer()
                         Text("Nothing here.")
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                         Spacer()
                     } else {
                         List {
@@ -78,11 +79,11 @@ struct FeedDirectoryView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                        .foregroundStyle(AppTheme.accent)
+                        .foregroundStyle(appTheme.accent)
                 }
             }
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
         }
     }
 
@@ -97,13 +98,13 @@ struct FeedDirectoryView: View {
                     } label: {
                         Text(category)
                             .font(AppTheme.sansSerif(13, weight: selectedCategory == category ? .semibold : .regular))
-                            .foregroundStyle(selectedCategory == category ? AppTheme.background : AppTheme.textFaint)
+                            .foregroundStyle(selectedCategory == category ? appTheme.background : appTheme.textFaint)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
                             .background(
                                 selectedCategory == category
-                                    ? AppTheme.readerAccent
-                                    : AppTheme.surface
+                                    ? appTheme.accent
+                                    : appTheme.surface
                             )
                             .clipShape(Capsule())
                     }
@@ -122,6 +123,7 @@ private struct DirectoryRow: View {
     let isSubscribed: Bool
     let onSubscribe: () -> Void
 
+    @Environment(\.appTheme) private var appTheme
     @State private var justSubscribed = false
 
     var body: some View {
@@ -129,12 +131,12 @@ private struct DirectoryRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
                     .font(AppTheme.sansSerif(15, weight: .medium))
-                    .foregroundStyle(AppTheme.heading)
+                    .foregroundStyle(appTheme.heading)
                     .lineLimit(1)
 
                 Text(item.description)
                     .font(AppTheme.sansSerif(12))
-                    .foregroundStyle(AppTheme.textFaint)
+                    .foregroundStyle(appTheme.textFaint)
                     .lineLimit(2)
             }
 
@@ -143,7 +145,7 @@ private struct DirectoryRow: View {
             if isSubscribed || justSubscribed {
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(AppTheme.readerAccent)
+                    .foregroundStyle(appTheme.accent)
                     .frame(width: 32, height: 32)
             } else {
                 Button {
@@ -152,19 +154,19 @@ private struct DirectoryRow: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppTheme.heading)
+                        .foregroundStyle(appTheme.heading)
                         .frame(width: 32, height: 32)
-                        .background(AppTheme.surface)
+                        .background(appTheme.surface)
                         .clipShape(Circle())
                         .overlay(
-                            Circle().stroke(AppTheme.separator, lineWidth: 1)
+                            Circle().stroke(appTheme.separator, lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(AppTheme.cardPadding)
-        .background(AppTheme.surface)
+        .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
     }
 }

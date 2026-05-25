@@ -6,6 +6,9 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppRouter.self) private var router
 
+    @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
+    private var activeTheme: AppTheme { AppTheme(theme: ReaderTheme(rawValue: themeRaw) ?? .ember) }
+
     var body: some View {
         @Bindable var router = router
         TabView(selection: $router.selectedTab) {
@@ -33,8 +36,9 @@ struct RootView: View {
                     Label("Brain", systemImage: "brain.head.profile")
                 }
         }
-        .tint(AppTheme.accent)
-        .preferredColorScheme(.dark)
+        .tint(activeTheme.accent)
+        .preferredColorScheme(activeTheme.colorScheme)
+        .environment(\.appTheme, activeTheme)
         .task {
             processPendingLinks()
             RSSFetchService.fetchInProcess(container: context.container)

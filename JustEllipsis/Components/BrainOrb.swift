@@ -5,6 +5,7 @@ struct BrainOrb: View {
     let entryCount: Int
     let progress: Double    // 0.0–1.0
 
+    @Environment(\.appTheme) private var appTheme
     @State private var pulse: Bool = false
 
     var body: some View {
@@ -29,7 +30,7 @@ struct BrainOrb: View {
 
                 // Progress ring
                 Circle()
-                    .stroke(AppTheme.separator, lineWidth: 2)
+                    .stroke(appTheme.separator, lineWidth: 2)
                     .frame(width: 108, height: 108)
 
                 Circle()
@@ -61,13 +62,13 @@ struct BrainOrb: View {
                 VStack(spacing: 2) {
                     Text("\(entryCount)")
                         .font(AppTheme.sansSerif(28, weight: .semibold))
-                        .foregroundStyle(AppTheme.heading)
+                        .foregroundStyle(appTheme.heading)
                         .monospacedDigit()
                         .contentTransition(.numericText())
 
                     Text(entryCount == 1 ? "entry" : "entries")
                         .font(AppTheme.sansSerif(10))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                 }
             }
 
@@ -85,7 +86,7 @@ struct BrainOrb: View {
         switch rank {
         case .curious:  return Color(hex: "#7EB8C9")
         case .reader:   return Color(hex: "#78B87A")
-        case .thinker:  return AppTheme.accent
+        case .thinker:  return Color.white
         case .scholar:  return Color(hex: "#C49A6C")
         case .polymath: return Color(hex: "#D4ADDB")
         case .luminary: return Color(hex: "#F5ECD7")
@@ -95,7 +96,7 @@ struct BrainOrb: View {
 
 #Preview {
     ZStack {
-        AppTheme.background.ignoresSafeArea()
+        AppTheme().background.ignoresSafeArea()
         BrainOrb(rank: .thinker, entryCount: 142, progress: 0.42)
     }
 }

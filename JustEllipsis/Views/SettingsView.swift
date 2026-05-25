@@ -4,9 +4,12 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Environment(\.appTheme) private var appTheme
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
     @AppStorage(JustEllipsisApp.iCloudSyncKey) private var iCloudSyncEnabled: Bool = false
+    @AppStorage("rss.fetchHour")   private var fetchHour:   Int = RSSFetchService.defaultFetchHour
+    @AppStorage("rss.fetchMinute") private var fetchMinute: Int = RSSFetchService.defaultFetchMinute
 
     // MARK: - Dialog state
 
@@ -37,12 +40,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppTheme.background.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 32) {
                         syncSection
                         streakSection
+                        feedsSection
                         themeSection
                         dangerSection
                         versionFooter
@@ -59,13 +63,13 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                         .font(AppTheme.sansSerif(15))
-                        .foregroundStyle(AppTheme.accent)
+                        .foregroundStyle(appTheme.accent)
                 }
             }
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
+            .toolbarBackground(appTheme.background, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(appTheme.colorScheme)
         .confirmationDialog(
             activeDialog == .clearStreak ? "Clear streak?" : "Reset everything?",
             isPresented: Binding(get: { activeDialog != nil },
@@ -97,7 +101,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("SYNC")
                 .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(AppTheme.textFaint)
+                .foregroundStyle(appTheme.textFaint)
                 .tracking(2)
 
             if iCloudAvailable {
@@ -106,23 +110,23 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Sync with iCloud")
                                 .font(AppTheme.sansSerif(15))
-                                .foregroundStyle(AppTheme.heading)
+                                .foregroundStyle(appTheme.heading)
                             Text("Your queue, Brain, and streak sync across devices on this Apple ID.")
                                 .font(AppTheme.sansSerif(12))
-                                .foregroundStyle(AppTheme.textFaint)
+                                .foregroundStyle(appTheme.textFaint)
                         }
 
                         Spacer()
 
                         Toggle("", isOn: $iCloudSyncEnabled)
                             .labelsHidden()
-                            .tint(AppTheme.readerAccent)
+                            .tint(appTheme.accent)
                     }
 
                     if iCloudSyncEnabled {
                         Text("Active the next time you open Just…")
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.readerAccent.opacity(0.7))
+                            .foregroundStyle(appTheme.accent.opacity(0.7))
                     }
                 }
             } else {
@@ -130,10 +134,10 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("iCloud is off.")
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.heading)
+                            .foregroundStyle(appTheme.heading)
                         Text("Enable iCloud Drive in Settings to sync.")
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                     }
 
                     Spacer()
@@ -144,7 +148,7 @@ struct SettingsView: View {
                         }
                     }
                     .font(AppTheme.sansSerif(13))
-                    .foregroundStyle(AppTheme.readerAccent)
+                    .foregroundStyle(appTheme.accent)
                 }
             }
         }
@@ -156,17 +160,17 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("STREAK")
                 .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(AppTheme.textFaint)
+                .foregroundStyle(appTheme.textFaint)
                 .tracking(2)
 
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Reads per day")
                         .font(AppTheme.sansSerif(15))
-                        .foregroundStyle(AppTheme.heading)
+                        .foregroundStyle(appTheme.heading)
                     Text("Minimum to count the day.")
                         .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                 }
 
                 Spacer()
@@ -177,14 +181,14 @@ struct SettingsView: View {
                     } label: {
                         Image(systemName: "minus")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(minReadsPerDay > 1 ? AppTheme.accent : AppTheme.textFaint)
+                            .foregroundStyle(minReadsPerDay > 1 ? appTheme.accent : appTheme.textFaint)
                             .frame(width: 36, height: 36)
                     }
                     .buttonStyle(.plain)
 
                     Text("\(minReadsPerDay)")
                         .font(AppTheme.sansSerif(17, weight: .semibold))
-                        .foregroundStyle(AppTheme.heading)
+                        .foregroundStyle(appTheme.heading)
                         .monospacedDigit()
                         .frame(minWidth: 28, alignment: .center)
 
@@ -193,13 +197,59 @@ struct SettingsView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(minReadsPerDay < 5 ? AppTheme.accent : AppTheme.textFaint)
+                            .foregroundStyle(minReadsPerDay < 5 ? appTheme.accent : appTheme.textFaint)
                             .frame(width: 36, height: 36)
                     }
                     .buttonStyle(.plain)
                 }
-                .background(AppTheme.surface)
+                .background(appTheme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+
+    // MARK: - Feeds Section
+
+    /// A Date binding that maps hour/minute AppStorage ints to/from a Date for DatePicker.
+    private var fetchTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                comps.hour   = fetchHour
+                comps.minute = fetchMinute
+                return Calendar.current.date(from: comps) ?? Date()
+            },
+            set: { date in
+                let comps  = Calendar.current.dateComponents([.hour, .minute], from: date)
+                fetchHour   = comps.hour   ?? RSSFetchService.defaultFetchHour
+                fetchMinute = comps.minute ?? RSSFetchService.defaultFetchMinute
+                RSSFetchService.scheduleNextBackgroundTask()
+            }
+        )
+    }
+
+    private var feedsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("FEEDS")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Daily fetch")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(appTheme.heading)
+                    Text("When background refresh runs.")
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+
+                Spacer()
+
+                DatePicker("", selection: fetchTimeBinding, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
             }
         }
     }
@@ -208,9 +258,9 @@ struct SettingsView: View {
 
     private var themeSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("READER")
+            Text("APPEARANCE")
                 .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(AppTheme.textFaint)
+                .foregroundStyle(appTheme.textFaint)
                 .tracking(2)
 
             LazyVGrid(
@@ -233,7 +283,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("DANGER")
                 .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(AppTheme.textFaint)
+                .foregroundStyle(appTheme.textFaint)
                 .tracking(2)
 
             Button {
@@ -270,7 +320,7 @@ struct SettingsView: View {
         } label: {
             Text("Just… \(appVersion) (\(buildNumber))")
                 .font(AppTheme.sansSerif(12))
-                .foregroundStyle(AppTheme.textFaint)
+                .foregroundStyle(appTheme.textFaint)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 8)
         }
@@ -312,6 +362,8 @@ private struct ThemeTile: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @Environment(\.appTheme) private var appTheme
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 0) {
@@ -319,7 +371,7 @@ private struct ThemeTile: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.cardRadius)
                             .stroke(
-                                isSelected ? AppTheme.readerAccent : AppTheme.separator,
+                                isSelected ? appTheme.accent : appTheme.separator,
                                 lineWidth: isSelected ? 2 : 1
                             )
                     )
@@ -327,12 +379,12 @@ private struct ThemeTile: View {
                 HStack {
                     Text(theme.displayName)
                         .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(isSelected ? AppTheme.heading : AppTheme.textFaint)
+                        .foregroundStyle(isSelected ? appTheme.heading : appTheme.textFaint)
                     Spacer()
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(AppTheme.readerAccent)
+                            .foregroundStyle(appTheme.accent)
                     }
                 }
                 .padding(.horizontal, 4)

@@ -6,21 +6,20 @@ struct ReaderView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.appTheme) private var appTheme
 
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
+    private var readerTheme: ReaderTheme { ReaderTheme(rawValue: themeRaw) ?? .ember }
+
     @State private var viewModel = ReaderViewModel()
     @State private var pendingEntry: BrainEntry?
     @State private var isNearBottom = false
     @State private var overScrollDelta: CGFloat = 0
 
-    private var theme: ReaderTheme {
-        ReaderTheme(rawValue: themeRaw) ?? .ember
-    }
-
     var body: some View {
         reflectPresentation {
             ZStack {
-                theme.bg.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 if viewModel.isLoading {
                     loadingView
@@ -33,7 +32,7 @@ struct ReaderView: View {
             .task {
                 await viewModel.load(link: link, context: context)
             }
-            .preferredColorScheme(theme.colorScheme)
+            .preferredColorScheme(appTheme.colorScheme)
         }
     }
 
@@ -47,7 +46,7 @@ struct ReaderView: View {
                     reflectView(for: entry)
                         .presentationDetents([.medium, .large])
                         .frame(maxWidth: 540)
-                        .presentationBackground(theme.bg)
+                        .presentationBackground(appTheme.background)
                 }
         } else {
             content()
@@ -58,7 +57,7 @@ struct ReaderView: View {
     }
 
     private func reflectView(for entry: BrainEntry) -> some View {
-        ReflectView(entry: entry, link: link, theme: theme, prompt: viewModel.generatedPrompt, onComplete: {
+        ReflectView(entry: entry, link: link, prompt: viewModel.generatedPrompt, onComplete: {
             viewModel.markAsRead(link: link, context: context)
             updateReadingDay()
             dismiss()
@@ -70,21 +69,20 @@ struct ReaderView: View {
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .tint(theme.accent)
+                .tint(appTheme.accent)
             Text("Fetching article…")
                 .font(AppTheme.sansSerif(13))
-                .foregroundStyle(theme.text.opacity(0.5))
+                .foregroundStyle(appTheme.text.opacity(0.5))
         }
     }
 
     private func errorBannerView(_ error: Error) -> some View {
         VStack(spacing: 0) {
-            // Chrome — identical structure to articleView so dismiss is always reachable
             HStack {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
                 }
                 .buttonStyle(.plain)
 
@@ -92,7 +90,7 @@ struct ReaderView: View {
 
                 Text(link.domain ?? domainFromURL(link.url))
                     .font(AppTheme.sansSerif(12, weight: .medium))
-                    .foregroundStyle(theme.text.opacity(0.4))
+                    .foregroundStyle(appTheme.text.opacity(0.4))
 
                 Spacer()
 
@@ -101,46 +99,45 @@ struct ReaderView: View {
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 14))
-                        .foregroundStyle(theme.text.opacity(0.4))
+                        .foregroundStyle(appTheme.text.opacity(0.4))
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 12)
-            .background(theme.bg)
+            .background(appTheme.background)
 
             Rectangle()
-                .fill(theme.text.opacity(0.08))
+                .fill(appTheme.text.opacity(0.08))
                 .frame(height: 1)
 
-            // Error banner
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "exclamationmark.circle")
                     .font(.system(size: 15))
-                    .foregroundStyle(theme.text.opacity(0.35))
+                    .foregroundStyle(appTheme.text.opacity(0.35))
                     .padding(.top, 1)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Couldn't load this link.")
                         .font(AppTheme.sansSerif(14, weight: .medium))
-                        .foregroundStyle(theme.heading)
+                        .foregroundStyle(appTheme.heading)
 
                     Text(friendlyErrorMessage(for: error))
                         .font(AppTheme.sansSerif(13))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
             }
             .padding(AppTheme.pagePadding)
-            .background(theme.text.opacity(0.05))
+            .background(appTheme.text.opacity(0.05))
 
             Button("Try again") {
                 Task { await viewModel.load(link: link, context: context) }
             }
             .font(AppTheme.sansSerif(14, weight: .medium))
-            .foregroundStyle(theme.accent)
+            .foregroundStyle(appTheme.accent)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.top, 20)
@@ -184,12 +181,11 @@ struct ReaderView: View {
 
     private func articleView(_ content: StrippedContent) -> some View {
         VStack(spacing: 0) {
-            // Top chrome: domain + read time, muted fallback Done
             HStack {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
                 }
                 .buttonStyle(.plain)
 
@@ -198,11 +194,11 @@ struct ReaderView: View {
                 VStack(spacing: 1) {
                     Text(content.domain)
                         .font(AppTheme.sansSerif(12, weight: .medium))
-                        .foregroundStyle(theme.text.opacity(0.5))
+                        .foregroundStyle(appTheme.text.opacity(0.5))
 
                     Text("\(content.estimatedReadingMinutes) min read")
                         .font(AppTheme.sansSerif(10))
-                        .foregroundStyle(theme.text.opacity(0.3))
+                        .foregroundStyle(appTheme.text.opacity(0.3))
                 }
 
                 Spacer()
@@ -213,26 +209,25 @@ struct ReaderView: View {
                     } label: {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 13))
-                            .foregroundStyle(theme.text.opacity(0.4))
+                            .foregroundStyle(appTheme.text.opacity(0.4))
                     }
                     .buttonStyle(.plain)
 
-                    // Gesture is the primary path — button is muted for accessibility
                     Button("Done") {
                         openReflect(content: content)
                     }
                     .font(AppTheme.sansSerif(14))
-                    .foregroundStyle(theme.text.opacity(0.5))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
                 }
             }
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 12)
-            .background(theme.bg)
+            .background(appTheme.background)
 
             // Progress indicator
             GeometryReader { geo in
                 Rectangle()
-                    .fill(theme.accent.opacity(0.4))
+                    .fill(appTheme.accent.opacity(0.4))
                     .frame(width: geo.size.width * viewModel.readProgress, height: 1)
                     .animation(.linear(duration: 0.1), value: viewModel.readProgress)
             }
@@ -242,7 +237,7 @@ struct ReaderView: View {
             ZStack(alignment: .bottom) {
                 ReaderWebView(
                     html: content.body,
-                    theme: theme,
+                    theme: readerTheme,
                     onScrollProgress: { progress in
                         viewModel.readProgress = progress
                     },
@@ -277,16 +272,16 @@ struct ReaderView: View {
         VStack(spacing: 8) {
             Image(systemName: "chevron.up")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(theme.accent)
+                .foregroundStyle(appTheme.accent)
                 .offset(y: -min(overScrollDelta / 80 * 10, 10))
 
             Text("reflect")
                 .font(AppTheme.sansSerif(10))
-                .foregroundStyle(theme.text.opacity(0.5))
+                .foregroundStyle(appTheme.text.opacity(0.5))
                 .tracking(2)
 
             Rectangle()
-                .fill(theme.accent.opacity(0.45))
+                .fill(appTheme.accent.opacity(0.45))
                 .frame(height: 1)
         }
         .padding(.top, 20)
@@ -294,7 +289,7 @@ struct ReaderView: View {
         .frame(maxWidth: .infinity)
         .background {
             LinearGradient(
-                colors: [.clear, theme.bg.opacity(0.96)],
+                colors: [.clear, appTheme.background.opacity(0.96)],
                 startPoint: .top,
                 endPoint: .bottom
             )

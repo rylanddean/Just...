@@ -4,6 +4,7 @@ import SwiftData
 struct AddLinkView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var appTheme
     @Query(sort: \QueuedLink.sortOrder, order: .reverse) private var existingLinks: [QueuedLink]
 
     @State private var urlText: String = ""
@@ -17,13 +18,13 @@ struct AddLinkView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Paste a link")
                         .font(AppTheme.sansSerif(13))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
 
                     HStack(spacing: 10) {
                         TextField("https://…", text: $urlText)
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.heading)
-                            .tint(AppTheme.accent)
+                            .foregroundStyle(appTheme.heading)
+                            .tint(appTheme.accent)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
                             .keyboardType(.URL)
@@ -37,17 +38,17 @@ struct AddLinkView: View {
                                 error = nil
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(AppTheme.textFaint)
+                                    .foregroundStyle(appTheme.textFaint)
                             }
                             .buttonStyle(.plain)
                         }
                     }
                     .padding(12)
-                    .background(AppTheme.surface)
+                    .background(appTheme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay {
                         RoundedRectangle(cornerRadius: 10)
-                            .stroke(error != nil ? AppTheme.danger.opacity(0.6) : AppTheme.separator)
+                            .stroke(error != nil ? AppTheme.danger.opacity(0.6) : appTheme.separator)
                     }
 
                     if let error {
@@ -63,16 +64,16 @@ struct AddLinkView: View {
                         Spacer()
                         if isValidating {
                             ProgressView()
-                                .tint(AppTheme.background)
+                                .tint(appTheme.background)
                         } else {
                             Text("Add to queue")
                                 .font(AppTheme.sansSerif(15, weight: .semibold))
-                                .foregroundStyle(AppTheme.background)
+                                .foregroundStyle(appTheme.background)
                         }
                         Spacer()
                     }
                     .frame(height: 48)
-                    .background(AppTheme.accent)
+                    .background(appTheme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .disabled(urlText.trimmingCharacters(in: .whitespaces).isEmpty || isValidating)
@@ -82,19 +83,19 @@ struct AddLinkView: View {
                 Spacer()
             }
             .padding(AppTheme.pagePadding)
-            .background(AppTheme.background)
+            .background(appTheme.background)
             .navigationTitle("Add link")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                 }
             }
             .onAppear { isFocused = true }
         }
         .presentationDetents([.medium])
-        .presentationBackground(AppTheme.background)
+        .presentationBackground(appTheme.background)
     }
 
     // MARK: - Actions
@@ -118,8 +119,6 @@ struct AddLinkView: View {
         let link = QueuedLink(url: urlString, sortOrder: nextOrder)
         context.insert(link)
 
-        // Prefetch metadata — capture only the URL string so we don't send
-        // the @Model object across the actor boundary.
         let capturedURL = urlString
         Task {
             if let result = try? await ContentFetcher.fetch(urlString: capturedURL) {

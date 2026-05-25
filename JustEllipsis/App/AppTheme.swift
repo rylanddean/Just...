@@ -1,24 +1,40 @@
 import SwiftUI
 
-enum AppTheme {
+// MARK: - AppTheme
 
-    // MARK: - Colours
+struct AppTheme {
 
-    static let background   = Color(hex: "#0C0A08")
-    static let text         = Color(hex: "#C8B898")
-    static let textFaint    = Color(hex: "#C8B898").opacity(0.45)
-    static let heading      = Color(hex: "#F5ECD7")
-    static let accent       = Color(hex: "#FFFFFF")
-    static let accentFaint  = Color(hex: "#FFFFFF").opacity(0.18)
+    // MARK: Theme-derived colours (vary with the selected palette)
 
-    // Used inside the reader/reflect experience only
-    static let readerAccent      = Color(hex: "#E8A83E")
-    static let readerAccentFaint = Color(hex: "#E8A83E").opacity(0.18)
-    static let surface      = Color(hex: "#161310")
-    static let separator    = Color(hex: "#C8B898").opacity(0.12)
-    static let danger       = Color(hex: "#D0553A")
+    let background:  Color
+    let surface:     Color
+    let text:        Color
+    let textFaint:   Color
+    let heading:     Color
+    let accent:      Color
+    let accentFaint: Color
+    let separator:   Color
+    let colorScheme: ColorScheme
+    let isLight:     Bool
 
-    // MARK: - Typography
+    init(theme: ReaderTheme = .ember) {
+        background  = theme.bg
+        surface     = theme.surface
+        text        = theme.text
+        textFaint   = theme.text.opacity(0.45)
+        heading     = theme.heading
+        accent      = theme.accent
+        accentFaint = theme.accent.opacity(0.18)
+        separator   = theme.text.opacity(0.12)
+        colorScheme = theme.colorScheme
+        isLight     = theme.isLight
+    }
+
+    // MARK: Fixed colours (not theme-dependent)
+
+    static let danger = Color(hex: "#D0553A")
+
+    // MARK: Typography
 
     static func serif(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .custom("Georgia", size: size).weight(weight)
@@ -28,14 +44,27 @@ enum AppTheme {
         .system(size: size, weight: weight, design: .default)
     }
 
-    // MARK: - Spacing
+    // MARK: Spacing
 
     static let pagePadding: CGFloat = 20
-    static let cardRadius: CGFloat  = 14
+    static let cardRadius:  CGFloat = 14
     static let cardPadding: CGFloat = 16
 }
 
-// MARK: - Hex Colour Init
+// MARK: - Environment
+
+private struct AppThemeKey: EnvironmentKey {
+    static let defaultValue = AppTheme()
+}
+
+extension EnvironmentValues {
+    var appTheme: AppTheme {
+        get { self[AppThemeKey.self] }
+        set { self[AppThemeKey.self] = newValue }
+    }
+}
+
+// MARK: - Hex colour init
 
 extension Color {
     init(hex: String) {

@@ -3,6 +3,7 @@ import SwiftData
 
 struct FeedsView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.appTheme) private var appTheme
     @Environment(AppRouter.self) private var router
     @Query(sort: \RSSFeed.title) private var feeds: [RSSFeed]
 
@@ -19,7 +20,7 @@ struct FeedsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppTheme.background.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 if feeds.isEmpty {
                     emptyState
@@ -36,7 +37,7 @@ struct FeedsView: View {
                     } label: {
                         Text("Browse")
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.accent)
+                            .foregroundStyle(appTheme.accent)
                     }
                 }
 
@@ -49,12 +50,12 @@ struct FeedsView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(AppTheme.accent)
+                            .foregroundStyle(appTheme.accent)
                     }
                 }
             }
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
         }
         .sheet(isPresented: $showAddByURL) {
             addByURLSheet
@@ -110,6 +111,12 @@ struct FeedsView: View {
                         Label("Rename", systemImage: "pencil")
                     }
 
+                    Button {
+                        UIPasteboard.general.string = feed.url
+                    } label: {
+                        Label("Copy URL", systemImage: "doc.on.doc")
+                    }
+
                     if feed.isPaused {
                         Button {
                             feed.isPaused = false
@@ -151,11 +158,11 @@ struct FeedsView: View {
             VStack(spacing: 12) {
                 Text("Nothing subscribed.")
                     .font(AppTheme.sansSerif(18, weight: .medium))
-                    .foregroundStyle(AppTheme.heading)
+                    .foregroundStyle(appTheme.heading)
 
                 Text("Browse feeds or add a URL.")
                     .font(AppTheme.sansSerif(14))
-                    .foregroundStyle(AppTheme.textFaint)
+                    .foregroundStyle(appTheme.textFaint)
                     .multilineTextAlignment(.center)
             }
 
@@ -169,11 +176,11 @@ struct FeedsView: View {
                         Spacer()
                         Text("Browse feeds")
                             .font(AppTheme.sansSerif(15, weight: .semibold))
-                            .foregroundStyle(AppTheme.background)
+                            .foregroundStyle(appTheme.background)
                         Spacer()
                     }
                     .frame(height: 48)
-                    .background(AppTheme.accent)
+                    .background(appTheme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
@@ -188,15 +195,15 @@ struct FeedsView: View {
                         Spacer()
                         Text("Add a URL")
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                         Spacer()
                     }
                     .frame(height: 48)
-                    .background(AppTheme.surface)
+                    .background(appTheme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(AppTheme.separator, lineWidth: 1)
+                            .stroke(appTheme.separator, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -211,36 +218,36 @@ struct FeedsView: View {
     private var addByURLSheet: some View {
         NavigationStack {
             ZStack {
-                AppTheme.background.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("FEED URL")
                             .font(AppTheme.sansSerif(11, weight: .medium))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                             .kerning(2)
 
                         TextField("https://example.com/feed.xml", text: $pasteURL)
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.heading)
+                            .foregroundStyle(appTheme.heading)
                             .autocapitalization(.none)
                             .keyboardType(.URL)
                             .padding(AppTheme.cardPadding)
-                            .background(AppTheme.surface)
+                            .background(appTheme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("CUSTOM NAME (OPTIONAL)")
                             .font(AppTheme.sansSerif(11, weight: .medium))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                             .kerning(2)
 
                         TextField("Leave blank to use the feed's title", text: $customFeedName)
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.heading)
+                            .foregroundStyle(appTheme.heading)
                             .padding(AppTheme.cardPadding)
-                            .background(AppTheme.surface)
+                            .background(appTheme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
                     }
 
@@ -258,16 +265,16 @@ struct FeedsView: View {
                             Spacer()
                             if isFetching {
                                 ProgressView()
-                                    .tint(AppTheme.background)
+                                    .tint(appTheme.background)
                             } else {
                                 Text("Add feed")
                                     .font(AppTheme.sansSerif(15, weight: .semibold))
-                                    .foregroundStyle(AppTheme.background)
+                                    .foregroundStyle(appTheme.background)
                             }
                             Spacer()
                         }
                         .frame(height: 48)
-                        .background(pasteURL.isEmpty ? AppTheme.accentFaint : AppTheme.accent)
+                        .background(pasteURL.isEmpty ? appTheme.accentFaint : appTheme.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
@@ -282,11 +289,11 @@ struct FeedsView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { showAddByURL = false }
-                        .foregroundStyle(AppTheme.accent)
+                        .foregroundStyle(appTheme.accent)
                 }
             }
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
         }
         .presentationDetents([.medium])
     }
@@ -296,20 +303,20 @@ struct FeedsView: View {
     private var renameSheet: some View {
         NavigationStack {
             ZStack {
-                AppTheme.background.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("FEED NAME")
                             .font(AppTheme.sansSerif(11, weight: .medium))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                             .kerning(2)
 
                         TextField("Feed name", text: $renameText)
                             .font(AppTheme.sansSerif(15))
-                            .foregroundStyle(AppTheme.heading)
+                            .foregroundStyle(appTheme.heading)
                             .padding(AppTheme.cardPadding)
-                            .background(AppTheme.surface)
+                            .background(appTheme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
                     }
 
@@ -325,11 +332,11 @@ struct FeedsView: View {
                             Spacer()
                             Text("Save")
                                 .font(AppTheme.sansSerif(15, weight: .semibold))
-                                .foregroundStyle(AppTheme.background)
+                                .foregroundStyle(appTheme.background)
                             Spacer()
                         }
                         .frame(height: 48)
-                        .background(trimmed.isEmpty ? AppTheme.accentFaint : AppTheme.accent)
+                        .background(trimmed.isEmpty ? appTheme.accentFaint : appTheme.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
@@ -344,11 +351,11 @@ struct FeedsView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { showRenameSheet = false }
-                        .foregroundStyle(AppTheme.accent)
+                        .foregroundStyle(appTheme.accent)
                 }
             }
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
         }
         .presentationDetents([.medium])
     }
@@ -416,6 +423,7 @@ struct FeedsView: View {
 private struct FeedRow: View {
     let feed: RSSFeed
     @Query private var articles: [RSSArticle]
+    @Environment(\.appTheme) private var appTheme
 
     init(feed: RSSFeed) {
         self.feed = feed
@@ -431,17 +439,17 @@ private struct FeedRow: View {
                 HStack(spacing: 8) {
                     Text(feed.title)
                         .font(AppTheme.sansSerif(15, weight: .medium))
-                        .foregroundStyle(feed.isPaused ? AppTheme.textFaint : AppTheme.heading)
+                        .foregroundStyle(feed.isPaused ? appTheme.textFaint : appTheme.heading)
                         .lineLimit(1)
 
                     if feed.isPaused {
                         Text("PAUSED")
                             .font(AppTheme.sansSerif(10, weight: .medium))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                             .kerning(1.5)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(AppTheme.surface)
+                            .background(appTheme.surface)
                             .clipShape(Capsule())
                     }
                 }
@@ -449,19 +457,19 @@ private struct FeedRow: View {
                 HStack(spacing: 8) {
                     Text(feed.category)
                         .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
 
                     Text("·")
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
 
                     if let fetched = feed.lastFetchedAt {
                         Text(fetched.formatted(.relative(presentation: .named)))
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                     } else {
                         Text("Never fetched.")
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                     }
                 }
             }
@@ -471,14 +479,14 @@ private struct FeedRow: View {
             if articles.count > 0 {
                 Text("\(articles.count)")
                     .font(AppTheme.sansSerif(12, weight: .medium))
-                    .foregroundStyle(AppTheme.background)
+                    .foregroundStyle(appTheme.background)
                     .frame(minWidth: 22, minHeight: 22)
-                    .background(AppTheme.readerAccent)
+                    .background(appTheme.accent)
                     .clipShape(Circle())
             }
         }
         .padding(AppTheme.cardPadding)
-        .background(AppTheme.surface)
+        .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
     }
 }

@@ -5,8 +5,11 @@ struct FeedDetailView: View {
     let feed: RSSFeed
 
     @Environment(\.modelContext) private var context
+    @Environment(\.appTheme) private var appTheme
     @Query private var articles: [RSSArticle]
     @Query private var queue: [QueuedLink]
+
+    @State private var isFetching = false
 
     init(feed: RSSFeed) {
         self.feed = feed
@@ -22,7 +25,7 @@ struct FeedDetailView: View {
 
     var body: some View {
         ZStack {
-            AppTheme.background.ignoresSafeArea()
+            appTheme.background.ignoresSafeArea()
 
             if articles.isEmpty {
                 emptyState
@@ -50,8 +53,25 @@ struct FeedDetailView: View {
         }
         .navigationTitle(feed.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(AppTheme.background, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    refetch()
+                } label: {
+                    if isFetching {
+                        ProgressView()
+                            .tint(appTheme.accent)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(appTheme.accent)
+                    }
+                }
+                .disabled(isFetching)
+            }
+        }
+        .toolbarBackground(appTheme.background, for: .navigationBar)
+        .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
     }
 
     // MARK: - Empty state
@@ -60,15 +80,25 @@ struct FeedDetailView: View {
         VStack(spacing: 12) {
             Text("Nothing fetched yet.")
                 .font(AppTheme.sansSerif(16, weight: .medium))
-                .foregroundStyle(AppTheme.heading)
+                .foregroundStyle(appTheme.heading)
 
             Text("Articles appear after the next fetch.")
                 .font(AppTheme.sansSerif(14))
-                .foregroundStyle(AppTheme.textFaint)
+                .foregroundStyle(appTheme.textFaint)
         }
     }
 
     // MARK: - Actions
+
+    private func refetch() {
+        guard !isFetching else { return }
+        isFetching = true
+        RSSFetchService.fetchSingle(feedID: feed.id, url: feed.url, container: context.container)
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            isFetching = false
+        }
+    }
 
     private func addToQueue(_ article: RSSArticle) {
         guard !queuedURLs.contains(article.url) else { return }
@@ -92,6 +122,7 @@ private struct ArticleRow: View {
     let isQueued: Bool
     let onAdd: () -> Void
 
+    @Environment(\.appTheme) private var appTheme
     @State private var justAdded = false
 
     private var displaySummary: String? {
@@ -112,28 +143,28 @@ private struct ArticleRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)
                     .font(AppTheme.sansSerif(15, weight: .medium))
-                    .foregroundStyle(AppTheme.heading)
+                    .foregroundStyle(appTheme.heading)
                     .lineLimit(2)
 
                 if let summary = displaySummary {
                     Text(summary)
                         .font(AppTheme.sansSerif(13))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                         .lineLimit(2)
                 }
 
                 HStack(spacing: 6) {
                     Text(article.publishedAt.relativeShort)
                         .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
 
                     if let mins = article.estimatedReadingMinutes {
                         Text("·")
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                         Text("\(mins) min")
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                     }
                 }
             }
@@ -143,7 +174,7 @@ private struct ArticleRow: View {
             if isQueued || justAdded {
                 Image(systemName: "checkmark")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppTheme.readerAccent)
+                    .foregroundStyle(appTheme.accent)
                     .frame(width: 32, height: 32)
             } else {
                 Button {
@@ -152,22 +183,19 @@ private struct ArticleRow: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppTheme.heading)
+                        .foregroundStyle(appTheme.heading)
                         .frame(width: 32, height: 32)
-                        .background(AppTheme.surface)
+                        .background(appTheme.surface)
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(AppTheme.separator, lineWidth: 1))
+                        .overlay(Circle().stroke(appTheme.separator, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(AppTheme.cardPadding)
-        .background(AppTheme.surface)
+        .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
         .onChange(of: isQueued) { _, queued in
-            // If the link was removed from the queue externally (deleted from HomeView
-            // or read and later deleted from the Brain), clear the local justAdded flag
-            // so the + button re-appears and the article can be re-added.
             if !queued { justAdded = false }
         }
     }

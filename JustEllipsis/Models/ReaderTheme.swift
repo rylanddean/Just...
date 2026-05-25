@@ -32,6 +32,17 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
         }
     }
 
+    var surfaceHex: String {
+        switch self {
+        case .ember: "#161310"
+        case .slate: "#161B22"
+        case .dusk:  "#231628"
+        case .sage:  "#171E19"
+        case .sepia: "#EAE0CA"
+        case .paper: "#F0F0EE"
+        }
+    }
+
     var textHex: String {
         switch self {
         case .ember: "#C8B898"
@@ -68,6 +79,7 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
     var isLight: Bool { self == .sepia || self == .paper }
 
     var bg: Color      { Color(hex: bgHex) }
+    var surface: Color { Color(hex: surfaceHex) }
     var text: Color    { Color(hex: textHex) }
     var accent: Color  { Color(hex: accentHex) }
     var heading: Color { Color(hex: headingHex) }

@@ -8,6 +8,7 @@ struct DigestView: View {
     @Query private var queue: [QueuedLink]
     @Query(sort: \BrainEntry.readAt, order: .reverse) private var brainEntries: [BrainEntry]
 
+    @Environment(\.appTheme) private var appTheme
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
 
     init() {
@@ -113,7 +114,7 @@ struct DigestView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppTheme.background.ignoresSafeArea()
+                appTheme.background.ignoresSafeArea()
 
                 if articles.isEmpty {
                     emptyState
@@ -202,8 +203,8 @@ struct DigestView: View {
         }
         .navigationTitle("Digest")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(AppTheme.background, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(appTheme.background, for: .navigationBar)
+        .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
     }
 }
 
@@ -213,11 +214,11 @@ struct DigestView: View {
         VStack(spacing: 12) {
             Text("Nothing from the past two days.")
                 .font(AppTheme.sansSerif(16, weight: .medium))
-                .foregroundStyle(AppTheme.heading)
+                .foregroundStyle(appTheme.heading)
 
             Text("New articles will appear here after the next fetch.")
                 .font(AppTheme.sansSerif(14))
-                .foregroundStyle(AppTheme.textFaint)
+                .foregroundStyle(appTheme.textFaint)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
         }
@@ -233,26 +234,26 @@ struct DigestView: View {
                 .kerning(2)
         }
         .font(AppTheme.sansSerif(11, weight: .medium))
-        .foregroundStyle(AppTheme.accent)
+        .foregroundStyle(appTheme.accent)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, AppTheme.pagePadding)
         .padding(.top, 8)
         .padding(.bottom, 2)
         .listRowInsets(EdgeInsets())
-        .background(AppTheme.background)
+        .background(appTheme.background)
     }
 
     private func sectionHeader(_ label: String) -> some View {
         Text(label)
             .font(AppTheme.sansSerif(11, weight: .medium))
-            .foregroundStyle(AppTheme.textFaint)
+            .foregroundStyle(appTheme.textFaint)
             .kerning(2)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.top, 8)
             .padding(.bottom, 2)
             .listRowInsets(EdgeInsets())
-            .background(AppTheme.background)
+            .background(appTheme.background)
     }
 
     private func addToQueue(_ article: RSSArticle) {
@@ -278,6 +279,7 @@ private struct DigestArticleRow: View {
     let isQueued: Bool
     let onAdd: () -> Void
 
+    @Environment(\.appTheme) private var appTheme
     @State private var justAdded = false
 
     private var domain: String {
@@ -292,24 +294,24 @@ private struct DigestArticleRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)
                     .font(AppTheme.sansSerif(15, weight: .medium))
-                    .foregroundStyle(AppTheme.heading)
+                    .foregroundStyle(appTheme.heading)
                     .lineLimit(2)
 
                 HStack(spacing: 6) {
                     if !feedName.isEmpty {
                         Text(feedName)
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                             .lineLimit(1)
 
                         Text("·")
                             .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(AppTheme.textFaint)
+                            .foregroundStyle(appTheme.textFaint)
                     }
 
                     Text(article.publishedAt.relativeShort)
                         .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(AppTheme.textFaint)
+                        .foregroundStyle(appTheme.textFaint)
                 }
             }
 
@@ -318,7 +320,7 @@ private struct DigestArticleRow: View {
             if isQueued || justAdded {
                 Image(systemName: "checkmark")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppTheme.readerAccent)
+                    .foregroundStyle(appTheme.accent)
                     .frame(width: 32, height: 32)
             } else {
                 Button {
@@ -327,17 +329,17 @@ private struct DigestArticleRow: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppTheme.heading)
+                        .foregroundStyle(appTheme.heading)
                         .frame(width: 32, height: 32)
-                        .background(AppTheme.surface)
+                        .background(appTheme.surface)
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(AppTheme.separator, lineWidth: 1))
+                        .overlay(Circle().stroke(appTheme.separator, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(AppTheme.cardPadding)
-        .background(AppTheme.surface)
+        .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
         .onChange(of: isQueued) { _, queued in
             if !queued { justAdded = false }
