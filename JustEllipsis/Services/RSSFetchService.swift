@@ -37,6 +37,15 @@ struct RSSFetchService {
             await actor.summarizePendingArticles()
         }
     }
+
+    // Fetch a single newly-added feed immediately so its articles appear right away.
+    @MainActor
+    static func fetchSingle(feedID: UUID, url: String, container: ModelContainer) {
+        Task.detached(priority: .userInitiated) {
+            let actor = RSSFetchActor(modelContainer: container)
+            await actor.fetchOne(feedID: feedID, urlString: url)
+        }
+    }
 }
 
 // MARK: - Feed directory item (decoded from feeds.json)
@@ -72,6 +81,12 @@ struct ParsedArticle: Sendable {
 
 @ModelActor
 actor RSSFetchActor {
+
+    // Fetch a single feed by ID — used immediately after subscribing.
+    func fetchOne(feedID: UUID, urlString: String) async {
+        let articles = await Self.parseFeed(urlString: urlString)
+        store(articles: articles, feedID: feedID)
+    }
 
     // Fetch all non-paused feeds, parse with FeedKit, store new RSSArticle records.
     func fetchAll() async {
