@@ -4,9 +4,14 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
+    @AppStorage(JustEllipsisApp.iCloudSyncKey) private var iCloudSyncEnabled: Bool = false
 
     private var selectedTheme: ReaderTheme {
         ReaderTheme(rawValue: themeRaw) ?? .ember
+    }
+
+    private var iCloudAvailable: Bool {
+        FileManager.default.ubiquityIdentityToken != nil
     }
 
     var body: some View {
@@ -16,6 +21,7 @@ struct SettingsView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 32) {
+                        syncSection
                         streakSection
                         themeSection
                     }
@@ -37,6 +43,65 @@ struct SettingsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
+    }
+
+    // MARK: - Sync Section
+
+    private var syncSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("SYNC")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(AppTheme.textFaint)
+                .tracking(2)
+
+            if iCloudAvailable {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Sync with iCloud")
+                                .font(AppTheme.sansSerif(15))
+                                .foregroundStyle(AppTheme.heading)
+                            Text("Your queue, Brain, and streak sync across devices on this Apple ID.")
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(AppTheme.textFaint)
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: $iCloudSyncEnabled)
+                            .labelsHidden()
+                            .tint(AppTheme.readerAccent)
+                    }
+
+                    if iCloudSyncEnabled {
+                        Text("Active the next time you open Just…")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(AppTheme.readerAccent.opacity(0.7))
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("iCloud is off.")
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(AppTheme.heading)
+                        Text("Enable iCloud Drive in Settings to sync.")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(AppTheme.textFaint)
+                    }
+
+                    Spacer()
+
+                    Button("Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(AppTheme.readerAccent)
+                }
+            }
+        }
     }
 
     // MARK: - Streak Section

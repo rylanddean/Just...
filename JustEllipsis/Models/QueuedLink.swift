@@ -17,7 +17,7 @@ final class QueuedLink {
     var addedAt: Date = Date()
     var sortOrder: Int
     var isRead: Bool = false
-    var cachedHTML: String?
+    @Attribute(.externalStorage) var cachedHTML: String?
     var prefetchStateRaw: String = PrefetchState.pending.rawValue
 
     var prefetchState: PrefetchState {
