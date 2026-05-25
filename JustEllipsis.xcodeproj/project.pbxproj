@@ -18,6 +18,7 @@
 		24271D2A9FCFC50049035718 /* FeedsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D55C543A6A1CB887D6732BF /* FeedsView.swift */; };
 		25AC66CE65822836CC940ED8 /* BrainViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */; };
 		286F5A0E2A4A563D35F90F73 /* CountdownRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42F62308F8EC6615789E6A4 /* CountdownRing.swift */; };
+		2E143914847BE5ADB667EEEF /* FeedType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7FC5EA4C08B9D140F78A054 /* FeedType.swift */; };
 		3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */; };
 		4B13C26BA23068BA674FDD03 /* RSSArticle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6EA6D6C5E383E851F31F032 /* RSSArticle.swift */; };
 		5200F218FCDCDE23A0BFB0A5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F138A6A626CF6CF070B7A67E /* Assets.xcassets */; };
@@ -40,6 +41,7 @@
 		942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD402C01934293F01520002 /* PendingLinkStore.swift */; };
 		949A68996476CD7276C0382C /* AddLinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA108705DC55D44129CFA2E /* AddLinkView.swift */; };
 		963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FFDB49A234476554B1FE83 /* QueuedLink.swift */; };
+		A053373759B60E86667FAAE1 /* PodcastTranscriptService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D296853179E8B44DFCDF8CB0 /* PodcastTranscriptService.swift */; };
 		A2B143A00787D4144D1E41B7 /* PrefetchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E682902D7E4F05A13644A84 /* PrefetchService.swift */; };
 		A683565502BA61332A25F23B /* BrainEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5FFE2DFE392AFFCF9E68E21 /* BrainEngineTests.swift */; };
 		AB60A86711520B76E110A37A /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB525487287C343A913E2DB /* AppRouter.swift */; };
@@ -104,7 +106,7 @@
 		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
-		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		369CC02046EDB9D512264A8B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
 		3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFetcherTests.swift; sourceTree = "<group>"; };
@@ -117,7 +119,7 @@
 		646F64DBC62E5B05B45AC067 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		6DD402C01934293F01520002 /* PendingLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingLinkStore.swift; sourceTree = "<group>"; };
 		711256DA53620D4C746AC36F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		79111AB1E05BBF6590D197DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		80160876D84DBAF018BB717D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = JustEllipsisTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -136,6 +138,8 @@
 		C6EA6D6C5E383E851F31F032 /* RSSArticle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSArticle.swift; sourceTree = "<group>"; };
 		CC480E509A335B23D95C2896 /* StreakHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakHeader.swift; sourceTree = "<group>"; };
 		CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakEngine.swift; sourceTree = "<group>"; };
+		D296853179E8B44DFCDF8CB0 /* PodcastTranscriptService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastTranscriptService.swift; sourceTree = "<group>"; };
+		D7FC5EA4C08B9D140F78A054 /* FeedType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedType.swift; sourceTree = "<group>"; };
 		D92347D5631A1D698929B76D /* BrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainView.swift; sourceTree = "<group>"; };
 		DEB0F696771B8EDE0D4FC2B2 /* feeds.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = feeds.json; sourceTree = "<group>"; };
 		E3FFDB49A234476554B1FE83 /* QueuedLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedLink.swift; sourceTree = "<group>"; };
@@ -191,6 +195,7 @@
 				9E031427BDE66D20C2190203 /* BrainEngine.swift */,
 				C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */,
 				BD6345AF40A371C990B21023 /* IntelligenceService.swift */,
+				D296853179E8B44DFCDF8CB0 /* PodcastTranscriptService.swift */,
 				2E682902D7E4F05A13644A84 /* PrefetchService.swift */,
 				00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */,
 				94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */,
@@ -214,6 +219,7 @@
 			isa = PBXGroup;
 			children = (
 				F8881FBE57095A67C1C24497 /* BrainEntry.swift */,
+				D7FC5EA4C08B9D140F78A054 /* FeedType.swift */,
 				E3FFDB49A234476554B1FE83 /* QueuedLink.swift */,
 				53C8EBE71DB26F97014284EE /* ReaderTheme.swift */,
 				1FB7BE8457A65678C63AA04B /* ReadingDay.swift */,
@@ -400,6 +406,12 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0B22B2BD222A2112071A54FE = {
+						DevelopmentTeam = "";
+					};
+					16DBE1A265CA7C974E3E08D0 = {
+						DevelopmentTeam = "";
+					};
 					36799AF5621258DD12197858 = {
 						DevelopmentTeam = "";
 					};
@@ -474,12 +486,14 @@
 				CB82B521C89B60A2D64CF6E5 /* FaviconView.swift in Sources */,
 				743293124B7106E74EA6C0BC /* FeedDetailView.swift in Sources */,
 				C5758CD9E02EA13965072A09 /* FeedDirectoryView.swift in Sources */,
+				2E143914847BE5ADB667EEEF /* FeedType.swift in Sources */,
 				24271D2A9FCFC50049035718 /* FeedsView.swift in Sources */,
 				854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */,
 				1A8F7B7E1F4EF583D9485183 /* IntelligenceService.swift in Sources */,
 				8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */,
 				2344727D36DCEF1C39989C66 /* LinkCard.swift in Sources */,
 				942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */,
+				A053373759B60E86667FAAE1 /* PodcastTranscriptService.swift in Sources */,
 				A2B143A00787D4144D1E41B7 /* PrefetchService.swift in Sources */,
 				963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */,
 				4B13C26BA23068BA674FDD03 /* RSSArticle.swift in Sources */,
@@ -535,7 +549,6 @@
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -636,7 +649,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -659,7 +671,6 @@
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -678,7 +689,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

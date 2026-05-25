@@ -70,8 +70,8 @@ struct ReaderView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .tint(appTheme.accent)
-            Text("Fetching article…")
-                .font(AppTheme.sansSerif(13))
+            Text(link.isEpisode ? "Still thinking." : "Fetching article…")
+                .font(link.isEpisode ? AppTheme.mono(13) : AppTheme.sansSerif(13))
                 .foregroundStyle(appTheme.text.opacity(0.5))
         }
     }
@@ -233,6 +233,11 @@ struct ReaderView: View {
             }
             .frame(height: 1)
 
+            // Persistent attribution line for AI-generated podcast articles
+            if link.isEpisode, let showName = link.showName {
+                episodeAttributionBar(showName: showName)
+            }
+
             // Article + pull indicator overlay
             ZStack(alignment: .bottom) {
                 ReaderWebView(
@@ -265,6 +270,25 @@ struct ReaderView: View {
                         .transition(.opacity)
                 }
             }
+        }
+    }
+
+    private func episodeAttributionBar(showName: String) -> some View {
+        HStack {
+            Text("GENERATED FROM EPISODE — \(showName.uppercased())")
+                .font(AppTheme.mono(11))
+                .foregroundStyle(appTheme.text.opacity(0.4))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(appTheme.background)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(appTheme.text.opacity(0.06))
+                .frame(height: 1)
         }
     }
 

@@ -12,12 +12,20 @@ final class RSSArticle {
     var feedDescription: String?
     var summary: String?
     var estimatedReadingMinutes: Int?
+    var isEpisode: Bool = false
+    var transcriptURL: String?
+    var transcriptFormatRaw: String?
 
-    init(feedID: UUID, url: String, title: String, publishedAt: Date, feedDescription: String? = nil) {
+    init(feedID: UUID, url: String, title: String, publishedAt: Date,
+         feedDescription: String? = nil, isEpisode: Bool = false,
+         transcriptURL: String? = nil, transcriptFormatRaw: String? = nil) {
         self.feedID = feedID
         self.url = url
         self.title = title
         self.publishedAt = publishedAt
         self.feedDescription = feedDescription
+        self.isEpisode = isEpisode
+        self.transcriptURL = transcriptURL
+        self.transcriptFormatRaw = transcriptFormatRaw
     }
 }

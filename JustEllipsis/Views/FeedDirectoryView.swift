@@ -129,10 +129,17 @@ private struct DirectoryRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.name)
-                    .font(AppTheme.sansSerif(15, weight: .medium))
-                    .foregroundStyle(appTheme.heading)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    if item.feedType == .podcast {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 13))
+                            .foregroundStyle(appTheme.textFaint)
+                    }
+                    Text(item.name)
+                        .font(AppTheme.sansSerif(15, weight: .medium))
+                        .foregroundStyle(appTheme.heading)
+                        .lineLimit(1)
+                }
 
                 Text(item.description)
                     .font(AppTheme.sansSerif(12))

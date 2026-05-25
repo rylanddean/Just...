@@ -62,7 +62,8 @@ struct FeedsView: View {
         }
         .sheet(isPresented: $showDirectory) {
             FeedDirectoryView(subscribedURLs: Set(feeds.map { $0.url })) { item in
-                subscribe(url: item.url, title: item.name, category: item.category)
+                subscribe(url: item.url, title: item.name, category: item.category,
+                          feedType: item.feedType ?? .article)
             }
         }
         .sheet(isPresented: $showRenameSheet, onDismiss: { feedToRename = nil }) {
@@ -362,12 +363,12 @@ struct FeedsView: View {
 
     // MARK: - Actions
 
-    private func subscribe(url: String, title: String, category: String) {
+    private func subscribe(url: String, title: String, category: String, feedType: FeedType = .article) {
         guard !feeds.contains(where: { $0.url == url }) else { return }
-        let feed = RSSFeed(url: url, title: title, category: category)
+        let feed = RSSFeed(url: url, title: title, category: category, feedType: feedType)
         context.insert(feed)
         try? context.save()
-        RSSFetchService.fetchSingle(feedID: feed.id, url: url, container: context.container)
+        RSSFetchService.fetchSingle(feedID: feed.id, url: url, feedType: feedType, container: context.container)
     }
 
     private func unsubscribe(_ feed: RSSFeed) {
@@ -386,35 +387,35 @@ struct FeedsView: View {
         addError = nil
 
         let customName = customFeedName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title: String
-        if customName.isEmpty {
-            title = await resolveTitle(from: url) ?? url.host ?? raw
-        } else {
-            title = customName
-        }
+        let (resolvedTitle, detectedType) = await resolveTitleAndType(from: url)
+        let title = customName.isEmpty ? (resolvedTitle ?? url.host ?? raw) : customName
 
         await MainActor.run {
-            subscribe(url: raw, title: title, category: "Custom")
+            subscribe(url: raw, title: title, category: "Custom", feedType: detectedType)
             isFetching = false
             customFeedName = ""
             showAddByURL = false
         }
     }
 
-    private func resolveTitle(from url: URL) async -> String? {
+    // Fetches 8KB prefix in a single request — extracts <title> and detects feed type.
+    private func resolveTitleAndType(from url: URL) async -> (title: String?, feedType: FeedType) {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 10
         guard let (data, _) = try? await URLSession(configuration: config).data(from: url) else {
-            return nil
+            return (nil, .article)
         }
-        let preview = String(data: data.prefix(2048), encoding: .utf8) ?? ""
-        if let range = preview.range(of: "<title>"),
-           let endRange = preview.range(of: "</title>", range: range.upperBound..<preview.endIndex) {
-            let raw = String(preview[range.upperBound..<endRange.lowerBound])
+        let prefix = String(data: data.prefix(8192), encoding: .utf8) ?? ""
+        let feedType = RSSFetchService.detectFeedType(from: prefix)
+
+        var resolvedTitle: String?
+        if let range = prefix.range(of: "<title>"),
+           let endRange = prefix.range(of: "</title>", range: range.upperBound..<prefix.endIndex) {
+            let raw = String(prefix[range.upperBound..<endRange.lowerBound])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !raw.isEmpty { return raw }
+            if !raw.isEmpty { resolvedTitle = raw }
         }
-        return nil
+        return (resolvedTitle, feedType)
     }
 }
 
@@ -436,7 +437,13 @@ private struct FeedRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    if feed.feedType == .podcast {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 13))
+                            .foregroundStyle(feed.isPaused ? appTheme.textFaint.opacity(0.4) : appTheme.textFaint)
+                    }
+
                     Text(feed.title)
                         .font(AppTheme.sansSerif(15, weight: .medium))
                         .foregroundStyle(feed.isPaused ? appTheme.textFaint : appTheme.heading)

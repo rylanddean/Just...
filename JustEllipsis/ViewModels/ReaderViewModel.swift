@@ -17,12 +17,19 @@ final class ReaderViewModel {
         error = nil
         isLoading = true
 
-        // Capture primitives before any await so we don't send the model object
-        // across the actor boundary.
         let urlString = link.url
         let cachedHTML = link.cachedHTML
         let themeRaw = UserDefaults.standard.string(forKey: ReaderTheme.defaultsKey) ?? "ember"
         let theme = ReaderTheme(rawValue: themeRaw) ?? .ember
+
+        // Podcast episodes with generated content skip the network fetch entirely.
+        if link.isEpisode, link.transcriptState == .ready, let generated = link.generatedContent {
+            let episodeTitle = link.title ?? urlString
+            let showName = link.showName ?? ""
+            content = ContentFetcher.fromGenerated(generated, title: episodeTitle, showName: showName, theme: theme)
+            isLoading = false
+            return
+        }
 
         do {
             let result = try await ContentFetcher.fetch(urlString: urlString, cachedHTML: cachedHTML, theme: theme)

@@ -141,6 +141,48 @@ struct ContentFetcher: Sendable {
         )
     }
 
+    // Build a StrippedContent from AI-generated plain text (podcast articles).
+    // Wraps prose paragraphs in reader-themed HTML without any network call.
+    static func fromGenerated(
+        _ plainText: String,
+        title: String,
+        showName: String,
+        theme: ReaderTheme = .ember
+    ) -> StrippedContent {
+        let paragraphs = plainText
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .map { "<p>\($0)</p>" }
+            .joined(separator: "\n")
+
+        let css = readerCSS(for: theme)
+        let fullHTML = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>\(css)</style>
+        </head>
+        <body>
+          \(paragraphs)
+        </body>
+        </html>
+        """
+
+        let words = plainText.split(separator: " ").count
+        let readingMinutes = max(1, words / 238)
+
+        return StrippedContent(
+            title: title,
+            body: fullHTML,
+            domain: showName,
+            estimatedWordCount: words,
+            estimatedReadingMinutes: readingMinutes
+        )
+    }
+
     static func extractDomain(from url: URL) -> String {
         guard var host = url.host else { return url.absoluteString }
         if host.hasPrefix("www.") { host = String(host.dropFirst(4)) }

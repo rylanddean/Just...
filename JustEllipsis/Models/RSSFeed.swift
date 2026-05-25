@@ -9,10 +9,12 @@ final class RSSFeed {
     var category: String = ""
     var lastFetchedAt: Date?
     var isPaused: Bool = false
+    var feedType: FeedType = FeedType.article
 
-    init(url: String, title: String, category: String) {
+    init(url: String, title: String, category: String, feedType: FeedType = .article) {
         self.url = url
         self.title = title
         self.category = category
+        self.feedType = feedType
     }
 }

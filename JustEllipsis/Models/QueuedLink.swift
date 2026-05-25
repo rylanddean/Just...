@@ -54,6 +54,14 @@ final class QueuedLink {
     var prefetchStateRaw: String = PrefetchState.pending.rawValue
     var sourceRaw: String = "manual"
 
+    // Podcast episode fields — nil/default for all article links
+    var isEpisode: Bool = false
+    var transcriptStateRaw: String = TranscriptState.ready.rawValue
+    var transcriptURL: String?
+    var transcriptFormatRaw: String?
+    @Attribute(.externalStorage) var generatedContent: String?
+    var showName: String?
+
     var prefetchState: PrefetchState {
         get { PrefetchState(rawValue: prefetchStateRaw) ?? .pending }
         set { prefetchStateRaw = newValue.rawValue }
@@ -64,11 +72,24 @@ final class QueuedLink {
         set { sourceRaw = newValue.rawValue }
     }
 
-    init(url: String, sortOrder: Int, title: String? = nil, domain: String? = nil, source: LinkSource = .manual) {
+    var transcriptState: TranscriptState {
+        get { TranscriptState(rawValue: transcriptStateRaw) ?? .ready }
+        set { transcriptStateRaw = newValue.rawValue }
+    }
+
+    init(url: String, sortOrder: Int, title: String? = nil, domain: String? = nil,
+         source: LinkSource = .manual, isEpisode: Bool = false,
+         transcriptState: TranscriptState = .ready, transcriptURL: String? = nil,
+         transcriptFormatRaw: String? = nil, showName: String? = nil) {
         self.url = url
         self.sortOrder = sortOrder
         self.title = title
         self.domain = domain
         self.sourceRaw = source.rawValue
+        self.isEpisode = isEpisode
+        self.transcriptStateRaw = transcriptState.rawValue
+        self.transcriptURL = transcriptURL
+        self.transcriptFormatRaw = transcriptFormatRaw
+        self.showName = showName
     }
 }

@@ -44,6 +44,10 @@ struct AppTheme {
         .system(size: size, weight: weight, design: .default)
     }
 
+    static func mono(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .monospaced)
+    }
+
     // MARK: Spacing
 
     static let pagePadding: CGFloat = 20
