@@ -100,8 +100,15 @@ private struct ArticleRow: View {
         return nil
     }
 
+    private var domain: String {
+        guard let url = URL(string: article.url) else { return "" }
+        return ContentFetcher.extractDomain(from: url)
+    }
+
     var body: some View {
         HStack(spacing: 12) {
+            FaviconView(domain: domain)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)
                     .font(AppTheme.sansSerif(15, weight: .medium))
@@ -115,9 +122,20 @@ private struct ArticleRow: View {
                         .lineLimit(2)
                 }
 
-                Text(article.publishedAt, style: .relative)
-                    .font(AppTheme.sansSerif(12))
-                    .foregroundStyle(AppTheme.textFaint)
+                HStack(spacing: 6) {
+                    Text(article.publishedAt.relativeShort)
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(AppTheme.textFaint)
+
+                    if let mins = article.estimatedReadingMinutes {
+                        Text("·")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(AppTheme.textFaint)
+                        Text("\(mins) min")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(AppTheme.textFaint)
+                    }
+                }
             }
 
             Spacer()

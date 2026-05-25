@@ -39,6 +39,18 @@ final class ReaderViewModel {
                 link.cachedHTML = result.rawHTML
                 link.prefetchState = .ready
             }
+
+            // Backfill accurate read time on any matching RSSArticle.
+            let articleURL = urlString
+            let readMins = result.content.estimatedReadingMinutes
+            let articleDescriptor = FetchDescriptor<RSSArticle>(
+                predicate: #Predicate { $0.url == articleURL }
+            )
+            if let article = try? context.fetch(articleDescriptor).first,
+               article.estimatedReadingMinutes == nil {
+                article.estimatedReadingMinutes = readMins
+            }
+
             try? context.save()
 
             if #available(iOS 26, *), IntelligenceService.isAvailable {

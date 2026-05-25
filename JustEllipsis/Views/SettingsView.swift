@@ -1,10 +1,16 @@
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
     @AppStorage(JustEllipsisApp.iCloudSyncKey) private var iCloudSyncEnabled: Bool = false
+
+    @State private var versionTapCount = 0
+    @State private var showClearStreakDialog = false
+    @State private var showFullResetDialog = false
 
     private var selectedTheme: ReaderTheme {
         ReaderTheme(rawValue: themeRaw) ?? .ember
@@ -12,6 +18,14 @@ struct SettingsView: View {
 
     private var iCloudAvailable: Bool {
         FileManager.default.ubiquityIdentityToken != nil
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
+
+    private var buildNumber: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
     }
 
     var body: some View {
@@ -24,9 +38,12 @@ struct SettingsView: View {
                         syncSection
                         streakSection
                         themeSection
+                        dangerSection
+                        versionFooter
                     }
                     .padding(AppTheme.pagePadding)
                     .padding(.top, 8)
+                    .padding(.bottom, 24)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -43,6 +60,26 @@ struct SettingsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
+        .confirmationDialog(
+            "Clear streak?",
+            isPresented: $showClearStreakDialog,
+            titleVisibility: .visible
+        ) {
+            Button("Clear streak", role: .destructive) { clearStreak() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Your reading streak and daily history will be deleted.")
+        }
+        .confirmationDialog(
+            "Reset everything?",
+            isPresented: $showFullResetDialog,
+            titleVisibility: .visible
+        ) {
+            Button("Reset everything", role: .destructive) { resetEverything() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Your queue, Brain, streak, and feeds will be deleted. This cannot be undone.")
+        }
     }
 
     // MARK: - Sync Section
@@ -181,11 +218,81 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Danger Section
+
+    private var dangerSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("DANGER")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(AppTheme.textFaint)
+                .tracking(2)
+
+            Button {
+                showFullResetDialog = true
+            } label: {
+                HStack {
+                    Spacer()
+                    Text("Reset everything.")
+                        .font(AppTheme.sansSerif(15, weight: .medium))
+                        .foregroundStyle(AppTheme.danger)
+                    Spacer()
+                }
+                .frame(height: 48)
+                .background(AppTheme.danger.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.cardRadius)
+                        .stroke(AppTheme.danger.opacity(0.25), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Version Footer
+
+    private var versionFooter: some View {
+        Button {
+            versionTapCount += 1
+            if versionTapCount >= 10 {
+                showClearStreakDialog = true
+                versionTapCount = 0
+            }
+        } label: {
+            Text("Just… \(appVersion) (\(buildNumber))")
+                .font(AppTheme.sansSerif(12))
+                .foregroundStyle(AppTheme.textFaint)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Actions
 
     private func handleSelection(_ theme: ReaderTheme) {
         guard theme != selectedTheme else { return }
         themeRaw = theme.rawValue
+    }
+
+    private func clearStreak() {
+        let days = (try? context.fetch(FetchDescriptor<ReadingDay>())) ?? []
+        days.forEach { context.delete($0) }
+        try? context.save()
+    }
+
+    private func resetEverything() {
+        let links = (try? context.fetch(FetchDescriptor<QueuedLink>())) ?? []
+        links.forEach { context.delete($0) }
+        let entries = (try? context.fetch(FetchDescriptor<BrainEntry>())) ?? []
+        entries.forEach { context.delete($0) }
+        let days = (try? context.fetch(FetchDescriptor<ReadingDay>())) ?? []
+        days.forEach { context.delete($0) }
+        let feeds = (try? context.fetch(FetchDescriptor<RSSFeed>())) ?? []
+        feeds.forEach { context.delete($0) }
+        let articles = (try? context.fetch(FetchDescriptor<RSSArticle>())) ?? []
+        articles.forEach { context.delete($0) }
+        try? context.save()
     }
 }
 

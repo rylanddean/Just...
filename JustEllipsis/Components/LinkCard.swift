@@ -64,35 +64,3 @@ struct LinkCard: View {
     }
 }
 
-// MARK: - Favicon
-
-private struct FaviconView: View {
-    let domain: String
-
-    private var faviconURL: URL? {
-        URL(string: "https://icons.duckduckgo.com/ip3/\(domain).ico")
-    }
-
-    var body: some View {
-        AsyncImage(url: faviconURL) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 28, height: 28)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            default:
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(AppTheme.textFaint.opacity(0.12))
-                    .frame(width: 28, height: 28)
-                    .overlay {
-                        Text(domain.prefix(1).uppercased())
-                            .font(AppTheme.sansSerif(13, weight: .medium))
-                            .foregroundStyle(AppTheme.textFaint)
-                    }
-            }
-        }
-        .frame(width: 28, height: 28)
-    }
-}

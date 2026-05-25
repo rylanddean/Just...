@@ -6,6 +6,7 @@ import BackgroundTasks
 struct JustEllipsisApp: App {
 
     let container: ModelContainer = makeContainer()
+    @State private var router = AppRouter()
 
     init() {
         registerRSSBackgroundTask()
@@ -15,6 +16,10 @@ struct JustEllipsisApp: App {
         WindowGroup {
             RootView()
                 .modelContainer(container)
+                .environment(router)
+                .onOpenURL { url in
+                    handleOpenURL(url)
+                }
         }
         // Prefetch cached HTML for queued links
         .backgroundTask(.appRefresh(PrefetchService.backgroundTaskID)) {
@@ -42,6 +47,32 @@ struct JustEllipsisApp: App {
             }
             processingTask.expirationHandler = { taskHandle.cancel() }
         }
+    }
+
+    // MARK: - URL handling
+
+    // Handles feed:// URLs launched from Safari or tapped in other apps.
+    // feed://example.com/feed.xml  →  https://example.com/feed.xml
+    // feed:https://example.com/feed.xml  →  https://example.com/feed.xml
+    private func handleOpenURL(_ url: URL) {
+        guard url.scheme == "feed" else { return }
+
+        let httpsString: String
+        if let host = url.host, !host.isEmpty {
+            // feed://example.com/path  →  https://example.com/path
+            let path = url.path.isEmpty ? "" : url.path
+            let query = url.query.map { "?\($0)" } ?? ""
+            httpsString = "https://\(host)\(path)\(query)"
+        } else {
+            // feed:https://…  →  https://…
+            let raw = url.absoluteString
+            let stripped = raw.hasPrefix("feed:") ? String(raw.dropFirst("feed:".count)) : raw
+            httpsString = stripped
+        }
+
+        guard URL(string: httpsString)?.scheme?.hasPrefix("http") == true else { return }
+        router.pendingFeedURL = httpsString
+        router.selectedTab = 1 // Feeds tab
     }
 
     // MARK: - ModelContainer

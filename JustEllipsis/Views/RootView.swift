@@ -4,20 +4,31 @@ import SwiftData
 struct RootView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(AppRouter.self) private var router
 
     var body: some View {
-        TabView {
+        @Bindable var router = router
+        TabView(selection: $router.selectedTab) {
             HomeView()
+                .tag(0)
                 .tabItem {
                     Label("Queue", systemImage: "list.bullet")
                 }
 
             FeedsView()
+                .tag(1)
                 .tabItem {
                     Label("Feeds", systemImage: "dot.radiowaves.left.and.right")
                 }
 
+            DigestView()
+                .tag(2)
+                .tabItem {
+                    Label("Digest", systemImage: "newspaper")
+                }
+
             BrainView()
+                .tag(3)
                 .tabItem {
                     Label("Brain", systemImage: "brain.head.profile")
                 }

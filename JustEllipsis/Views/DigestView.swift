@@ -1,0 +1,332 @@
+import SwiftUI
+import SwiftData
+
+struct DigestView: View {
+    @Environment(\.modelContext) private var context
+    @Query private var articles: [RSSArticle]
+    @Query private var feeds: [RSSFeed]
+    @Query private var queue: [QueuedLink]
+    @Query(sort: \BrainEntry.readAt, order: .reverse) private var brainEntries: [BrainEntry]
+
+    @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
+
+    init() {
+        let cutoff = Date(timeIntervalSinceNow: -48 * 60 * 60)
+        _articles = Query(
+            filter: #Predicate<RSSArticle> { $0.publishedAt >= cutoff },
+            sort: \RSSArticle.publishedAt,
+            order: .reverse
+        )
+    }
+
+    private var queuedURLs: Set<String> { Set(queue.map { $0.url }) }
+
+    private var feedLookup: [UUID: RSSFeed] {
+        Dictionary(uniqueKeysWithValues: feeds.map { ($0.id, $0) })
+    }
+
+    private var todayArticles: [RSSArticle] {
+        articles.filter { Calendar.current.isDateInToday($0.publishedAt) }
+    }
+
+    private var yesterdayArticles: [RSSArticle] {
+        articles.filter { Calendar.current.isDateInYesterday($0.publishedAt) }
+    }
+
+    // Returns nil when the Brain doesn't yet have enough signal (< 5 entries).
+    private var brainURLs: Set<String> { Set(brainEntries.map { $0.url }) }
+
+    private var recommendations: [RSSArticle]? {
+        guard brainEntries.count >= 5 else { return nil }
+        let candidates = articles.filter { !queuedURLs.contains($0.url) && !brainURLs.contains($0.url) }
+        guard !candidates.isEmpty else { return nil }
+
+        let keywords = brainKeywords()
+        let scored: [RSSArticle]
+        if keywords.isEmpty {
+            scored = candidates.sorted { $0.publishedAt > $1.publishedAt }
+        } else {
+            scored = candidates
+                .map { article -> (RSSArticle, Int) in
+                    let words = Set(article.title.lowercased().split(separator: " ").map(String.init))
+                    return (article, words.intersection(keywords).count)
+                }
+                .sorted { $0.1 > $1.1 }
+                .map { $0.0 }
+        }
+
+        let picks = diversifiedPicks(from: scored, max: minReadsPerDay)
+        return picks.isEmpty ? nil : picks
+    }
+
+    private func brainKeywords() -> Set<String> {
+        let stopwords: Set<String> = [
+            "the","a","an","and","or","but","in","on","at","to","for","of","with",
+            "is","it","this","that","was","are","be","been","have","has","had",
+            "do","did","will","would","could","should","may","might","can","not",
+            "no","from","by","as","if","what","how","why","when","which","who",
+            "than","more","about","i","my","me","we","our","you","your","its","how"
+        ]
+        var words = Set<String>()
+        for entry in brainEntries.prefix(30) {
+            entry.title.lowercased().split(separator: " ").forEach { words.insert(String($0)) }
+            if let r = entry.reflection, !r.isEmpty {
+                r.lowercased().split(separator: " ").forEach { words.insert(String($0)) }
+            }
+        }
+        return words.filter { $0.count > 3 && !stopwords.contains($0) }
+    }
+
+    private func diversifiedPicks(from articles: [RSSArticle], max count: Int) -> [RSSArticle] {
+        var seen = Set<UUID>()
+        var picks: [RSSArticle] = []
+        // First pass: one per feed
+        for article in articles {
+            guard picks.count < count else { break }
+            if seen.insert(article.feedID).inserted { picks.append(article) }
+        }
+        // Second pass: fill remaining slots from any feed
+        if picks.count < count {
+            let pickIDs = Set(picks.map { $0.id })
+            for article in articles where !pickIDs.contains(article.id) {
+                guard picks.count < count else { break }
+                picks.append(article)
+            }
+        }
+        return picks
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.background.ignoresSafeArea()
+
+                if articles.isEmpty {
+                    emptyState
+                } else {
+                    List {
+                    if let recs = recommendations {
+                        Section {
+                            ForEach(recs) { article in
+                                DigestArticleRow(
+                                    article: article,
+                                    feedName: feedLookup[article.feedID]?.title ?? "",
+                                    isQueued: queuedURLs.contains(article.url)
+                                ) {
+                                    addToQueue(article)
+                                }
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: 5,
+                                    leading: AppTheme.pagePadding,
+                                    bottom: 5,
+                                    trailing: AppTheme.pagePadding
+                                ))
+                            }
+                        } header: {
+                            brainSectionHeader
+                        }
+                        .listSectionSeparator(.hidden)
+                    }
+
+                    if !todayArticles.isEmpty {
+                        Section {
+                            ForEach(todayArticles) { article in
+                                DigestArticleRow(
+                                    article: article,
+                                    feedName: feedLookup[article.feedID]?.title ?? "",
+                                    isQueued: queuedURLs.contains(article.url)
+                                ) {
+                                    addToQueue(article)
+                                }
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: 5,
+                                    leading: AppTheme.pagePadding,
+                                    bottom: 5,
+                                    trailing: AppTheme.pagePadding
+                                ))
+                            }
+                        } header: {
+                            sectionHeader("TODAY")
+                        }
+                        .listSectionSeparator(.hidden)
+                    }
+
+                    if !yesterdayArticles.isEmpty {
+                        Section {
+                            ForEach(yesterdayArticles) { article in
+                                DigestArticleRow(
+                                    article: article,
+                                    feedName: feedLookup[article.feedID]?.title ?? "",
+                                    isQueued: queuedURLs.contains(article.url)
+                                ) {
+                                    addToQueue(article)
+                                }
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: 5,
+                                    leading: AppTheme.pagePadding,
+                                    bottom: 5,
+                                    trailing: AppTheme.pagePadding
+                                ))
+                            }
+                        } header: {
+                            sectionHeader("YESTERDAY")
+                        }
+                        .listSectionSeparator(.hidden)
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollIndicators(.hidden)
+                .contentMargins(.bottom, 32, for: .scrollContent)
+            }
+        }
+        .navigationTitle("Digest")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(AppTheme.background, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+}
+
+    // MARK: - Empty state
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("Nothing from the past two days.")
+                .font(AppTheme.sansSerif(16, weight: .medium))
+                .foregroundStyle(AppTheme.heading)
+
+            Text("New articles will appear here after the next fetch.")
+                .font(AppTheme.sansSerif(14))
+                .foregroundStyle(AppTheme.textFaint)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var brainSectionHeader: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 10, weight: .semibold))
+            Text("FROM YOUR BRAIN")
+                .kerning(2)
+        }
+        .font(AppTheme.sansSerif(11, weight: .medium))
+        .foregroundStyle(AppTheme.accent)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.top, 8)
+        .padding(.bottom, 2)
+        .listRowInsets(EdgeInsets())
+        .background(AppTheme.background)
+    }
+
+    private func sectionHeader(_ label: String) -> some View {
+        Text(label)
+            .font(AppTheme.sansSerif(11, weight: .medium))
+            .foregroundStyle(AppTheme.textFaint)
+            .kerning(2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, AppTheme.pagePadding)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+            .listRowInsets(EdgeInsets())
+            .background(AppTheme.background)
+    }
+
+    private func addToQueue(_ article: RSSArticle) {
+        guard !queuedURLs.contains(article.url) else { return }
+        let maxOrder = queue.map { $0.sortOrder }.max() ?? -1
+        let link = QueuedLink(
+            url: article.url,
+            sortOrder: maxOrder + 1,
+            title: article.title,
+            source: .rss(feedID: article.feedID)
+        )
+        context.insert(link)
+        article.isQueued = true
+        try? context.save()
+    }
+}
+
+// MARK: - Article row
+
+private struct DigestArticleRow: View {
+    let article: RSSArticle
+    let feedName: String
+    let isQueued: Bool
+    let onAdd: () -> Void
+
+    @State private var justAdded = false
+
+    private var domain: String {
+        guard let url = URL(string: article.url) else { return "" }
+        return ContentFetcher.extractDomain(from: url)
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            FaviconView(domain: domain)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(article.title)
+                    .font(AppTheme.sansSerif(15, weight: .medium))
+                    .foregroundStyle(AppTheme.heading)
+                    .lineLimit(2)
+
+                HStack(spacing: 6) {
+                    if !feedName.isEmpty {
+                        Text(feedName)
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(AppTheme.textFaint)
+                            .lineLimit(1)
+
+                        Text("·")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(AppTheme.textFaint)
+                    }
+
+                    Text(article.publishedAt.relativeShort)
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(AppTheme.textFaint)
+                }
+            }
+
+            Spacer()
+
+            if isQueued || justAdded {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppTheme.readerAccent)
+                    .frame(width: 32, height: 32)
+            } else {
+                Button {
+                    onAdd()
+                    justAdded = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppTheme.heading)
+                        .frame(width: 32, height: 32)
+                        .background(AppTheme.surface)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(AppTheme.separator, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(AppTheme.cardPadding)
+        .background(AppTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .onChange(of: isQueued) { _, queued in
+            if !queued { justAdded = false }
+        }
+    }
+}

@@ -3,13 +3,19 @@ import SwiftData
 
 struct FeedsView: View {
     @Environment(\.modelContext) private var context
+    @Environment(AppRouter.self) private var router
     @Query(sort: \RSSFeed.title) private var feeds: [RSSFeed]
 
     @State private var showAddByURL = false
     @State private var showDirectory = false
     @State private var pasteURL = ""
+    @State private var customFeedName = ""
     @State private var addError: String?
     @State private var isFetching = false
+    @State private var feedToRename: RSSFeed?
+    @State private var renameText = ""
+    @State private var showRenameSheet = false
+
 
     var body: some View {
         NavigationStack {
@@ -38,6 +44,7 @@ struct FeedsView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         pasteURL = ""
+                        customFeedName = ""
                         addError = nil
                         showAddByURL = true
                     } label: {
@@ -58,6 +65,17 @@ struct FeedsView: View {
                 subscribe(url: item.url, title: item.name, category: item.category)
             }
         }
+        .sheet(isPresented: $showRenameSheet, onDismiss: { feedToRename = nil }) {
+            renameSheet
+        }
+        .onChange(of: router.pendingFeedURL) { _, pendingURL in
+            guard let url = pendingURL else { return }
+            pasteURL = url
+            customFeedName = ""
+            addError = nil
+            showAddByURL = true
+            router.pendingFeedURL = nil
+        }
     }
 
     // MARK: - Feed list
@@ -77,38 +95,46 @@ struct FeedsView: View {
                     trailing: AppTheme.pagePadding
                 ))
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            unsubscribe(feed)
-                        } label: {
-                            Label("Unsubscribe", systemImage: "trash")
-                        }
-                        .tint(AppTheme.danger)
+                    Button(role: .destructive) {
+                        unsubscribe(feed)
+                    } label: {
+                        Label("Unsubscribe", systemImage: "trash")
                     }
-                    .contextMenu {
-                        if feed.isPaused {
-                            Button {
-                                feed.isPaused = false
-                                try? context.save()
-                            } label: {
-                                Label("Resume", systemImage: "play.circle")
-                            }
-                        } else {
-                            Button {
-                                feed.isPaused = true
-                                try? context.save()
-                            } label: {
-                                Label("Pause", systemImage: "pause.circle")
-                            }
-                        }
+                    .tint(AppTheme.danger)
+                }
+                .contextMenu {
+                    Button {
+                        renameText = feed.title
+                        feedToRename = feed
+                        showRenameSheet = true
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
 
-                        Divider()
-
-                        Button(role: .destructive) {
-                            unsubscribe(feed)
+                    if feed.isPaused {
+                        Button {
+                            feed.isPaused = false
+                            try? context.save()
                         } label: {
-                            Label("Unsubscribe", systemImage: "trash")
+                            Label("Resume", systemImage: "play.circle")
+                        }
+                    } else {
+                        Button {
+                            feed.isPaused = true
+                            try? context.save()
+                        } label: {
+                            Label("Pause", systemImage: "pause.circle")
                         }
                     }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        unsubscribe(feed)
+                    } label: {
+                        Label("Unsubscribe", systemImage: "trash")
+                    }
+                }
             }
         }
         .listStyle(.plain)
@@ -155,6 +181,7 @@ struct FeedsView: View {
 
                 Button {
                     pasteURL = ""
+                    customFeedName = ""
                     addError = nil
                     showAddByURL = true
                 } label: {
@@ -187,7 +214,7 @@ struct FeedsView: View {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
 
-                VStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("FEED URL")
                             .font(AppTheme.sansSerif(11, weight: .medium))
@@ -199,6 +226,20 @@ struct FeedsView: View {
                             .foregroundStyle(AppTheme.heading)
                             .autocapitalization(.none)
                             .keyboardType(.URL)
+                            .padding(AppTheme.cardPadding)
+                            .background(AppTheme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("CUSTOM NAME (OPTIONAL)")
+                            .font(AppTheme.sansSerif(11, weight: .medium))
+                            .foregroundStyle(AppTheme.textFaint)
+                            .kerning(2)
+
+                        TextField("Leave blank to use the feed's title", text: $customFeedName)
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(AppTheme.heading)
                             .padding(AppTheme.cardPadding)
                             .background(AppTheme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
@@ -251,6 +292,68 @@ struct FeedsView: View {
         .presentationDetents([.medium])
     }
 
+    // MARK: - Rename sheet
+
+    private var renameSheet: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.background.ignoresSafeArea()
+
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("FEED NAME")
+                            .font(AppTheme.sansSerif(11, weight: .medium))
+                            .foregroundStyle(AppTheme.textFaint)
+                            .kerning(2)
+
+                        TextField("Feed name", text: $renameText)
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(AppTheme.heading)
+                            .padding(AppTheme.cardPadding)
+                            .background(AppTheme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                    }
+
+                    let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    Button {
+                        if let feed = feedToRename, !trimmed.isEmpty {
+                            feed.title = trimmed
+                            try? context.save()
+                        }
+                        showRenameSheet = false
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Save")
+                                .font(AppTheme.sansSerif(15, weight: .semibold))
+                                .foregroundStyle(AppTheme.background)
+                            Spacer()
+                        }
+                        .frame(height: 48)
+                        .background(trimmed.isEmpty ? AppTheme.accentFaint : AppTheme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(trimmed.isEmpty)
+
+                    Spacer()
+                }
+                .padding(AppTheme.pagePadding)
+            }
+            .navigationTitle("Rename Feed")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showRenameSheet = false }
+                        .foregroundStyle(AppTheme.accent)
+                }
+            }
+            .toolbarBackground(AppTheme.background, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+        .presentationDetents([.medium])
+    }
+
     // MARK: - Actions
 
     private func subscribe(url: String, title: String, category: String) {
@@ -276,24 +379,28 @@ struct FeedsView: View {
         isFetching = true
         addError = nil
 
-        let title = await resolveTitle(from: url) ?? url.host ?? raw
-        let category = "Custom"
+        let customName = customFeedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title: String
+        if customName.isEmpty {
+            title = await resolveTitle(from: url) ?? url.host ?? raw
+        } else {
+            title = customName
+        }
 
         await MainActor.run {
-            subscribe(url: raw, title: title, category: category)
+            subscribe(url: raw, title: title, category: "Custom")
             isFetching = false
+            customFeedName = ""
             showAddByURL = false
         }
     }
 
-    // Best-effort: fetch the feed and read its top-level title.
     private func resolveTitle(from url: URL) async -> String? {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 10
         guard let (data, _) = try? await URLSession(configuration: config).data(from: url) else {
             return nil
         }
-        // Simple heuristic: look for <title> in the first 2KB
         let preview = String(data: data.prefix(2048), encoding: .utf8) ?? ""
         if let range = preview.range(of: "<title>"),
            let endRange = preview.range(of: "</title>", range: range.upperBound..<preview.endIndex) {
