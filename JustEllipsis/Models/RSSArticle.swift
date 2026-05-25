@@ -4,10 +4,10 @@ import Foundation
 @Model
 final class RSSArticle {
     var id: UUID = UUID()
-    var feedID: UUID
-    var url: String
-    var title: String
-    var publishedAt: Date
+    var feedID: UUID = UUID()
+    var url: String = ""
+    var title: String = ""
+    var publishedAt: Date = Date()
     var isQueued: Bool = false
     var feedDescription: String?
     var summary: String?

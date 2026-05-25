@@ -11,6 +11,7 @@ final class ReaderViewModel {
     var error: Error?
     var readProgress: Double = 0.0   // 0.0–1.0, driven by WKWebView scroll position
     var generatedPrompt: String? = nil
+    var generatedDNA: String? = nil
 
     func load(link: QueuedLink, context: ModelContext) async {
         error = nil
@@ -72,6 +73,15 @@ final class ReaderViewModel {
     }
 
     func markAsRead(link: QueuedLink, context: ModelContext) {
+        // Reset the RSS article's queued flag so it can be re-added from the feed
+        // if the brain entry is later deleted.
+        let url = link.url
+        let descriptor = FetchDescriptor<RSSArticle>(
+            predicate: #Predicate { $0.url == url }
+        )
+        if let article = try? context.fetch(descriptor).first {
+            article.isQueued = false
+        }
         context.delete(link)
         try? context.save()
     }
@@ -80,7 +90,12 @@ final class ReaderViewModel {
 
     @available(iOS 26, *)
     private func generateSummary(for body: String) async {
-        guard let summary = try? await IntelligenceService.summarize(body) else { return }
-        generatedPrompt = try? await IntelligenceService.reflectPrompt(for: summary)
+        async let summaryTask = IntelligenceService.summarize(body)
+        async let dnaTask = IntelligenceService.extractDNA(from: body)
+
+        if let summary = try? await summaryTask {
+            generatedPrompt = try? await IntelligenceService.reflectPrompt(for: summary)
+        }
+        generatedDNA = try? await dnaTask
     }
 }

@@ -146,5 +146,11 @@ private struct ArticleRow: View {
         .padding(AppTheme.cardPadding)
         .background(AppTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .onChange(of: isQueued) { _, queued in
+            // If the link was removed from the queue externally (deleted from HomeView
+            // or read and later deleted from the Brain), clear the local justAdded flag
+            // so the + button re-appears and the article can be re-added.
+            if !queued { justAdded = false }
+        }
     }
 }

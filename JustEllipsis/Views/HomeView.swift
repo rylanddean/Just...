@@ -169,6 +169,14 @@ struct HomeView: View {
     // MARK: - Actions
 
     private func deleteLink(_ link: QueuedLink) {
+        // Reset the RSS article's queued flag so it can be re-added from the feed.
+        let url = link.url
+        let descriptor = FetchDescriptor<RSSArticle>(
+            predicate: #Predicate { $0.url == url }
+        )
+        if let article = try? context.fetch(descriptor).first {
+            article.isQueued = false
+        }
         context.delete(link)
         try? context.save()
     }

@@ -97,7 +97,11 @@ struct JustEllipsisApp: App {
             QueuedLink.self, BrainEntry.self, ReadingDay.self,
             RSSFeed.self, RSSArticle.self
         ])
-        let config = ModelConfiguration(schema: fullSchema, isStoredInMemoryOnly: false)
+        let config = ModelConfiguration(
+            schema: fullSchema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none
+        )
         return try! ModelContainer(for: fullSchema, configurations: [config])
     }
 }
