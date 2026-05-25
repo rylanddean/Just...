@@ -2,11 +2,6 @@ import Foundation
 import SwiftData
 import Observation
 
-enum ReflectionMode: String {
-    case typed = "typed"
-    case voice = "voice"
-}
-
 @Observable
 @MainActor
 final class ReflectViewModel {
@@ -50,17 +45,12 @@ final class ReflectViewModel {
 
     /// Returns true if the save actually ran (false if already saved — caller should ignore).
     @discardableResult
-    func save(
-        entry: BrainEntry,
-        mode: ReflectionMode,
-        secondsSpent: Int,
-        context: ModelContext
-    ) -> Bool {
+    func save(entry: BrainEntry, secondsSpent: Int, context: ModelContext) -> Bool {
         guard !isSaved else { return false }
         context.insert(entry)
         let reflection = text.trimmingCharacters(in: .whitespacesAndNewlines)
         entry.reflection = reflection.isEmpty ? nil : reflection
-        entry.reflectionMode = reflection.isEmpty ? nil : mode.rawValue
+        entry.reflectionMode = reflection.isEmpty ? nil : "typed"
         entry.reflectionSeconds = secondsSpent
         try? context.save()
         timer?.invalidate()

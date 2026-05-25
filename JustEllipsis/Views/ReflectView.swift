@@ -11,13 +11,10 @@ struct ReflectView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = ReflectViewModel()
-    @State private var voiceRecognizer = VoiceRecognizer()
-    @State private var reflectionMode: ReflectionMode = .typed
     @State private var placeholder: String = ""
     @FocusState private var textFocused: Bool
 
     private var secondsSpent: Int { 60 - viewModel.secondsRemaining }
-    private var isPaused: Bool { textFocused || voiceRecognizer.isListening }
 
     var body: some View {
         ZStack {
@@ -50,16 +47,9 @@ struct ReflectView: View {
         .onChange(of: textFocused) { _, focused in
             if focused { viewModel.pauseCountdown() } else { viewModel.resumeCountdown() }
         }
-        .onChange(of: voiceRecognizer.isListening) { _, listening in
-            if listening { viewModel.pauseCountdown() } else { viewModel.resumeCountdown() }
-            if listening { viewModel.text = "" }
-        }
-        .onChange(of: voiceRecognizer.transcript) { _, t in
-            if voiceRecognizer.isListening { viewModel.text = t }
-        }
         .onChange(of: viewModel.secondsRemaining) { _, rem in
             if rem == 0 {
-                if viewModel.save(entry: entry, mode: reflectionMode, secondsSpent: secondsSpent, context: context) {
+                if viewModel.save(entry: entry, secondsSpent: secondsSpent, context: context) {
                     dismiss()
                     onComplete()
                 }
@@ -75,29 +65,11 @@ struct ReflectView: View {
             CountdownRing(
                 total: 60,
                 remaining: viewModel.secondsRemaining,
-                isPaused: isPaused,
+                isPaused: textFocused,
                 accent: theme.accent
             )
 
             Spacer()
-
-            if voiceRecognizer.isAvailable {
-                VoiceInputButton(isListening: $voiceRecognizer.isListening, accent: theme.accent) {
-                    if voiceRecognizer.isListening {
-                        voiceRecognizer.stopListening()
-                        reflectionMode = .typed
-                        textFocused = true
-                    } else {
-                        textFocused = false
-                        reflectionMode = .voice
-                        Task {
-                            if await voiceRecognizer.requestPermission() {
-                                try? voiceRecognizer.startListening()
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -135,13 +107,7 @@ struct ReflectView: View {
     private var bottomBar: some View {
         HStack {
             Button {
-                voiceRecognizer.stopListening()
-                if viewModel.save(
-                    entry: entry,
-                    mode: reflectionMode,
-                    secondsSpent: secondsSpent,
-                    context: context
-                ) {
+                if viewModel.save(entry: entry, secondsSpent: secondsSpent, context: context) {
                     dismiss()
                     onComplete()
                 }
@@ -163,7 +129,6 @@ struct ReflectView: View {
             Spacer().frame(width: 16)
 
             Button("Skip") {
-                voiceRecognizer.stopListening()
                 if viewModel.skip(entry: entry, context: context) {
                     dismiss()
                     onComplete()
