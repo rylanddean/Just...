@@ -4,9 +4,9 @@ import Foundation
 @Model
 final class RSSFeed {
     var id: UUID = UUID()
-    var url: String
-    var title: String
-    var category: String
+    var url: String = ""
+    var title: String = ""
+    var category: String = ""
     var lastFetchedAt: Date?
     var isPaused: Bool = false
 

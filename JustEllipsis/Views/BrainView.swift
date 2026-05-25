@@ -84,6 +84,14 @@ struct BrainView: View {
 
     private func deleteEntry(_ entry: BrainEntry) {
         if selectedEntry?.id == entry.id { selectedEntry = nil }
+        // Clear the RSS article's queued flag so it can be re-added from the feed.
+        let url = entry.url
+        let descriptor = FetchDescriptor<RSSArticle>(
+            predicate: #Predicate { $0.url == url }
+        )
+        if let article = try? context.fetch(descriptor).first {
+            article.isQueued = false
+        }
         context.delete(entry)
         try? context.save()
     }
@@ -118,6 +126,12 @@ struct BrainEntryRow: View {
             Text(entry.domain)
                 .font(AppTheme.sansSerif(11))
                 .foregroundStyle(AppTheme.textFaint)
+
+            if let dna = entry.dna {
+                Text(dna)
+                    .font(AppTheme.sansSerif(11))
+                    .foregroundStyle(AppTheme.textFaint)
+            }
 
             if let reflection = entry.reflection, !reflection.isEmpty {
                 Text(reflection)

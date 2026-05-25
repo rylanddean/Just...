@@ -44,11 +44,11 @@ enum LinkSource: Equatable {
 @Model
 final class QueuedLink {
     var id: UUID = UUID()
-    var url: String
+    var url: String = ""
     var title: String?
     var domain: String?
     var addedAt: Date = Date()
-    var sortOrder: Int
+    var sortOrder: Int = 0
     var isRead: Bool = false
     @Attribute(.externalStorage) var cachedHTML: String?
     var prefetchStateRaw: String = PrefetchState.pending.rawValue

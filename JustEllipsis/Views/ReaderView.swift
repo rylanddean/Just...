@@ -283,6 +283,7 @@ struct ReaderView: View {
     private func openReflect(content: StrippedContent) {
         let entry = BrainEntry(url: link.url, title: content.title, domain: content.domain)
         entry.wordCount = content.estimatedWordCount
+        entry.dna = viewModel.generatedDNA
         pendingEntry = entry
     }
 
