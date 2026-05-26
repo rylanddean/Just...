@@ -126,9 +126,19 @@ private struct ArticleRow: View {
     let onAdd: () -> Void
 
     @Environment(\.appTheme) private var appTheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(GradingProgressTracker.self) private var gradingTracker
     @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
     @State private var justAdded = false
+
+    private var titleLineLimit: Int {
+        UIDevice.current.userInterfaceIdiom == .phone ? 3 : 2
+    }
+
+    private var summaryLineLimit: Int {
+        if UIDevice.current.userInterfaceIdiom == .phone { return 6 }
+        return horizontalSizeClass == .regular ? 4 : 3
+    }
 
     private var displaySummary: String? {
         if let s = article.summary, !s.isEmpty { return s }
@@ -147,15 +157,16 @@ private struct ArticleRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)
-                    .font(AppTheme.sansSerif(15, weight: .medium))
+                    .font(AppTheme.sansSerif(14, weight: .medium))
                     .foregroundStyle(appTheme.heading)
-                    .lineLimit(2)
+                    .lineLimit(titleLineLimit)
 
                 if let summary = displaySummary {
                     Text(summary)
-                        .font(AppTheme.sansSerif(13))
+                        .font(AppTheme.sansSerif(13, weight: .medium))
                         .foregroundStyle(appTheme.textFaint)
-                        .lineLimit(2)
+                        .lineLimit(summaryLineLimit)
+                        .lineSpacing(2)
                 }
 
                 HStack(spacing: 6) {

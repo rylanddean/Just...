@@ -333,6 +333,15 @@ private struct DigestArticleRow: View {
     @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
     @State private var justAdded = false
 
+    private var titleLineLimit: Int {
+        UIDevice.current.userInterfaceIdiom == .phone ? 3 : 2
+    }
+
+    private var summaryLineLimit: Int {
+        if UIDevice.current.userInterfaceIdiom == .phone { return 6 }
+        return horizontalSizeClass == .regular ? 4 : 3
+    }
+
     private var domain: String {
         guard let url = URL(string: article.url) else { return "" }
         return ContentFetcher.extractDomain(from: url)
@@ -344,15 +353,15 @@ private struct DigestArticleRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)
-                    .font(AppTheme.sansSerif(15, weight: .medium))
+                    .font(AppTheme.sansSerif(14, weight: .medium))
                     .foregroundStyle(appTheme.heading)
-                    .lineLimit(2)
+                    .lineLimit(titleLineLimit)
 
                 if let summary = article.summary ?? article.feedDescription, !summary.isEmpty {
                     Text(summary)
-                        .font(AppTheme.serif(14))
+                        .font(AppTheme.sansSerif(13, weight: .medium))
                         .foregroundStyle(appTheme.textFaint)
-                        .lineLimit(horizontalSizeClass == .regular ? 4 : 3)
+                        .lineLimit(summaryLineLimit)
                         .lineSpacing(2)
                 }
 
