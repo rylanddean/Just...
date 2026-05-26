@@ -15,7 +15,15 @@ struct FetchResult: Sendable {
     let rawHTML: String       // the unstripped HTML, suitable for caching
 }
 
+enum ReaderTextSize {
+    static let defaultsKey = "reader.textSize"
+    static let defaultValue = 20.0
+    static let minValue = 16.0
+    static let maxValue = 28.0
+}
+
 struct ContentFetcher: Sendable {
+    private static let wrapperFallbackWordThreshold = 320
 
     // MARK: - Reader CSS (injected into WKWebView)
 
@@ -27,6 +35,7 @@ struct ContentFetcher: Sendable {
           --bg: \(theme.bgHex);
           --text: \(theme.textHex);
           --accent: \(theme.accentHex);
+          --reader-font-size: \(ReaderTextSize.defaultValue)px;
           color-scheme: \(colorScheme);
         }
         * { box-sizing: border-box; }
@@ -35,7 +44,7 @@ struct ContentFetcher: Sendable {
           background: var(--bg);
           color: var(--text);
           font-family: 'Georgia', serif;
-          font-size: 20px;
+          font-size: var(--reader-font-size);
           line-height: 1.85;
           max-width: 680px;
           margin: 0 auto;
@@ -63,11 +72,23 @@ struct ContentFetcher: Sendable {
         let domain = extractDomain(from: url)
 
         if let cached = cachedHTML, !cached.isEmpty {
-            let content = try strip(html: cached, sourceURL: url, knownDomain: domain, theme: theme)
+            var content = try strip(html: cached, sourceURL: url, knownDomain: domain, theme: theme)
+            var rawHTML = cached
+
+            if let upgraded = try await attemptWrapperUpgrade(
+                from: cached,
+                sourceURL: url,
+                current: content,
+                theme: theme
+            ) {
+                content = upgraded.content
+                rawHTML = upgraded.rawHTML
+            }
+
             if content.estimatedWordCount < 50 {
                 throw FetchError.emptyContent
             }
-            return FetchResult(content: content, rawHTML: cached)
+            return FetchResult(content: content, rawHTML: rawHTML)
         }
 
         let (data, response) = try await URLSession.shared.data(from: url)
@@ -75,11 +96,23 @@ struct ContentFetcher: Sendable {
             throw FetchError.httpError(http.statusCode)
         }
         let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
-        let content = try strip(html: html, sourceURL: url, knownDomain: domain, theme: theme)
+        var content = try strip(html: html, sourceURL: url, knownDomain: domain, theme: theme)
+        var rawHTML = html
+
+        if let upgraded = try await attemptWrapperUpgrade(
+            from: html,
+            sourceURL: url,
+            current: content,
+            theme: theme
+        ) {
+            content = upgraded.content
+            rawHTML = upgraded.rawHTML
+        }
+
         if content.estimatedWordCount < 50 {
             throw FetchError.emptyContent
         }
-        return FetchResult(content: content, rawHTML: html)
+        return FetchResult(content: content, rawHTML: rawHTML)
     }
 
     // MARK: - Strip
@@ -96,10 +129,12 @@ struct ContentFetcher: Sendable {
         // strip "leading-relaxed", "shadow-md", "gradient-*", "headline", etc.
         let noiseSelectors = [
             "img", "video", "figure", "picture", "iframe",
+            "svg", "canvas", "form", "input", "button", "select", "textarea",
             "nav", "header", "footer", "aside",
             "script", "style", "noscript",
             "[class~=ad]", "[class*=advert]", "[class*=adsense]", "[class*=adsbygoogle]",
             "[class*=banner]", "[class*=social]",
+            "[class*=icon]",
             "[class*=comment]", "[class*=related]", "[class*=share]",
             "[class*=subscribe]", "[class*=newsletter]",
             "[id*=advertisement]", "[id*=adsense]", "[id*=sidebar]", "[id*=comments]"
@@ -150,6 +185,10 @@ struct ContentFetcher: Sendable {
     // MARK: - Private Helpers
 
     private static func findContentElement(in root: Element) -> Element {
+        if let preferred = findPreferredContentElement(in: root) {
+            return preferred
+        }
+
         guard let paragraphs = try? root.select("p"), !paragraphs.isEmpty() else {
             return root
         }
@@ -174,6 +213,136 @@ struct ContentFetcher: Sendable {
         }
 
         return scoredElements.max(by: { $0.score < $1.score })?.element ?? root
+    }
+
+    private static func findPreferredContentElement(in root: Element) -> Element? {
+        let selectors = [
+            "article [itemprop=articleBody]",
+            "[itemprop=articleBody]",
+            "article .post-content",
+            "article .entry-content",
+            "main article",
+            "article",
+            "main"
+        ]
+
+        var best: (element: Element, score: Int)?
+        for selector in selectors {
+            guard let elements = try? root.select(selector), !elements.isEmpty() else { continue }
+            for element in elements.array() {
+                let score = contentScore(for: element)
+                guard score >= 120 else { continue }
+                if best == nil || score > best!.score {
+                    best = (element, score)
+                }
+            }
+            if best != nil { break }
+        }
+
+        return best?.element
+    }
+
+    private static func contentScore(for element: Element) -> Int {
+        guard let paragraphs = try? element.select("p"), !paragraphs.isEmpty() else {
+            return 0
+        }
+
+        var score = 0
+        for para in paragraphs.array() {
+            guard let text = try? para.text() else { continue }
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.count > 35 else { continue }
+            score += min(trimmed.count, 300)
+        }
+        return score
+    }
+
+    private static func attemptWrapperUpgrade(
+        from html: String,
+        sourceURL: URL,
+        current: StrippedContent,
+        theme: ReaderTheme
+    ) async throws -> FetchResult? {
+        guard current.estimatedWordCount <= wrapperFallbackWordThreshold else {
+            return nil
+        }
+        guard let targetURL = extractPrimaryOutboundURL(from: html, sourceURL: sourceURL) else {
+            return nil
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: targetURL)
+        if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+            throw FetchError.httpError(http.statusCode)
+        }
+        let targetHTML = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
+        let stripped = try strip(html: targetHTML, sourceURL: targetURL, theme: theme)
+
+        let hasMeaningfulGain = stripped.estimatedWordCount >= max(150, current.estimatedWordCount * 2)
+        guard hasMeaningfulGain else { return nil }
+        return FetchResult(content: stripped, rawHTML: targetHTML)
+    }
+
+    static func extractPrimaryOutboundURL(from html: String, sourceURL: URL) -> URL? {
+        guard let doc = try? SwiftSoup.parse(html, sourceURL.absoluteString) else {
+            return nil
+        }
+
+        // Prefer known "link-post title" anchors first, then broader content anchors.
+        let selectors = [
+            "dl.linkedlist dt > a[href]",
+            "article h1 a[href]",
+            "article h2 a[href]",
+            "main h1 a[href]",
+            "main h2 a[href]",
+            "main p a[href]",
+            "article p a[href]"
+        ]
+
+        for selector in selectors {
+            guard let links = try? doc.select(selector) else { continue }
+            for link in links.array() {
+                guard let href = try? link.attr("href"),
+                      let candidate = URL(string: href, relativeTo: sourceURL)?.absoluteURL,
+                      isValidOutboundTarget(candidate, sourceURL: sourceURL) else { continue }
+                return candidate
+            }
+        }
+        return nil
+    }
+
+    static func isValidOutboundTarget(_ target: URL, sourceURL: URL) -> Bool {
+        guard let scheme = target.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return false
+        }
+
+        let normalizedSource = normalizeHost(sourceURL.host)
+        let normalizedTarget = normalizeHost(target.host)
+        if normalizedSource == nil || normalizedTarget == nil { return false }
+        if normalizedSource == normalizedTarget { return false }
+
+        // Avoid obvious non-article utility endpoints.
+        let lowerPath = target.path.lowercased()
+        if lowerPath.hasSuffix(".jpg")
+            || lowerPath.hasSuffix(".jpeg")
+            || lowerPath.hasSuffix(".png")
+            || lowerPath.hasSuffix(".gif")
+            || lowerPath.hasSuffix(".svg")
+            || lowerPath.hasSuffix(".pdf")
+            || lowerPath.hasSuffix(".xml")
+            || lowerPath.hasSuffix(".rss") {
+            return false
+        }
+
+        return true
+    }
+
+    private static func normalizeHost(_ host: String?) -> String? {
+        guard var value = host?.lowercased(), !value.isEmpty else { return nil }
+        if value.hasPrefix("www.") {
+            value = String(value.dropFirst(4))
+        }
+        return value
     }
 
     // MARK: - Errors

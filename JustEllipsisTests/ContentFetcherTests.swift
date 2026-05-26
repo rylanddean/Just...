@@ -25,6 +25,20 @@ struct ContentFetcherTests {
     </html>
     """
 
+    let linkedPostHTML = """
+    <html>
+    <head><title>Link Post</title></head>
+    <body>
+      <dl class="linkedlist">
+        <dt><a href="https://external.example.com/full-article">A full article</a></dt>
+        <dd>
+          <p>Short commentary excerpt with context.</p>
+        </dd>
+      </dl>
+    </body>
+    </html>
+    """
+
     @Test("Strip removes noise elements")
     func stripRemovesNoise() throws {
         let url = URL(string: "https://example.com/article")!
@@ -36,6 +50,23 @@ struct ContentFetcherTests {
         #expect(!result.body.contains("<aside>"))
         #expect(!result.body.contains("<script>"))
         #expect(!result.body.contains("<img"))
+    }
+
+    @Test("Strip removes inline SVG icons")
+    func stripRemovesInlineSVGIcons() throws {
+        let url = URL(string: "https://example.com/article")!
+        let html = """
+        <html><body>
+          <article>
+            <h1>Title</h1>
+            <p>This paragraph is long enough to be picked as real article content by the extractor.</p>
+            <svg><path d="M0 0h10v10z"></path></svg>
+          </article>
+        </body></html>
+        """
+        let result = try ContentFetcher.strip(html: html, sourceURL: url)
+        #expect(!result.body.contains("<svg"))
+        #expect(!result.body.contains("<path"))
     }
 
     @Test("Strip preserves article paragraphs")
@@ -85,5 +116,33 @@ struct ContentFetcherTests {
         // Simulate cached path by passing the raw HTML back in
         let fetchResult = try await ContentFetcher.fetch(urlString: url.absoluteString, cachedHTML: sampleHTML)
         #expect(fetchResult.content.title == stripResult.title)
+    }
+
+    @Test("extractPrimaryOutboundURL prefers external linked post URL")
+    func extractPrimaryOutboundURLFindsLinkedTarget() throws {
+        let sourceURL = URL(string: "https://daringfireball.net/linked/2014/01/29/haynes-aapl")!
+        let resolved = ContentFetcher.extractPrimaryOutboundURL(from: linkedPostHTML, sourceURL: sourceURL)
+        #expect(resolved?.absoluteString == "https://external.example.com/full-article")
+    }
+
+    @Test("extractPrimaryOutboundURL ignores same-host links")
+    func extractPrimaryOutboundURLIgnoresSameHost() throws {
+        let sourceURL = URL(string: "https://daringfireball.net/linked/2014/01/29/haynes-aapl")!
+        let html = """
+        <html><body>
+          <dl class="linkedlist">
+            <dt><a href="https://www.daringfireball.net/archives">Archive</a></dt>
+          </dl>
+        </body></html>
+        """
+        let resolved = ContentFetcher.extractPrimaryOutboundURL(from: html, sourceURL: sourceURL)
+        #expect(resolved == nil)
+    }
+
+    @Test("isValidOutboundTarget rejects non-http links")
+    func isValidOutboundTargetRejectsNonHTTP() throws {
+        let sourceURL = URL(string: "https://daringfireball.net/linked/2014/01/29/haynes-aapl")!
+        let mailtoURL = URL(string: "mailto:someone@example.com")!
+        #expect(ContentFetcher.isValidOutboundTarget(mailtoURL, sourceURL: sourceURL) == false)
     }
 }

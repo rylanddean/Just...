@@ -4,6 +4,7 @@ import WebKit
 struct ReaderWebView: UIViewRepresentable {
     let html: String
     var theme: ReaderTheme = .ember
+    var fontSize: CGFloat = CGFloat(ReaderTextSize.defaultValue)
     var onScrollProgress: (Double) -> Void = { _ in }
     var onNearBottom: (Bool) -> Void = { _ in }
     var onOverScrollDelta: (CGFloat) -> Void = { _ in }
@@ -36,6 +37,7 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onNearBottom = onNearBottom
         context.coordinator.onOverScrollDelta = onOverScrollDelta
         context.coordinator.onReflectTrigger = onReflectTrigger
+        context.coordinator.requestedFontSize = fontSize
         let bgColor = UIColor(theme.bg)
         webView.backgroundColor = bgColor
         webView.scrollView.backgroundColor = bgColor
@@ -44,6 +46,8 @@ struct ReaderWebView: UIViewRepresentable {
             context.coordinator.didTrigger = false
             context.coordinator.wasNearBottom = false
             webView.loadHTMLString(html, baseURL: nil)
+        } else {
+            context.coordinator.applyFontSizeIfNeeded(on: webView)
         }
     }
 
@@ -55,6 +59,8 @@ struct ReaderWebView: UIViewRepresentable {
         var loadedHTML: String = ""
         var didTrigger = false
         var wasNearBottom = false
+        var requestedFontSize: CGFloat = CGFloat(ReaderTextSize.defaultValue)
+        private var appliedFontSize: CGFloat = -1
 
         init(
             onScrollProgress: @escaping (Double) -> Void,
@@ -66,6 +72,19 @@ struct ReaderWebView: UIViewRepresentable {
             self.onNearBottom = onNearBottom
             self.onOverScrollDelta = onOverScrollDelta
             self.onReflectTrigger = onReflectTrigger
+        }
+
+        func applyFontSizeIfNeeded(on webView: WKWebView) {
+            guard abs(appliedFontSize - requestedFontSize) > 0.1 else { return }
+            let minSize = CGFloat(ReaderTextSize.minValue)
+            let maxSize = CGFloat(ReaderTextSize.maxValue)
+            let clamped = min(max(requestedFontSize, minSize), maxSize)
+            appliedFontSize = clamped
+            let js = """
+            document.documentElement.style.setProperty('--reader-font-size', '\(clamped)px');
+            document.body.style.fontSize = '\(clamped)px';
+            """
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -111,6 +130,10 @@ struct ReaderWebView: UIViewRepresentable {
             } else {
                 decisionHandler(.allow)
             }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            applyFontSizeIfNeeded(on: webView)
         }
     }
 }

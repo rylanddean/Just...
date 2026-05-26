@@ -9,12 +9,45 @@ struct ReaderView: View {
     @Environment(\.appTheme) private var appTheme
 
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
+    @AppStorage(ReaderTextSize.defaultsKey) private var readerTextSize: Double = ReaderTextSize.defaultValue
     private var readerTheme: ReaderTheme { ReaderTheme(rawValue: themeRaw) ?? .ember }
 
     @State private var viewModel = ReaderViewModel()
     @State private var pendingEntry: BrainEntry?
     @State private var isNearBottom = false
     @State private var overScrollDelta: CGFloat = 0
+    @State private var isTextSizeControlVisible = false
+    @State private var loadingMessageIndex = 0
+
+    private let loadingMessages = [
+        "Polishing commas...",
+        "Untangling the good parts...",
+        "Shushing pop-ups and ads...",
+        "Brewing your reading tea...",
+        "Asking the article to be normal...",
+        "Convincing the page to behave...",
+        "Removing 47 'you won't believe' banners...",
+        "Translating clickbait into human...",
+        "Dusting off rogue toolbars...",
+        "Negotiating with mysterious JavaScript...",
+        "Petting the loading hamster...",
+        "Ironing out weird spacing...",
+        "Finding the actual point...",
+        "Extracting sentences from chaos...",
+        "Turning noise into paragraphs...",
+        "Sifting signal from confetti...",
+        "Putting the words in a straight line...",
+        "Gently deleting floating widgets...",
+        "Sweeping out autoplay gremlins...",
+        "Making headlines less dramatic...",
+        "Removing unsolicited enthusiasm...",
+        "Whispering 'calm down' to the DOM...",
+        "Loading article, not nonsense...",
+        "Defluffing the fluff...",
+        "Making this look readable on purpose...",
+        "Finding where the article actually starts...",
+        "Assembling a distraction-free zone..."
+    ]
 
     var body: some View {
         reflectPresentation {
@@ -70,9 +103,15 @@ struct ReaderView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .tint(appTheme.accent)
-            Text("Fetching article…")
+            Text(loadingMessages[loadingMessageIndex])
                 .font(AppTheme.sansSerif(13))
                 .foregroundStyle(appTheme.text.opacity(0.5))
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: loadingMessageIndex)
+        }
+        .task(id: viewModel.isLoading) {
+            guard viewModel.isLoading else { return }
+            loadingMessageIndex = Int.random(in: 0..<loadingMessages.count)
         }
     }
 
@@ -205,6 +244,21 @@ struct ReaderView: View {
 
                 HStack(spacing: 16) {
                     Button {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            isTextSizeControlVisible.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "textformat.size")
+                            .font(.system(size: 13))
+                            .foregroundStyle(
+                                isTextSizeControlVisible
+                                ? appTheme.accent
+                                : appTheme.text.opacity(0.4)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
                         UIPasteboard.general.string = link.url
                     } label: {
                         Image(systemName: "doc.on.doc")
@@ -213,16 +267,19 @@ struct ReaderView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button("Done") {
-                        openReflect(content: content)
-                    }
-                    .font(AppTheme.sansSerif(14))
-                    .foregroundStyle(appTheme.text.opacity(0.5))
                 }
             }
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.vertical, 12)
             .background(appTheme.background)
+
+            if isTextSizeControlVisible {
+                textSizeControl
+                    .padding(.horizontal, AppTheme.pagePadding)
+                    .padding(.bottom, 10)
+                    .background(appTheme.background)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
 
             // Progress indicator
             GeometryReader { geo in
@@ -238,6 +295,7 @@ struct ReaderView: View {
                 ReaderWebView(
                     html: content.body,
                     theme: readerTheme,
+                    fontSize: CGFloat(readerTextSize),
                     onScrollProgress: { progress in
                         viewModel.readProgress = progress
                     },
@@ -265,6 +323,42 @@ struct ReaderView: View {
                         .transition(.opacity)
                 }
             }
+        }
+    }
+
+    private var textSizeControl: some View {
+        HStack(spacing: 10) {
+            Text("Text")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.text.opacity(0.45))
+
+            Button {
+                readerTextSize = max(ReaderTextSize.minValue, readerTextSize - 1)
+            } label: {
+                Image(systemName: "textformat.size.smaller")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.55))
+            }
+            .buttonStyle(.plain)
+
+            Slider(
+                value: Binding(
+                    get: { readerTextSize },
+                    set: { readerTextSize = min(max($0, ReaderTextSize.minValue), ReaderTextSize.maxValue) }
+                ),
+                in: ReaderTextSize.minValue...ReaderTextSize.maxValue,
+                step: 1
+            )
+            .tint(appTheme.accent)
+
+            Button {
+                readerTextSize = min(ReaderTextSize.maxValue, readerTextSize + 1)
+            } label: {
+                Image(systemName: "textformat.size.larger")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.55))
+            }
+            .buttonStyle(.plain)
         }
     }
 

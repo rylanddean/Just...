@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct BrainView: View {
     @Environment(\.modelContext) private var context
@@ -59,6 +60,13 @@ struct BrainView: View {
                             BrainEntryRow(entry: entry)
                                 .contentShape(Rectangle())
                                 .onTapGesture { selectedEntry = entry }
+                                .contextMenu {
+                                    Button {
+                                        UIPasteboard.general.string = entry.url
+                                    } label: {
+                                        Label("Copy Link", systemImage: "link")
+                                    }
+                                }
                                 .listRowBackground(appTheme.background)
                                 .listRowSeparatorTint(appTheme.separator)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {

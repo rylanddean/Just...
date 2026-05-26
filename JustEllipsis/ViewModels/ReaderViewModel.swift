@@ -35,7 +35,7 @@ final class ReaderViewModel {
             if link.domain == nil || link.domain!.isEmpty {
                 link.domain = result.content.domain
             }
-            if link.cachedHTML == nil {
+            if link.cachedHTML != result.rawHTML {
                 link.cachedHTML = result.rawHTML
                 link.prefetchState = .ready
             }
