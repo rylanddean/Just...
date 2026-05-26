@@ -62,6 +62,20 @@ struct ArticleDNA {
 
 @available(iOS 26, *)
 @Generable
+struct ArticleQualityAssessment {
+    @Guide(description: """
+        Grade the article as a read for someone who values original
+        thinking and focused attention.
+        - strong: original argument or insight, earns undivided attention
+        - worthIt: informative and well-written, not essential
+        - noise: aggregated, promotional, listicle, clickbait, or too brief
+        Return exactly one of: strong, worthIt, noise.
+        """)
+    var grade: String
+}
+
+@available(iOS 26, *)
+@Generable
 struct RelevanceScore {
     @Guide(description: """
         A single integer from 0 to 10 representing how relevant the article is to the reader.
@@ -118,6 +132,27 @@ extension IntelligenceService {
             generating: ArticleDNA.self
         )
         return response.content.concepts
+    }
+
+    // MARK: Article Quality Grading
+
+    static func gradeQuality(title: String, description: String) async -> ArticleQualityGrade? {
+        let input = description.isEmpty ? title : "\(title)\n\n\(String(description.prefix(1500)))"
+        let session = LanguageModelSession()
+        let response = try? await session.respond(
+            to: "Grade this article as a read:\n\n\(input)",
+            generating: ArticleQualityAssessment.self
+        )
+        let raw = response?.content.grade
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+        switch raw {
+        case "strong":  return .strong
+        case "worthit": return .worthIt
+        case "noise":   return .noise
+        default:        return nil
+        }
     }
 
     // MARK: Article Relevance Scoring (used by RSSRecommendationEngine)

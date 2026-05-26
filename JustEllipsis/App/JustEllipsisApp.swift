@@ -7,6 +7,7 @@ struct JustEllipsisApp: App {
 
     let container: ModelContainer = makeContainer()
     @State private var router = AppRouter()
+    @State private var gradingTracker = GradingProgressTracker()
 
     init() {
         registerRSSBackgroundTask()
@@ -17,6 +18,7 @@ struct JustEllipsisApp: App {
             RootView()
                 .modelContainer(container)
                 .environment(router)
+                .environment(gradingTracker)
                 .onOpenURL { url in
                     handleOpenURL(url)
                 }

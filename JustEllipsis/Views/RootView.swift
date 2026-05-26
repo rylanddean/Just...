@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppRouter.self) private var router
+    @Environment(GradingProgressTracker.self) private var gradingTracker
 
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     private var activeTheme: AppTheme { AppTheme(theme: ReaderTheme(rawValue: themeRaw) ?? .ember) }
@@ -41,13 +42,13 @@ struct RootView: View {
         .environment(\.appTheme, activeTheme)
         .task {
             processPendingLinks()
-            RSSFetchService.fetchInProcess(container: context.container)
+            RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
             PrefetchService.prefetchInProcess(container: context.container)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 processPendingLinks()
-                RSSFetchService.fetchInProcess(container: context.container)
+                RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
                 PrefetchService.prefetchInProcess(container: context.container)
             }
         }

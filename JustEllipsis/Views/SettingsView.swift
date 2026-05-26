@@ -6,11 +6,14 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
+    @Environment(GradingProgressTracker.self) private var gradingTracker
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
     @AppStorage(JustEllipsisApp.iCloudSyncKey) private var iCloudSyncEnabled: Bool = false
     @AppStorage("rss.fetchHour")   private var fetchHour:   Int = RSSFetchService.defaultFetchHour
     @AppStorage("rss.fetchMinute") private var fetchMinute: Int = RSSFetchService.defaultFetchMinute
+    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
+    @AppStorage("digest.hideNoise") private var hideNoise: Bool = false
 
     // MARK: - Dialog state
 
@@ -53,6 +56,7 @@ struct SettingsView: View {
                         syncSection
                         streakSection
                         feedsSection
+                        readingSection
                         themeSection
                         dangerSection
                         versionFooter
@@ -343,6 +347,57 @@ struct SettingsView: View {
                 DatePicker("", selection: fetchTimeBinding, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                     .tint(appTheme.accent)
+            }
+        }
+    }
+
+    // MARK: - Reading Section
+
+    private var readingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("READING")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Article grading")
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint)
+                        if !IntelligenceService.isAvailable {
+                            Text("Requires Apple Intelligence.")
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                    }
+                    Spacer()
+                    Toggle("", isOn: $gradingEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                        .disabled(!IntelligenceService.isAvailable)
+                        .onChange(of: gradingEnabled) { _, enabled in
+                            if enabled {
+                                RSSFetchService.gradeInProcess(
+                                    container: context.container,
+                                    tracker: gradingTracker
+                                )
+                            }
+                        }
+                }
+
+                HStack {
+                    Text("Hide noise from digest")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(gradingEnabled && IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint)
+                        .padding(.leading, 16)
+                    Spacer()
+                    Toggle("", isOn: $hideNoise)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                        .disabled(!gradingEnabled || !IntelligenceService.isAvailable)
+                }
             }
         }
     }

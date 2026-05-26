@@ -29,6 +29,7 @@
 		6F55A95F2635E6E07C126DC7 /* ContentFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */; };
 		7032B03292C0899EC0EAC305 /* RSSFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE22AF6BA2593A1F3AE13771 /* RSSFeed.swift */; };
 		71051F154C5F1E8E4C32F3A8 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */; };
+		71E142A7D93F5DE88AF64BF2 /* GradingProgressTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420304C73D3C2F1BA89FB9AE /* GradingProgressTracker.swift */; };
 		743293124B7106E74EA6C0BC /* FeedDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DAE9F4B42AFCFBD95276C19 /* FeedDetailView.swift */; };
 		77F8A704F081AFC3671D2168 /* ReflectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F232598215B53DB59A71324A /* ReflectView.swift */; };
 		78CA24460077DABBF1C0A10A /* BrainOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */; };
@@ -50,6 +51,7 @@
 		B89A122322A35304859319F6 /* AddLinkIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */; };
 		BA81D77627C4EC391E22F535 /* RSSFetchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */; };
 		C5758CD9E02EA13965072A09 /* FeedDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9667F64E5204B686724BC6 /* FeedDirectoryView.swift */; };
+		C57D850E136EA2F6017B58BB /* GradeDots.swift in Sources */ = {isa = PBXBuildFile; fileRef = E99A34628404DFACDBB556C2 /* GradeDots.swift */; };
 		C5E3510BA0839FE572FE05A4 /* ShareFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC763198DE4280198397A77F /* ShareFeedbackView.swift */; };
 		CB82B521C89B60A2D64CF6E5 /* FaviconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A73E845D1BE786825396BF8C /* FaviconView.swift */; };
 		CC99FBCD2E1EA422F4EC7E0D /* StreakEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */; };
@@ -61,6 +63,7 @@
 		E4C64FB18B12689A4A2873F7 /* BrainDietPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E01C072C66A485762BAC5A3 /* BrainDietPanel.swift */; };
 		E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = F70788F7020E27CA19E61A12 /* SwiftSoup */; };
 		E5EE934B550AB6F6E15D6AE8 /* RereadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F314B2513A0B75D17496E9C /* RereadView.swift */; };
+		F167F9B4C6EB23363E004A1A /* ArticleQualityGrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +106,7 @@
 		1CDA3E54FDEF2BEF53809AB3 /* ReflectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectViewModel.swift; sourceTree = "<group>"; };
 		1F314B2513A0B75D17496E9C /* RereadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RereadView.swift; sourceTree = "<group>"; };
 		1FB7BE8457A65678C63AA04B /* ReadingDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingDay.swift; sourceTree = "<group>"; };
+		21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleQualityGrade.swift; sourceTree = "<group>"; };
 		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
@@ -111,6 +115,7 @@
 		3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
 		3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFetcherTests.swift; sourceTree = "<group>"; };
 		3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLinkIntent.swift; sourceTree = "<group>"; };
+		420304C73D3C2F1BA89FB9AE /* GradingProgressTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradingProgressTracker.swift; sourceTree = "<group>"; };
 		46A719D305320A1D2B22BA50 /* LinkCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkCard.swift; sourceTree = "<group>"; };
 		47BE1C9EB59A42E35267C8A4 /* ActivityChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityChart.swift; sourceTree = "<group>"; };
 		53C8EBE71DB26F97014284EE /* ReaderTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTheme.swift; sourceTree = "<group>"; };
@@ -146,6 +151,7 @@
 		E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainOrb.swift; sourceTree = "<group>"; };
 		E5125754A6D578D4450448D7 /* DigestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigestView.swift; sourceTree = "<group>"; };
 		E5FFE2DFE392AFFCF9E68E21 /* BrainEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEngineTests.swift; sourceTree = "<group>"; };
+		E99A34628404DFACDBB556C2 /* GradeDots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradeDots.swift; sourceTree = "<group>"; };
 		EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWebView.swift; sourceTree = "<group>"; };
 		ED7FFE6597C651A7C460DFB1 /* JustEllipsis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsis.entitlements; sourceTree = "<group>"; };
 		EE22AF6BA2593A1F3AE13771 /* RSSFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSFeed.swift; sourceTree = "<group>"; };
@@ -218,6 +224,7 @@
 		8CC770824E4E5DD65F9EC56C /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */,
 				F8881FBE57095A67C1C24497 /* BrainEntry.swift */,
 				E3FFDB49A234476554B1FE83 /* QueuedLink.swift */,
 				53C8EBE71DB26F97014284EE /* ReaderTheme.swift */,
@@ -273,6 +280,7 @@
 				E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */,
 				A42F62308F8EC6615789E6A4 /* CountdownRing.swift */,
 				A73E845D1BE786825396BF8C /* FaviconView.swift */,
+				E99A34628404DFACDBB556C2 /* GradeDots.swift */,
 				46A719D305320A1D2B22BA50 /* LinkCard.swift */,
 				EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */,
 				CC480E509A335B23D95C2896 /* StreakHeader.swift */,
@@ -295,6 +303,7 @@
 			children = (
 				5FB525487287C343A913E2DB /* AppRouter.swift */,
 				369CC02046EDB9D512264A8B /* AppTheme.swift */,
+				420304C73D3C2F1BA89FB9AE /* GradingProgressTracker.swift */,
 				9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */,
 			);
 			path = App;
@@ -468,6 +477,7 @@
 				949A68996476CD7276C0382C /* AddLinkView.swift in Sources */,
 				AB60A86711520B76E110A37A /* AppRouter.swift in Sources */,
 				B2F38D292704272C04A106AC /* AppTheme.swift in Sources */,
+				F167F9B4C6EB23363E004A1A /* ArticleQualityGrade.swift in Sources */,
 				E4C64FB18B12689A4A2873F7 /* BrainDietPanel.swift in Sources */,
 				E2EB2EA9151BA6D2E9C5700B /* BrainEngine.swift in Sources */,
 				B564A9798D0457D85A3D73AE /* BrainEntry.swift in Sources */,
@@ -483,6 +493,8 @@
 				743293124B7106E74EA6C0BC /* FeedDetailView.swift in Sources */,
 				C5758CD9E02EA13965072A09 /* FeedDirectoryView.swift in Sources */,
 				24271D2A9FCFC50049035718 /* FeedsView.swift in Sources */,
+				C57D850E136EA2F6017B58BB /* GradeDots.swift in Sources */,
+				71E142A7D93F5DE88AF64BF2 /* GradingProgressTracker.swift in Sources */,
 				854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */,
 				1A8F7B7E1F4EF583D9485183 /* IntelligenceService.swift in Sources */,
 				8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */,

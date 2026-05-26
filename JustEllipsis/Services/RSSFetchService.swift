@@ -49,20 +49,31 @@ struct RSSFetchService {
     // in the background task. Running it here would delete articles older than 7 days
     // that were just fetched, making infrequently-updated feeds appear empty.
     @MainActor
-    static func fetchInProcess(container: ModelContainer) {
+    static func fetchInProcess(container: ModelContainer, tracker: GradingProgressTracker) {
         Task.detached(priority: .background) {
             let actor = RSSFetchActor(modelContainer: container)
             await actor.fetchAll()
             await actor.summarizePendingArticles()
+            await actor.gradeNewArticles(tracker: tracker)
+        }
+    }
+
+    // Grade any ungraded articles without doing a network fetch — used when grading is first enabled.
+    @MainActor
+    static func gradeInProcess(container: ModelContainer, tracker: GradingProgressTracker) {
+        Task.detached(priority: .background) {
+            let actor = RSSFetchActor(modelContainer: container)
+            await actor.gradeNewArticles(tracker: tracker)
         }
     }
 
     // Fetch a single newly-added feed immediately so its articles appear right away.
     @MainActor
-    static func fetchSingle(feedID: UUID, url: String, container: ModelContainer) {
+    static func fetchSingle(feedID: UUID, url: String, container: ModelContainer, tracker: GradingProgressTracker) {
         Task.detached(priority: .userInitiated) {
             let actor = RSSFetchActor(modelContainer: container)
             await actor.fetchOne(feedID: feedID, urlString: url)
+            await actor.gradeNewArticles(tracker: tracker)
         }
     }
 }
@@ -137,11 +148,12 @@ actor RSSFetchActor {
         try? modelContext.save()
     }
 
-    // Full daily job: fetch all feeds, prune stale articles, make picks, promote to queue.
+    // Full daily job: fetch all feeds, prune stale articles, grade, make picks, promote to queue.
     func performDailyJob() async {
         await fetchAll()
         await pruneOldArticles()
         await summarizePendingArticles()
+        await gradeNewArticles(tracker: nil)
 
         // Extract Sendable snapshots before crossing the isolation boundary.
         let articleSnapshots: [ArticleSnapshot] = ((try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? [])
@@ -250,6 +262,38 @@ actor RSSFetchActor {
             }
         }
         if !stubs.isEmpty { try? modelContext.save() }
+    }
+
+    // Grades ungraded articles using on-device AI. No-ops when grading is disabled or AI is unavailable.
+    // Pass nil tracker from background tasks where there is no UI to update.
+    func gradeNewArticles(tracker: GradingProgressTracker?) async {
+        guard #available(iOS 26, *) else { return }
+        guard UserDefaults.standard.bool(forKey: "grading.enabled") else { return }
+        guard IntelligenceService.isAvailable else { return }
+
+        struct Stub: Sendable {
+            let id: PersistentIdentifier
+            let articleID: UUID
+            let title: String
+            let desc: String
+        }
+        let all = (try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? []
+        let stubs: [Stub] = all.compactMap { article in
+            guard article.qualityGrade == nil else { return nil }
+            let desc = article.summary ?? article.feedDescription ?? ""
+            return Stub(id: article.persistentModelID, articleID: article.id,
+                        title: article.title, desc: desc)
+        }
+
+        for stub in stubs {
+            if let tracker { await MainActor.run { tracker.markActive(stub.articleID) } }
+            let grade = await IntelligenceService.gradeQuality(title: stub.title, description: stub.desc)
+            if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
+                article.qualityGrade = grade
+                try? modelContext.save()
+            }
+            if let tracker { await MainActor.run { tracker.markDone(stub.articleID) } }
+        }
     }
 
     // Pure parsing — runs on the cooperative pool, returns a Sendable value.

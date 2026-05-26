@@ -8,8 +8,14 @@ struct DigestView: View {
     @Query private var queue: [QueuedLink]
     @Query(sort: \BrainEntry.readAt, order: .reverse) private var brainEntries: [BrainEntry]
 
+    @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
+    @Environment(GradingProgressTracker.self) private var gradingTracker
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
+    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
+    @AppStorage("digest.hideNoise") private var hideNoise: Bool = false
+
+    @State private var isFetching = false
 
     init() {
         let cutoff = Date(timeIntervalSinceNow: -48 * 60 * 60)
@@ -31,6 +37,7 @@ struct DigestView: View {
         return articles
             .filter { Calendar.current.isDateInToday($0.publishedAt) }
             .filter { seen.insert($0.url).inserted }
+            .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
     }
 
     private var yesterdayArticles: [RSSArticle] {
@@ -38,6 +45,7 @@ struct DigestView: View {
         return articles
             .filter { Calendar.current.isDateInYesterday($0.publishedAt) }
             .filter { seen.insert($0.url).inserted }
+            .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
     }
 
     // Returns nil when the Brain doesn't yet have enough signal (< 5 entries).
@@ -203,8 +211,35 @@ struct DigestView: View {
         }
         .navigationTitle("Digest")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    refetch()
+                } label: {
+                    if isFetching {
+                        ProgressView()
+                            .tint(appTheme.accent)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(appTheme.accent)
+                    }
+                }
+                .disabled(isFetching)
+            }
+        }
         .toolbarBackground(appTheme.background, for: .navigationBar)
         .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+    }
+
+    private func refetch() {
+        guard !isFetching else { return }
+        isFetching = true
+        RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            isFetching = false
+        }
     }
 }
 
@@ -280,6 +315,7 @@ private struct DigestArticleRow: View {
     let onAdd: () -> Void
 
     @Environment(\.appTheme) private var appTheme
+    @Environment(GradingProgressTracker.self) private var gradingTracker
     @State private var justAdded = false
 
     private var domain: String {
@@ -312,6 +348,13 @@ private struct DigestArticleRow: View {
                     Text(article.publishedAt.relativeShort)
                         .font(AppTheme.sansSerif(12))
                         .foregroundStyle(appTheme.textFaint)
+
+                    if gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil {
+                        Text("·")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                        ArticleGradeIndicator(articleID: article.id, grade: article.qualityGrade)
+                    }
                 }
             }
 
