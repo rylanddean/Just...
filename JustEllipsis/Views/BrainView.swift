@@ -34,6 +34,13 @@ struct BrainView: View {
                     }
                 }
 
+                // ── Brain Diet panel ─────────────────────────────────────
+                Section {
+                    BrainDietPanel(entries: entries, viewModel: viewModel)
+                        .listRowBackground(appTheme.background)
+                        .listRowSeparator(.hidden)
+                }
+
                 // ── Entry list ────────────────────────────────────────────
                 Section {
                     if displayed.isEmpty {

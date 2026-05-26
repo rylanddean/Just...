@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import CoreData
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -14,12 +15,17 @@ struct SettingsView: View {
     // MARK: - Dialog state
 
     private enum DialogKind: Identifiable {
-        case clearStreak, resetEverything
+        case clearStreak, resetEverything, forceUpload, forceRestore
         var id: Self { self }
+    }
+
+    private enum SyncPhase {
+        case idle, syncing, success(String), failure(String)
     }
 
     @State private var versionTapCount = 0
     @State private var activeDialog: DialogKind? = nil
+    @State private var syncPhase: SyncPhase = .idle
 
     private var selectedTheme: ReaderTheme {
         ReaderTheme(rawValue: themeRaw) ?? .ember
@@ -71,7 +77,7 @@ struct SettingsView: View {
         }
         .preferredColorScheme(appTheme.colorScheme)
         .confirmationDialog(
-            activeDialog == .clearStreak ? "Clear streak?" : "Reset everything?",
+            dialogTitle,
             isPresented: Binding(get: { activeDialog != nil },
                                  set: { if !$0 { activeDialog = nil } }),
             titleVisibility: .visible,
@@ -84,6 +90,12 @@ struct SettingsView: View {
             case .resetEverything:
                 Button("Reset everything", role: .destructive) { resetEverything() }
                 Button("Cancel", role: .cancel) { }
+            case .forceUpload:
+                Button("Upload") { Task { await performForceUpload() } }
+                Button("Cancel", role: .cancel) { }
+            case .forceRestore:
+                Button("Restore", role: .destructive) { scheduleCloudRestore() }
+                Button("Cancel", role: .cancel) { }
             }
         } message: { dialog in
             switch dialog {
@@ -91,6 +103,10 @@ struct SettingsView: View {
                 Text("Your reading streak and daily history will be deleted.")
             case .resetEverything:
                 Text("Your queue, Brain, streak, and feeds will be deleted. This cannot be undone.")
+            case .forceUpload:
+                Text("Your local data will be pushed to iCloud. Any differences on other devices will be resolved on their next sync.")
+            case .forceRestore:
+                Text("Local data will be cleared and replaced from iCloud the next time you open Just….")
             }
         }
     }
@@ -127,6 +143,26 @@ struct SettingsView: View {
                         Text("Active the next time you open Just…")
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.accent.opacity(0.7))
+
+                        Divider().background(appTheme.separator)
+
+                        syncActionRow(
+                            title: "Upload to iCloud",
+                            subtitle: "Push this device's data to iCloud."
+                        ) {
+                            syncPhase = .idle
+                            activeDialog = .forceUpload
+                        }
+
+                        syncActionRow(
+                            title: "Restore from iCloud",
+                            subtitle: "Replace local data from iCloud on next launch."
+                        ) {
+                            syncPhase = .idle
+                            activeDialog = .forceRestore
+                        }
+
+                        syncPhaseFeedback
                     }
                 }
             } else {
@@ -152,6 +188,63 @@ struct SettingsView: View {
                 }
             }
         }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: NSPersistentCloudKitContainer.eventChangedNotification
+            ).receive(on: RunLoop.main)
+        ) { notification in
+            handleCloudKitEvent(notification)
+        }
+    }
+
+    @ViewBuilder
+    private var syncPhaseFeedback: some View {
+        switch syncPhase {
+        case .idle:
+            EmptyView()
+        case .syncing:
+            HStack(spacing: 8) {
+                ProgressView()
+                    .tint(appTheme.accent)
+                    .scaleEffect(0.75)
+                Text("Syncing to iCloud…")
+                    .font(AppTheme.sansSerif(12))
+                    .foregroundStyle(appTheme.accent.opacity(0.7))
+            }
+        case .success(let message):
+            Text(message)
+                .font(AppTheme.sansSerif(12))
+                .foregroundStyle(appTheme.accent.opacity(0.7))
+        case .failure(let message):
+            Text(message)
+                .font(AppTheme.sansSerif(12))
+                .foregroundStyle(AppTheme.danger.opacity(0.85))
+        }
+    }
+
+    private func syncActionRow(
+        title: String,
+        subtitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(AppTheme.sansSerif(14))
+                        .foregroundStyle(appTheme.heading)
+                    Text(subtitle)
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11))
+                    .foregroundStyle(appTheme.textFaint)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled({ if case .syncing = syncPhase { return true }; return false }())
     }
 
     // MARK: - Streak Section
@@ -327,7 +420,59 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Helpers
+
+    private var dialogTitle: String {
+        switch activeDialog {
+        case .clearStreak:    "Clear streak?"
+        case .resetEverything: "Reset everything?"
+        case .forceUpload:    "Upload to iCloud?"
+        case .forceRestore:   "Restore from iCloud?"
+        case nil:             ""
+        }
+    }
+
     // MARK: - Actions
+
+    private func performForceUpload() async {
+        syncPhase = .syncing
+        do {
+            try context.save()
+        } catch {
+            syncPhase = .failure("Could not commit changes.")
+            return
+        }
+        // Poll for a CloudKit export event (delivered via handleCloudKitEvent).
+        // If none fires within ~12 s, the store was already in sync.
+        for _ in 0..<24 {
+            try? await Task.sleep(for: .milliseconds(500))
+            if case .syncing = syncPhase { continue }
+            return
+        }
+        syncPhase = .success("iCloud is up to date.")
+    }
+
+    private func scheduleCloudRestore() {
+        CloudSyncService.scheduleRestore()
+        syncPhase = .success("Restore scheduled. Reopen Just… to complete.")
+    }
+
+    private func handleCloudKitEvent(_ notification: Notification) {
+        guard case .syncing = syncPhase else { return }
+        guard
+            let event = notification.userInfo?[
+                NSPersistentCloudKitContainer.eventNotificationUserInfoKey
+            ] as? NSPersistentCloudKitContainer.Event,
+            event.type == .export,
+            event.endDate != nil
+        else { return }
+
+        if event.succeeded {
+            syncPhase = .success("Synced. iCloud is up to date.")
+        } else {
+            syncPhase = .failure("Sync failed. Check your connection.")
+        }
+    }
 
     private func handleSelection(_ theme: ReaderTheme) {
         guard theme != selectedTheme else { return }

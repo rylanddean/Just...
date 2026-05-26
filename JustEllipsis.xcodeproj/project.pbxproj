@@ -35,6 +35,7 @@
 		7C28C1742A5A65634AE19449 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4958A7DF6F86097742050CA /* SettingsView.swift */; };
 		7ED49FF7C07BFE3CB2929B46 /* ReadingDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB7BE8457A65678C63AA04B /* ReadingDay.swift */; };
 		854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711256DA53620D4C746AC36F /* HomeView.swift */; };
+		85E502CAF98B8EBE370D5E7B /* CloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84722707AA336D1073651EEF /* CloudSyncService.swift */; };
 		864F3C0E8B0F3F5097EC15B4 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D03466EC4C3263BF1837381 /* ShareViewController.swift */; };
 		8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */; };
 		942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD402C01934293F01520002 /* PendingLinkStore.swift */; };
@@ -57,6 +58,7 @@
 		D8DF3954E0CB01D122E87439 /* feeds.json in Resources */ = {isa = PBXBuildFile; fileRef = DEB0F696771B8EDE0D4FC2B2 /* feeds.json */; };
 		DF47C19BEF474C1C7B732E11 /* Date+RelativeShort.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F2C68064C12A47B02C21E2 /* Date+RelativeShort.swift */; };
 		E2EB2EA9151BA6D2E9C5700B /* BrainEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E031427BDE66D20C2190203 /* BrainEngine.swift */; };
+		E4C64FB18B12689A4A2873F7 /* BrainDietPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E01C072C66A485762BAC5A3 /* BrainDietPanel.swift */; };
 		E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = F70788F7020E27CA19E61A12 /* SwiftSoup */; };
 		E5EE934B550AB6F6E15D6AE8 /* RereadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F314B2513A0B75D17496E9C /* RereadView.swift */; };
 /* End PBXBuildFile section */
@@ -120,6 +122,8 @@
 		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		79111AB1E05BBF6590D197DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		80160876D84DBAF018BB717D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		84722707AA336D1073651EEF /* CloudSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncService.swift; sourceTree = "<group>"; };
+		8E01C072C66A485762BAC5A3 /* BrainDietPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainDietPanel.swift; sourceTree = "<group>"; };
 		8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = JustEllipsisTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSRecommendationEngine.swift; sourceTree = "<group>"; };
 		9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustEllipsisApp.swift; sourceTree = "<group>"; };
@@ -189,6 +193,7 @@
 			isa = PBXGroup;
 			children = (
 				9E031427BDE66D20C2190203 /* BrainEngine.swift */,
+				84722707AA336D1073651EEF /* CloudSyncService.swift */,
 				C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */,
 				BD6345AF40A371C990B21023 /* IntelligenceService.swift */,
 				2E682902D7E4F05A13644A84 /* PrefetchService.swift */,
@@ -264,6 +269,7 @@
 			isa = PBXGroup;
 			children = (
 				47BE1C9EB59A42E35267C8A4 /* ActivityChart.swift */,
+				8E01C072C66A485762BAC5A3 /* BrainDietPanel.swift */,
 				E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */,
 				A42F62308F8EC6615789E6A4 /* CountdownRing.swift */,
 				A73E845D1BE786825396BF8C /* FaviconView.swift */,
@@ -462,11 +468,13 @@
 				949A68996476CD7276C0382C /* AddLinkView.swift in Sources */,
 				AB60A86711520B76E110A37A /* AppRouter.swift in Sources */,
 				B2F38D292704272C04A106AC /* AppTheme.swift in Sources */,
+				E4C64FB18B12689A4A2873F7 /* BrainDietPanel.swift in Sources */,
 				E2EB2EA9151BA6D2E9C5700B /* BrainEngine.swift in Sources */,
 				B564A9798D0457D85A3D73AE /* BrainEntry.swift in Sources */,
 				78CA24460077DABBF1C0A10A /* BrainOrb.swift in Sources */,
 				1D290063695771738CCDABD9 /* BrainView.swift in Sources */,
 				25AC66CE65822836CC940ED8 /* BrainViewModel.swift in Sources */,
+				85E502CAF98B8EBE370D5E7B /* CloudSyncService.swift in Sources */,
 				56DE24619050B42942363268 /* ContentFetcher.swift in Sources */,
 				286F5A0E2A4A563D35F90F73 /* CountdownRing.swift in Sources */,
 				DF47C19BEF474C1C7B732E11 /* Date+RelativeShort.swift in Sources */,

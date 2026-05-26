@@ -98,6 +98,10 @@ struct JustEllipsisApp: App {
             let mainURL = groupURL.appendingPathComponent("JustEllipsis.store")
             let articlesURL = groupURL.appendingPathComponent("JustEllipsis.articles.store")
 
+            // Wipe the main store when a force-restore was scheduled in Settings.
+            // CloudKit re-downloads all records into the fresh store on first open.
+            CloudSyncService.applyPendingRestoreIfNeeded(storeURL: mainURL)
+
             let mainConfig = ModelConfiguration(
                 "main",
                 schema: mainSchema,
