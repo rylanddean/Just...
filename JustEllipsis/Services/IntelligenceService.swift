@@ -93,6 +93,16 @@ struct RelevanceScore {
     var score: Int
 }
 
+@available(iOS 26, *)
+@Generable
+struct FeedCategoryAssessment {
+    @Guide(description: """
+        Return exactly one category label from the allowed categories list.
+        Do not invent new categories.
+        """)
+    var category: String
+}
+
 // MARK: - iOS 26 AI Features
 
 @available(iOS 26, *)
@@ -186,6 +196,42 @@ extension IntelligenceService {
             generating: RelevanceScore.self
         )
         return response?.content.score ?? 5
+    }
+
+    // MARK: Feed Category Classification
+
+    static func classifyFeedCategory(
+        feedURL: String,
+        feedTitle: String,
+        feedPreview: String,
+        allowedCategories: [String]
+    ) async -> String? {
+        let normalized = allowedCategories
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !normalized.isEmpty else { return nil }
+
+        let categoryList = normalized.joined(separator: ", ")
+        let prompt = """
+        Pick the best category for this RSS feed.
+
+        Allowed categories:
+        \(categoryList)
+
+        Feed URL: \(feedURL)
+        Feed title: \(feedTitle)
+        Feed preview:
+        \(feedPreview.prefix(1800))
+        """
+
+        let session = LanguageModelSession()
+        let response = try? await session.respond(
+            to: prompt,
+            generating: FeedCategoryAssessment.self
+        )
+
+        let raw = response?.content.category.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return normalized.first { $0.caseInsensitiveCompare(raw) == .orderedSame }
     }
 
     // MARK: Errors

@@ -17,6 +17,21 @@ struct FeedsView: View {
     @State private var feedToRename: RSSFeed?
     @State private var renameText = ""
     @State private var showRenameSheet = false
+    @State private var detectedCategoryPreview: String?
+
+    private var feedCategoryOptions: [String] {
+        var seen = Set<String>()
+        var ordered: [String] = []
+        for item in FeedDirectoryItem.loadAll() {
+            if seen.insert(item.category).inserted {
+                ordered.append(item.category)
+            }
+        }
+        if seen.insert("General").inserted {
+            ordered.append("General")
+        }
+        return ordered
+    }
 
     var body: some View {
         NavigationStack {
@@ -46,6 +61,7 @@ struct FeedsView: View {
                     Button {
                         pasteURL = ""
                         customFeedName = ""
+                        detectedCategoryPreview = nil
                         addError = nil
                         showAddByURL = true
                     } label: {
@@ -73,6 +89,7 @@ struct FeedsView: View {
             guard let url = pendingURL else { return }
             pasteURL = url
             customFeedName = ""
+            detectedCategoryPreview = nil
             addError = nil
             showAddByURL = true
             router.pendingFeedURL = nil
@@ -189,6 +206,7 @@ struct FeedsView: View {
                 Button {
                     pasteURL = ""
                     customFeedName = ""
+                    detectedCategoryPreview = nil
                     addError = nil
                     showAddByURL = true
                 } label: {
@@ -247,6 +265,21 @@ struct FeedsView: View {
                         TextField("Leave blank to use the feed's title", text: $customFeedName)
                             .font(AppTheme.sansSerif(15))
                             .foregroundStyle(appTheme.heading)
+                            .padding(AppTheme.cardPadding)
+                            .background(appTheme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("CATEGORY")
+                            .font(AppTheme.sansSerif(11, weight: .medium))
+                            .foregroundStyle(appTheme.textFaint)
+                            .kerning(2)
+
+                        Text(detectedCategoryPreview ?? "Auto-detected with Apple Intelligence")
+                            .font(AppTheme.sansSerif(13))
+                            .foregroundStyle(detectedCategoryPreview == nil ? appTheme.textFaint : appTheme.heading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(AppTheme.cardPadding)
                             .background(appTheme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
@@ -394,35 +427,106 @@ struct FeedsView: View {
         addError = nil
 
         let customName = customFeedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let metadata = await resolveFeedMetadata(from: url)
+
         let title: String
         if customName.isEmpty {
-            title = await resolveTitle(from: url) ?? url.host ?? raw
+            title = metadata.title ?? url.host ?? raw
         } else {
             title = customName
         }
+        let category = await autoCategory(for: url, title: title, preview: metadata.preview)
 
         await MainActor.run {
-            subscribe(url: raw, title: title, category: "Custom")
+            subscribe(url: raw, title: title, category: category)
             isFetching = false
             customFeedName = ""
+            detectedCategoryPreview = nil
             showAddByURL = false
         }
     }
 
-    private func resolveTitle(from url: URL) async -> String? {
+    private func resolveFeedMetadata(from url: URL) async -> (title: String?, preview: String) {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 10
         guard let (data, _) = try? await URLSession(configuration: config).data(from: url) else {
+            return (nil, "")
+        }
+        let preview = String(data: data.prefix(6000), encoding: .utf8) ?? ""
+        if let title = firstTitle(in: preview), !title.isEmpty {
+            return (title, preview)
+        }
+        return (nil, preview)
+    }
+
+    private func firstTitle(in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(
+            pattern: "<title[^>]*>(.*?)</title>",
+            options: [.caseInsensitive, .dotMatchesLineSeparators]
+        ) else { return nil }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard let match = regex.firstMatch(in: text, options: [], range: range),
+              let titleRange = Range(match.range(at: 1), in: text) else {
             return nil
         }
-        let preview = String(data: data.prefix(2048), encoding: .utf8) ?? ""
-        if let range = preview.range(of: "<title>"),
-           let endRange = preview.range(of: "</title>", range: range.upperBound..<preview.endIndex) {
-            let raw = String(preview[range.upperBound..<endRange.lowerBound])
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !raw.isEmpty { return raw }
+        let raw = String(text[titleRange])
+            .replacingOccurrences(of: "<![CDATA[", with: "")
+            .replacingOccurrences(of: "]]>", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty, raw.lowercased() != "rss" else { return nil }
+        return raw
+    }
+
+    private func autoCategory(for url: URL, title: String, preview: String) async -> String {
+        let allowed = feedCategoryOptions
+        if #available(iOS 26, *), IntelligenceService.isAvailable {
+            if let category = await IntelligenceService.classifyFeedCategory(
+                feedURL: url.absoluteString,
+                feedTitle: title,
+                feedPreview: preview,
+                allowedCategories: allowed
+            ) {
+                await MainActor.run { detectedCategoryPreview = category }
+                return category
+            }
         }
-        return nil
+
+        let fallback = heuristicCategory(
+            for: title,
+            urlString: url.absoluteString,
+            preview: preview,
+            allowed: allowed
+        )
+        await MainActor.run { detectedCategoryPreview = fallback }
+        return fallback
+    }
+
+    private func heuristicCategory(for title: String, urlString: String, preview: String, allowed: [String]) -> String {
+        let haystack = "\(title) \(urlString) \(preview.prefix(1000))".lowercased()
+        let preferredByKeyword: [(String, [String])] = [
+            ("Technology", ["tech", "developer", "programming", "startup", "software", "ai"]),
+            ("Business", ["business", "finance", "economy", "market", "invest"]),
+            ("Science", ["science", "research", "physics", "biology", "space", "nature"]),
+            ("World News", ["world", "international", "global"]),
+            ("News", ["news", "politics", "policy"]),
+            ("Design", ["design", "ux", "ui", "product design"]),
+            ("Culture", ["culture", "art", "media", "film", "music"]),
+            ("Health", ["health", "medical", "wellness"]),
+            ("Sports", ["sports", "football", "soccer", "basketball"])
+        ]
+
+        for (preferredCategory, keywords) in preferredByKeyword {
+            guard let match = allowed.first(where: { $0.caseInsensitiveCompare(preferredCategory) == .orderedSame }) else {
+                continue
+            }
+            if keywords.contains(where: { haystack.contains($0) }) {
+                return match
+            }
+        }
+
+        return allowed.first(where: { $0.caseInsensitiveCompare("General") == .orderedSame })
+            ?? allowed.first
+            ?? "General"
     }
 }
 
@@ -443,6 +547,8 @@ private struct FeedRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            FaviconView(domain: domain)
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text(feed.title)
@@ -496,5 +602,10 @@ private struct FeedRow: View {
         .padding(AppTheme.cardPadding)
         .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+    }
+
+    private var domain: String {
+        guard let url = URL(string: feed.url) else { return feed.url }
+        return ContentFetcher.extractDomain(from: url)
     }
 }

@@ -78,28 +78,64 @@ struct JustEllipsisApp: App {
 
     // MARK: - URL handling
 
-    // Handles feed:// URLs launched from Safari or tapped in other apps.
-    // feed://example.com/feed.xml  →  https://example.com/feed.xml
-    // feed:https://example.com/feed.xml  →  https://example.com/feed.xml
+    // Handles feed URLs launched from Safari/other apps.
+    // Supported examples:
+    // - feed://example.com/feed.xml
+    // - feed:https://example.com/feed.xml
+    // - justellipsis://add-feed?url=https://example.com/feed.xml
     private func handleOpenURL(_ url: URL) {
-        guard url.scheme == "feed" else { return }
+        guard let feedURLString = extractFeedURLString(from: url) else { return }
+        router.pendingFeedURL = feedURLString
+        router.selectedTab = 1 // Feeds tab
+    }
 
-        let httpsString: String
-        if let host = url.host, !host.isEmpty {
-            // feed://example.com/path  →  https://example.com/path
-            let path = url.path.isEmpty ? "" : url.path
-            let query = url.query.map { "?\($0)" } ?? ""
-            httpsString = "https://\(host)\(path)\(query)"
-        } else {
-            // feed:https://…  →  https://…
-            let raw = url.absoluteString
-            let stripped = raw.hasPrefix("feed:") ? String(raw.dropFirst("feed:".count)) : raw
-            httpsString = stripped
+    private func extractFeedURLString(from incomingURL: URL) -> String? {
+        let scheme = incomingURL.scheme?.lowercased()
+        let resolved: String?
+
+        switch scheme {
+        case "feed":
+            if let host = incomingURL.host, !host.isEmpty {
+                // feed://example.com/feed.xml -> https://example.com/feed.xml
+                var components = URLComponents()
+                components.scheme = "https"
+                components.host = host
+                components.path = incomingURL.path
+                components.query = incomingURL.query
+                components.fragment = incomingURL.fragment
+                resolved = components.string
+            } else {
+                // feed:https://example.com/feed.xml -> https://example.com/feed.xml
+                let raw = incomingURL.absoluteString
+                resolved = raw.hasPrefix("feed:") ? String(raw.dropFirst("feed:".count)) : nil
+            }
+
+        case "justellipsis", "just":
+            let components = URLComponents(url: incomingURL, resolvingAgainstBaseURL: false)
+            let queryItems = components?.queryItems ?? []
+            let deepLinkURL = queryItems.first { item in
+                let name = item.name.lowercased()
+                return name == "url" || name == "feed" || name == "feedurl"
+            }?.value
+            resolved = deepLinkURL
+
+        case "http", "https":
+            // For future universal-link support, allow direct web URLs too.
+            resolved = incomingURL.absoluteString
+
+        default:
+            resolved = nil
         }
 
-        guard URL(string: httpsString)?.scheme?.hasPrefix("http") == true else { return }
-        router.pendingFeedURL = httpsString
-        router.selectedTab = 1 // Feeds tab
+        guard let resolved,
+              let resolvedURL = URL(string: resolved),
+              let resolvedScheme = resolvedURL.scheme?.lowercased(),
+              resolvedScheme == "http" || resolvedScheme == "https"
+        else {
+            return nil
+        }
+
+        return resolved
     }
 
     // MARK: - ModelContainer
