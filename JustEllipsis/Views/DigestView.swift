@@ -36,6 +36,7 @@ struct DigestView: View {
     private var todayArticles: [RSSArticle] {
         var seen = Set<String>()
         return articles
+            .filter { feedLookup[$0.feedID] != nil }
             .filter { Calendar.current.isDateInToday($0.publishedAt) }
             .filter { seen.insert($0.url).inserted }
             .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
@@ -44,6 +45,7 @@ struct DigestView: View {
     private var yesterdayArticles: [RSSArticle] {
         var seen = Set<String>()
         return articles
+            .filter { feedLookup[$0.feedID] != nil }
             .filter { Calendar.current.isDateInYesterday($0.publishedAt) }
             .filter { seen.insert($0.url).inserted }
             .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
@@ -60,6 +62,7 @@ struct DigestView: View {
         let shownURLs = Set(todayArticles.map { $0.url })
             .union(yesterdayArticles.map { $0.url })
         let candidates = articles.filter {
+            feedLookup[$0.feedID] != nil &&
             !queuedURLs.contains($0.url) &&
             !brainURLs.contains($0.url) &&
             !shownURLs.contains($0.url) &&
@@ -325,6 +328,7 @@ private struct DigestArticleRow: View {
     let onAdd: () -> Void
 
     @Environment(\.appTheme) private var appTheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(GradingProgressTracker.self) private var gradingTracker
     @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
     @State private var justAdded = false
@@ -343,6 +347,14 @@ private struct DigestArticleRow: View {
                     .font(AppTheme.sansSerif(15, weight: .medium))
                     .foregroundStyle(appTheme.heading)
                     .lineLimit(2)
+
+                if let summary = article.summary ?? article.feedDescription, !summary.isEmpty {
+                    Text(summary)
+                        .font(AppTheme.serif(14))
+                        .foregroundStyle(appTheme.textFaint)
+                        .lineLimit(horizontalSizeClass == .regular ? 4 : 3)
+                        .lineSpacing(2)
+                }
 
                 HStack(spacing: 6) {
                     if !feedName.isEmpty {

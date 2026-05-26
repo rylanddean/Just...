@@ -23,4 +23,12 @@ extension ArticleQualityGrade {
         case .noise:   return .red
         }
     }
+
+    var rationale: String {
+        switch self {
+        case .strong:  return "Original argument or insight that earns undivided attention. Genuinely distinctive — most articles don't qualify."
+        case .worthIt: return "Informative and competently written, but not essential. Covers ground that exists elsewhere."
+        case .noise:   return "Aggregated takes, listicles, press releases, promotional content, or too brief to be substantive."
+        }
+    }
 }

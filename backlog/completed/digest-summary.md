@@ -75,7 +75,6 @@ One change: `DigestArticleRow` in `DigestView.swift`.
 Add a `@Environment(\.horizontalSizeClass)` read and a conditional `Text` block below the title:
 
 ```swift
-// DigestArticleRow — insert between title and metadata HStack
 let summaryText = article.summary ?? article.feedDescription
 if let text = summaryText, !text.isEmpty {
     Text(text)

@@ -451,7 +451,7 @@ struct SettingsView: View {
     }
 
     private func gradeRow(label: String, grade: ArticleQualityGrade, count: Int) -> some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             HStack(spacing: 3) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
@@ -460,16 +460,24 @@ struct SettingsView: View {
                 }
             }
             .frame(width: 22)
+            .padding(.top, 3)
 
-            Text(label)
-                .font(AppTheme.sansSerif(13))
-                .foregroundStyle(appTheme.textFaint)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+                Text(grade.rationale)
+                    .font(AppTheme.sansSerif(11))
+                    .foregroundStyle(appTheme.textFaint.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             Spacer()
 
             Text("\(count)")
                 .font(AppTheme.sansSerif(13).monospacedDigit())
                 .foregroundStyle(appTheme.textFaint)
+                .padding(.top, 1)
         }
     }
 

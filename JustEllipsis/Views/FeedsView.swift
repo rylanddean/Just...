@@ -372,6 +372,13 @@ struct FeedsView: View {
     }
 
     private func unsubscribe(_ feed: RSSFeed) {
+        let feedID = feed.id
+        let descriptor = FetchDescriptor<RSSArticle>(
+            predicate: #Predicate { $0.feedID == feedID }
+        )
+        if let articles = try? context.fetch(descriptor) {
+            articles.forEach { context.delete($0) }
+        }
         context.delete(feed)
         try? context.save()
     }
