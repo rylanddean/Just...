@@ -15,8 +15,10 @@ struct FeedDetailView: View {
     init(feed: RSSFeed) {
         self.feed = feed
         let feedID = feed.id
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
         _articles = Query(
-            filter: #Predicate<RSSArticle> { $0.feedID == feedID },
+            filter: #Predicate<RSSArticle> { $0.feedID == feedID && $0.publishedAt >= cutoff },
             sort: \RSSArticle.publishedAt,
             order: .reverse
         )
@@ -125,6 +127,7 @@ private struct ArticleRow: View {
 
     @Environment(\.appTheme) private var appTheme
     @Environment(GradingProgressTracker.self) private var gradingTracker
+    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
     @State private var justAdded = false
 
     private var displaySummary: String? {
@@ -169,7 +172,8 @@ private struct ArticleRow: View {
                             .foregroundStyle(appTheme.textFaint)
                     }
 
-                    if gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil {
+                    if gradingEnabled &&
+                        (gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil) {
                         Text("·")
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.textFaint)

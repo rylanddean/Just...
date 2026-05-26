@@ -6,6 +6,7 @@
 	<array>
 		<string>com.rylandean.justellipsis.prefetch</string>
 		<string>com.rylandean.justellipsis.rssfetch</string>
+		<string>com.rylandean.justellipsis.grading</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>

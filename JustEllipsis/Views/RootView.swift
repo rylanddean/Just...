@@ -7,6 +7,9 @@ struct RootView: View {
     @Environment(AppRouter.self) private var router
     @Environment(GradingProgressTracker.self) private var gradingTracker
 
+    @State private var hasRunInitialStartupWork = false
+    @State private var lastStartupWorkAt: Date = .distantPast
+
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     private var activeTheme: AppTheme { AppTheme(theme: ReaderTheme(rawValue: themeRaw) ?? .ember) }
 
@@ -41,15 +44,15 @@ struct RootView: View {
         .preferredColorScheme(activeTheme.colorScheme)
         .environment(\.appTheme, activeTheme)
         .task {
-            processPendingLinks()
-            RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
-            PrefetchService.prefetchInProcess(container: context.container)
+            guard !hasRunInitialStartupWork else { return }
+            hasRunInitialStartupWork = true
+            runStartupWorkIfNeeded(force: true)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                processPendingLinks()
-                RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
-                PrefetchService.prefetchInProcess(container: context.container)
+                runStartupWorkIfNeeded(force: false)
+            } else {
+                gradingTracker.reset()
             }
         }
     }
@@ -72,5 +75,14 @@ struct RootView: View {
             added += 1
         }
         if added > 0 { try? context.save() }
+    }
+
+    private func runStartupWorkIfNeeded(force: Bool) {
+        let now = Date()
+        if !force && now.timeIntervalSince(lastStartupWorkAt) < 3 { return }
+        lastStartupWorkAt = now
+        processPendingLinks()
+        RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
+        PrefetchService.prefetchInProcess(container: context.container)
     }
 }

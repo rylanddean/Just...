@@ -11,6 +11,7 @@ struct JustEllipsisApp: App {
 
     init() {
         registerRSSBackgroundTask()
+        registerGradingBackgroundTask()
     }
 
     var body: some Scene {
@@ -48,6 +49,30 @@ struct JustEllipsisApp: App {
                 processingTask.setTaskCompleted(success: true)
             }
             processingTask.expirationHandler = { taskHandle.cancel() }
+        }
+    }
+
+    private func registerGradingBackgroundTask() {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: RSSFetchService.gradingBackgroundTaskID,
+            using: nil
+        ) { [self] bgTask in
+            guard let processingTask = bgTask as? BGProcessingTask else {
+                bgTask.setTaskCompleted(success: false)
+                return
+            }
+            let taskHandle = Task {
+                let actor = RSSFetchActor(modelContainer: container)
+                await actor.gradeNewArticles(tracker: nil)
+                // Re-queue so the next backgrounding continues where this left off.
+                RSSFetchService.scheduleGradingBackgroundTaskIfNeeded()
+                processingTask.setTaskCompleted(success: true)
+            }
+            processingTask.expirationHandler = {
+                taskHandle.cancel()
+                // Still re-schedule — expiration means time ran out, not that we're done.
+                RSSFetchService.scheduleGradingBackgroundTaskIfNeeded()
+            }
         }
     }
 

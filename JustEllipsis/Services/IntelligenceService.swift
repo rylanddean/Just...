@@ -64,11 +64,20 @@ struct ArticleDNA {
 @Generable
 struct ArticleQualityAssessment {
     @Guide(description: """
-        Grade the article as a read for someone who values original
-        thinking and focused attention.
-        - strong: original argument or insight, earns undivided attention
-        - worthIt: informative and well-written, not essential
-        - noise: aggregated, promotional, listicle, clickbait, or too brief
+        Grade this article for a reader who values original thinking and focused attention.
+
+        strong — makes an original argument, challenges assumptions, or reveals something
+        the reader couldn't have found by reasoning from common knowledge alone.
+        Reserved for genuinely distinctive work. Most articles are NOT strong.
+
+        worthIt — informative and competently written, but not essential reading.
+        Covers ground that exists elsewhere or adds incremental value.
+
+        noise — aggregated takes, listicles, press releases, event recaps, promotional
+        content, opinion without supporting argument, or too brief to be substantive.
+        If the content could have been auto-generated or is obviously SEO-driven, it is noise.
+        When uncertain between worthIt and noise, prefer noise.
+
         Return exactly one of: strong, worthIt, noise.
         """)
     var grade: String
@@ -136,11 +145,15 @@ extension IntelligenceService {
 
     // MARK: Article Quality Grading
 
-    static func gradeQuality(title: String, description: String) async -> ArticleQualityGrade? {
-        let input = description.isEmpty ? title : "\(title)\n\n\(String(description.prefix(1500)))"
+    static func gradeQuality(title: String, description: String, source: String? = nil) async -> ArticleQualityGrade? {
+        var parts: [String] = []
+        parts.append("Title: \(title)")
+        if let source { parts.append("Source: \(source)") }
+        if !description.isEmpty { parts.append("Content:\n\(String(description.prefix(2000)))") }
+        let input = parts.joined(separator: "\n")
         let session = LanguageModelSession()
         let response = try? await session.respond(
-            to: "Grade this article as a read:\n\n\(input)",
+            to: "Grade this article:\n\n\(input)",
             generating: ArticleQualityAssessment.self
         )
         let raw = response?.content.grade

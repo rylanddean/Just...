@@ -17,7 +17,7 @@ struct ArticleGradeIndicator: View {
             HStack(spacing: 3) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
-                        .fill(i < grade.filledCount ? appTheme.accent : appTheme.accent.opacity(0.25))
+                        .fill(i < grade.filledCount ? grade.color : grade.color.opacity(0.25))
                         .frame(width: 5, height: 5)
                 }
             }

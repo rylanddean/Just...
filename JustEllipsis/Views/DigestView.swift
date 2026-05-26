@@ -3,14 +3,14 @@ import SwiftData
 
 struct DigestView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.appTheme) private var appTheme
+    @Environment(GradingProgressTracker.self) private var gradingTracker
+
     @Query private var articles: [RSSArticle]
     @Query private var feeds: [RSSFeed]
     @Query private var queue: [QueuedLink]
     @Query(sort: \BrainEntry.readAt, order: .reverse) private var brainEntries: [BrainEntry]
 
-    @Environment(\.modelContext) private var context
-    @Environment(\.appTheme) private var appTheme
-    @Environment(GradingProgressTracker.self) private var gradingTracker
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
     @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
     @AppStorage("digest.hideNoise") private var hideNoise: Bool = false
@@ -18,7 +18,8 @@ struct DigestView: View {
     @State private var isFetching = false
 
     init() {
-        let cutoff = Date(timeIntervalSinceNow: -48 * 60 * 60)
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
         _articles = Query(
             filter: #Predicate<RSSArticle> { $0.publishedAt >= cutoff },
             sort: \RSSArticle.publishedAt,
@@ -53,6 +54,7 @@ struct DigestView: View {
 
     private var recommendations: [RSSArticle]? {
         guard brainEntries.count >= 5 else { return nil }
+
         // Exclude anything already shown in the Today or Yesterday sections so the
         // same article never appears in two places at once.
         let shownURLs = Set(todayArticles.map { $0.url })
@@ -60,7 +62,8 @@ struct DigestView: View {
         let candidates = articles.filter {
             !queuedURLs.contains($0.url) &&
             !brainURLs.contains($0.url) &&
-            !shownURLs.contains($0.url)
+            !shownURLs.contains($0.url) &&
+            !(gradingEnabled && hideNoise && $0.qualityGrade == .noise)
         }
         guard !candidates.isEmpty else { return nil }
 
@@ -103,12 +106,14 @@ struct DigestView: View {
     private func diversifiedPicks(from articles: [RSSArticle], max count: Int) -> [RSSArticle] {
         var seen = Set<UUID>()
         var picks: [RSSArticle] = []
-        // First pass: one per feed
+
+        // First pass: one per feed.
         for article in articles {
             guard picks.count < count else { break }
             if seen.insert(article.feedID).inserted { picks.append(article) }
         }
-        // Second pass: fill remaining slots from any feed
+
+        // Second pass: fill remaining slots from any feed.
         if picks.count < count {
             let pickIDs = Set(picks.map { $0.id })
             for article in articles where !pickIDs.contains(article.id) {
@@ -116,6 +121,7 @@ struct DigestView: View {
                 picks.append(article)
             }
         }
+
         return picks
     }
 
@@ -127,121 +133,125 @@ struct DigestView: View {
                 if articles.isEmpty {
                     emptyState
                 } else {
-                    List {
-                    if let recs = recommendations {
-                        Section {
-                            ForEach(recs) { article in
-                                DigestArticleRow(
-                                    article: article,
-                                    feedName: feedLookup[article.feedID]?.title ?? "",
-                                    isQueued: queuedURLs.contains(article.url)
-                                ) {
-                                    addToQueue(article)
-                                }
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(
-                                    top: 5,
-                                    leading: AppTheme.pagePadding,
-                                    bottom: 5,
-                                    trailing: AppTheme.pagePadding
-                                ))
-                            }
-                        } header: {
-                            brainSectionHeader
-                        }
-                        .listSectionSeparator(.hidden)
-                    }
-
-                    if !todayArticles.isEmpty {
-                        Section {
-                            ForEach(todayArticles) { article in
-                                DigestArticleRow(
-                                    article: article,
-                                    feedName: feedLookup[article.feedID]?.title ?? "",
-                                    isQueued: queuedURLs.contains(article.url)
-                                ) {
-                                    addToQueue(article)
-                                }
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(
-                                    top: 5,
-                                    leading: AppTheme.pagePadding,
-                                    bottom: 5,
-                                    trailing: AppTheme.pagePadding
-                                ))
-                            }
-                        } header: {
-                            sectionHeader("TODAY")
-                        }
-                        .listSectionSeparator(.hidden)
-                    }
-
-                    if !yesterdayArticles.isEmpty {
-                        Section {
-                            ForEach(yesterdayArticles) { article in
-                                DigestArticleRow(
-                                    article: article,
-                                    feedName: feedLookup[article.feedID]?.title ?? "",
-                                    isQueued: queuedURLs.contains(article.url)
-                                ) {
-                                    addToQueue(article)
-                                }
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(
-                                    top: 5,
-                                    leading: AppTheme.pagePadding,
-                                    bottom: 5,
-                                    trailing: AppTheme.pagePadding
-                                ))
-                            }
-                        } header: {
-                            sectionHeader("YESTERDAY")
-                        }
-                        .listSectionSeparator(.hidden)
-                    }
+                    digestList
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .scrollIndicators(.hidden)
-                .contentMargins(.bottom, 32, for: .scrollContent)
+            }
+            .navigationTitle("Digest")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        refetch()
+                    } label: {
+                        if isFetching {
+                            ProgressView()
+                                .tint(appTheme.accent)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(appTheme.accent)
+                        }
+                    }
+                    .disabled(isFetching)
+                }
+            }
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+        }
+    }
+
+    private var digestList: some View {
+        List {
+            if let recs = recommendations {
+                Section {
+                    ForEach(recs) { article in
+                        DigestArticleRow(
+                            article: article,
+                            feedName: feedLookup[article.feedID]?.title ?? "",
+                            isQueued: queuedURLs.contains(article.url)
+                        ) {
+                            addToQueue(article)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: 5,
+                            leading: AppTheme.pagePadding,
+                            bottom: 5,
+                            trailing: AppTheme.pagePadding
+                        ))
+                    }
+                } header: {
+                    brainSectionHeader
+                }
+                .listSectionSeparator(.hidden)
+            }
+
+            if !todayArticles.isEmpty {
+                Section {
+                    ForEach(todayArticles) { article in
+                        DigestArticleRow(
+                            article: article,
+                            feedName: feedLookup[article.feedID]?.title ?? "",
+                            isQueued: queuedURLs.contains(article.url)
+                        ) {
+                            addToQueue(article)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: 5,
+                            leading: AppTheme.pagePadding,
+                            bottom: 5,
+                            trailing: AppTheme.pagePadding
+                        ))
+                    }
+                } header: {
+                    sectionHeader("TODAY")
+                }
+                .listSectionSeparator(.hidden)
+            }
+
+            if !yesterdayArticles.isEmpty {
+                Section {
+                    ForEach(yesterdayArticles) { article in
+                        DigestArticleRow(
+                            article: article,
+                            feedName: feedLookup[article.feedID]?.title ?? "",
+                            isQueued: queuedURLs.contains(article.url)
+                        ) {
+                            addToQueue(article)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: 5,
+                            leading: AppTheme.pagePadding,
+                            bottom: 5,
+                            trailing: AppTheme.pagePadding
+                        ))
+                    }
+                } header: {
+                    sectionHeader("YESTERDAY")
+                }
+                .listSectionSeparator(.hidden)
             }
         }
-        .navigationTitle("Digest")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    refetch()
-                } label: {
-                    if isFetching {
-                        ProgressView()
-                            .tint(appTheme.accent)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(appTheme.accent)
-                    }
-                }
-                .disabled(isFetching)
-            }
-        }
-        .toolbarBackground(appTheme.background, for: .navigationBar)
-        .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .contentMargins(.bottom, 32, for: .scrollContent)
     }
 
     private func refetch() {
         guard !isFetching else { return }
         isFetching = true
-        RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
+        let task = RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
         Task {
-            try? await Task.sleep(for: .seconds(2))
-            isFetching = false
+            await task.value
+            await MainActor.run { isFetching = false }
         }
     }
-}
 
     // MARK: - Empty state
 
@@ -316,6 +326,7 @@ private struct DigestArticleRow: View {
 
     @Environment(\.appTheme) private var appTheme
     @Environment(GradingProgressTracker.self) private var gradingTracker
+    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
     @State private var justAdded = false
 
     private var domain: String {
@@ -349,7 +360,8 @@ private struct DigestArticleRow: View {
                         .font(AppTheme.sansSerif(12))
                         .foregroundStyle(appTheme.textFaint)
 
-                    if gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil {
+                    if gradingEnabled &&
+                        (gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil) {
                         Text("·")
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.textFaint)
