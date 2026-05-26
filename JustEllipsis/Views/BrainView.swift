@@ -12,79 +12,107 @@ struct BrainView: View {
     private var rank: BrainRank { viewModel.rank(for: entries) }
     private var progress: Double { viewModel.progressToNextRank(for: entries) }
     private var displayed: [BrainEntry] { viewModel.filtered(entries) }
+    private var hasSearchQuery: Bool {
+        !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         NavigationStack {
-            List {
-                // ── Orb header ────────────────────────────────────────────
-                Section {
-                    BrainOrb(rank: rank, entryCount: entries.count, progress: progress)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .listRowBackground(appTheme.background)
-                        .listRowSeparator(.hidden)
+            ZStack {
+                appTheme.background.ignoresSafeArea()
 
-                    if entries.count > 0, viewModel.entriesUntilNextRank(for: entries) > 0 {
-                        Text("\(viewModel.entriesUntilNextRank(for: entries)) more to \(nextRankTitle)")
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
-                            .frame(maxWidth: .infinity)
-                            .listRowBackground(appTheme.background)
-                            .listRowSeparator(.hidden)
-                            .padding(.bottom, 8)
-                    }
-                }
+                if entries.isEmpty {
+                    emptyState
+                } else {
+                    List {
+                        Section {
+                            VStack(spacing: 12) {
+                                BrainOrb(rank: rank, entryCount: entries.count, progress: progress)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 2)
 
-                // ── Brain Diet panel ─────────────────────────────────────
-                Section {
-                    BrainDietPanel(entries: entries, viewModel: viewModel)
-                        .listRowBackground(appTheme.background)
-                        .listRowSeparator(.hidden)
-                }
-
-                // ── Entry list ────────────────────────────────────────────
-                Section {
-                    if displayed.isEmpty {
-                        Text(viewModel.searchText.isEmpty
-                             ? "Your Brain is empty.\nStart reading to grow it."
-                             : "No entries match that search.")
-                            .font(AppTheme.sansSerif(14))
-                            .foregroundStyle(appTheme.textFaint)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 24)
-                            .listRowBackground(appTheme.background)
-                            .listRowSeparator(.hidden)
-                    } else {
-                        ForEach(displayed) { entry in
-                            BrainEntryRow(entry: entry)
-                                .contentShape(Rectangle())
-                                .onTapGesture { selectedEntry = entry }
-                                .contextMenu {
-                                    Button {
-                                        UIPasteboard.general.string = entry.url
-                                    } label: {
-                                        Label("Copy Link", systemImage: "link")
-                                    }
+                                if viewModel.entriesUntilNextRank(for: entries) > 0 {
+                                    Text("\(viewModel.entriesUntilNextRank(for: entries)) more to \(nextRankTitle)")
+                                        .font(AppTheme.sansSerif(12))
+                                        .foregroundStyle(appTheme.textFaint)
+                                        .frame(maxWidth: .infinity)
                                 }
-                                .listRowBackground(appTheme.background)
-                                .listRowSeparatorTint(appTheme.separator)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        deleteEntry(entry)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                    .tint(.red)
-                                }
+                            }
+                            .padding(AppTheme.cardPadding)
+                            .background(appTheme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(rowInsets)
+                        } header: {
+                            sectionHeader("RANK")
                         }
+                        .listSectionSeparator(.hidden)
+
+                        Section {
+                            BrainDietPanel(entries: entries, viewModel: viewModel)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(rowInsets)
+                        } header: {
+                            sectionHeader("BRAIN DIET")
+                        }
+                        .listSectionSeparator(.hidden)
+
+                        Section {
+                            if displayed.isEmpty {
+                                VStack(spacing: 6) {
+                                    Text("No entries match that search.")
+                                        .font(AppTheme.sansSerif(14, weight: .medium))
+                                        .foregroundStyle(appTheme.heading)
+                                    Text("Try a different keyword.")
+                                        .font(AppTheme.sansSerif(13))
+                                        .foregroundStyle(appTheme.textFaint)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .multilineTextAlignment(.center)
+                                .padding(AppTheme.cardPadding)
+                                .background(appTheme.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(rowInsets)
+                            } else {
+                                ForEach(displayed) { entry in
+                                    BrainEntryRow(entry: entry)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { selectedEntry = entry }
+                                        .contextMenu {
+                                            Button {
+                                                UIPasteboard.general.string = entry.url
+                                            } label: {
+                                                Label("Copy Link", systemImage: "link")
+                                            }
+                                        }
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(rowInsets)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                deleteEntry(entry)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                            .tint(AppTheme.danger)
+                                        }
+                                }
+                            }
+                        } header: {
+                            sectionHeader(hasSearchQuery ? "SEARCH RESULTS" : "TIMELINE")
+                        }
+                        .listSectionSeparator(.hidden)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .scrollIndicators(.hidden)
+                    .contentMargins(.bottom, 32, for: .scrollContent)
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(appTheme.background)
-            .scrollIndicators(.hidden)
             .navigationTitle("Brain")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(appTheme.background, for: .navigationBar)
@@ -116,6 +144,42 @@ struct BrainView: View {
         guard let idx = all.firstIndex(of: rank), idx + 1 < all.count else { return "" }
         return all[idx + 1].rawValue
     }
+
+    private var rowInsets: EdgeInsets {
+        EdgeInsets(
+            top: 5,
+            leading: AppTheme.pagePadding,
+            bottom: 5,
+            trailing: AppTheme.pagePadding
+        )
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("Your Brain is empty.")
+                .font(AppTheme.sansSerif(18, weight: .medium))
+                .foregroundStyle(appTheme.heading)
+
+            Text("Start reading and reflecting to grow it.")
+                .font(AppTheme.sansSerif(14))
+                .foregroundStyle(appTheme.textFaint)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+    }
+
+    private func sectionHeader(_ label: String) -> some View {
+        Text(label)
+            .font(AppTheme.sansSerif(11, weight: .medium))
+            .foregroundStyle(appTheme.textFaint)
+            .kerning(2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, AppTheme.pagePadding)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+            .listRowInsets(EdgeInsets())
+            .background(appTheme.background)
+    }
 }
 
 // MARK: - Entry Row
@@ -126,39 +190,50 @@ struct BrainEntryRow: View {
     @Environment(\.appTheme) private var appTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .top, spacing: 12) {
+            FaviconView(domain: entry.domain)
+
+            VStack(alignment: .leading, spacing: 6) {
                 Text(entry.title)
                     .font(AppTheme.sansSerif(14, weight: .medium))
                     .foregroundStyle(appTheme.heading)
                     .lineLimit(2)
 
-                Spacer()
-
-                Text(entry.readAt.formatted(.relative(presentation: .named)))
-                    .font(AppTheme.sansSerif(11))
-                    .foregroundStyle(appTheme.textFaint)
-            }
-
-            Text(entry.domain)
+                HStack(spacing: 6) {
+                    Text(entry.domain)
+                        .lineLimit(1)
+                    Text("·")
+                    Text(entry.readAt.formatted(.relative(presentation: .named)))
+                }
                 .font(AppTheme.sansSerif(11))
                 .foregroundStyle(appTheme.textFaint)
 
-            if let dna = entry.dna {
-                Text(dna)
-                    .font(AppTheme.sansSerif(11))
-                    .foregroundStyle(appTheme.textFaint)
+                if let dna = entry.dna, !dna.isEmpty {
+                    Text(dna)
+                        .font(AppTheme.sansSerif(11))
+                        .foregroundStyle(appTheme.textFaint)
+                        .lineLimit(1)
+                }
+
+                if let reflection = entry.reflection, !reflection.isEmpty {
+                    Text(reflection)
+                        .font(AppTheme.serif(13))
+                        .foregroundStyle(appTheme.text.opacity(0.75))
+                        .lineLimit(2)
+                        .padding(.top, 2)
+                }
             }
 
-            if let reflection = entry.reflection, !reflection.isEmpty {
-                Text(reflection)
-                    .font(AppTheme.serif(13))
-                    .foregroundStyle(appTheme.text.opacity(0.75))
-                    .lineLimit(2)
-                    .padding(.top, 2)
-            }
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(appTheme.textFaint)
+                .padding(.top, 3)
         }
-        .padding(.vertical, 14)
+        .padding(AppTheme.cardPadding)
+        .background(appTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
     }
 }
 

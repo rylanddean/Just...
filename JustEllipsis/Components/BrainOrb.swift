@@ -3,83 +3,72 @@ import SwiftUI
 struct BrainOrb: View {
     let rank: BrainRank
     let entryCount: Int
-    let progress: Double    // 0.0–1.0
+    let progress: Double
 
     @Environment(\.appTheme) private var appTheme
-    @State private var pulse: Bool = false
 
     var body: some View {
-        VStack(spacing: 20) {
+        HStack(spacing: 14) {
             ZStack {
-                // Outer glow
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [orbColor.opacity(0.25), .clear],
-                            center: .center,
-                            startRadius: 30,
-                            endRadius: 80
-                        )
-                    )
-                    .frame(width: 160, height: 160)
-                    .scaleEffect(pulse ? 1.08 : 1.0)
-                    .animation(
-                        .easeInOut(duration: 3).repeatForever(autoreverses: true),
-                        value: pulse
-                    )
-
-                // Progress ring
                 Circle()
                     .stroke(appTheme.separator, lineWidth: 2)
-                    .frame(width: 108, height: 108)
+                    .frame(width: 56, height: 56)
 
                 Circle()
-                    .trim(from: 0, to: progress)
+                    .trim(from: 0, to: clampedProgress)
                     .stroke(
                         orbColor,
-                        style: StrokeStyle(lineWidth: 2, lineCap: .round)
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
                     )
-                    .frame(width: 108, height: 108)
+                    .frame(width: 56, height: 56)
                     .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 0.6), value: progress)
+                    .animation(.easeInOut(duration: 0.5), value: clampedProgress)
 
-                // Core orb
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [orbColor.opacity(0.3), orbColor.opacity(0.08)],
-                            center: .center,
-                            startRadius: 10,
-                            endRadius: 48
-                        )
-                    )
-                    .frame(width: 96, height: 96)
-                    .overlay {
-                        Circle().stroke(orbColor.opacity(0.35), lineWidth: 1)
-                    }
-
-                // Entry count
-                VStack(spacing: 2) {
-                    Text("\(entryCount)")
-                        .font(AppTheme.sansSerif(28, weight: .semibold))
-                        .foregroundStyle(appTheme.heading)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-
-                    Text(entryCount == 1 ? "entry" : "entries")
-                        .font(AppTheme.sansSerif(10))
-                        .foregroundStyle(appTheme.textFaint)
-                }
+                Text("\(entryCount)")
+                    .font(AppTheme.sansSerif(15, weight: .semibold))
+                    .foregroundStyle(appTheme.heading)
+                    .monospacedDigit()
             }
 
-            // Rank title
-            Text(rank.rawValue)
-                .font(AppTheme.sansSerif(18, weight: .semibold))
-                .foregroundStyle(orbColor)
-                .tracking(1.5)
-                .textCase(.uppercase)
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 6) {
+                    Text("CURRENT RANK")
+                        .font(AppTheme.sansSerif(10, weight: .medium))
+                        .foregroundStyle(appTheme.textFaint)
+                        .kerning(1.6)
+                    Text(rank.rawValue.uppercased())
+                        .font(AppTheme.sansSerif(10, weight: .medium))
+                        .foregroundStyle(orbColor)
+                        .kerning(1.2)
+                }
+
+                HStack(spacing: 8) {
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(appTheme.separator)
+                            Capsule()
+                                .fill(orbColor)
+                                .frame(width: max(6, proxy.size.width * clampedProgress))
+                        }
+                    }
+                    .frame(height: 6)
+
+                    Text("\(Int(clampedProgress * 100))%")
+                        .font(AppTheme.sansSerif(11, weight: .medium))
+                        .foregroundStyle(appTheme.textFaint)
+                        .monospacedDigit()
+                }
+
+                Text(entryCount == 1 ? "1 entry logged" : "\(entryCount) entries logged")
+                    .font(AppTheme.sansSerif(12))
+                    .foregroundStyle(appTheme.textFaint)
+            }
         }
-        .onAppear { pulse = true }
+    }
+
+    private var clampedProgress: Double {
+        min(max(progress, 0), 1)
     }
 
     private var orbColor: Color {
