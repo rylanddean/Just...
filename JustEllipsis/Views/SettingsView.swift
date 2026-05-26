@@ -6,16 +6,21 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
+    @Environment(GradingProgressTracker.self) private var gradingTracker
     @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
     @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
     @AppStorage(JustEllipsisApp.iCloudSyncKey) private var iCloudSyncEnabled: Bool = false
     @AppStorage("rss.fetchHour")   private var fetchHour:   Int = RSSFetchService.defaultFetchHour
     @AppStorage("rss.fetchMinute") private var fetchMinute: Int = RSSFetchService.defaultFetchMinute
+    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
+    @AppStorage("digest.hideNoise") private var hideNoise: Bool = false
+
+    @Query private var allArticles: [RSSArticle]
 
     // MARK: - Dialog state
 
     private enum DialogKind: Identifiable {
-        case clearStreak, resetEverything, forceUpload, forceRestore
+        case clearStreak, resetEverything, forceUpload, forceRestore, clearArticles, deduplicateArticles
         var id: Self { self }
     }
 
@@ -29,6 +34,23 @@ struct SettingsView: View {
 
     private var selectedTheme: ReaderTheme {
         ReaderTheme(rawValue: themeRaw) ?? .ember
+    }
+
+    private var duplicateCount: Int {
+        var seen = Set<String>()
+        var dupes = 0
+        for article in allArticles {
+            if !seen.insert(article.url).inserted { dupes += 1 }
+        }
+        return dupes
+    }
+
+    private var gradingProgressLabel: String {
+        let total = allArticles.count
+        let graded = allArticles.filter { $0.qualityGrade != nil }.count
+        guard total > 0 else { return "" }
+        let pct = Int((Double(graded) / Double(total)) * 100)
+        return "\(graded) of \(total) graded (\(pct)%)"
     }
 
     private var iCloudAvailable: Bool {
@@ -53,6 +75,7 @@ struct SettingsView: View {
                         syncSection
                         streakSection
                         feedsSection
+                        readingSection
                         themeSection
                         dangerSection
                         versionFooter
@@ -96,6 +119,12 @@ struct SettingsView: View {
             case .forceRestore:
                 Button("Restore", role: .destructive) { scheduleCloudRestore() }
                 Button("Cancel", role: .cancel) { }
+            case .clearArticles:
+                Button("Clear articles", role: .destructive) { clearAllArticles() }
+                Button("Cancel", role: .cancel) { }
+            case .deduplicateArticles:
+                Button("Remove duplicates", role: .destructive) { removeDuplicateArticles() }
+                Button("Cancel", role: .cancel) { }
             }
         } message: { dialog in
             switch dialog {
@@ -107,6 +136,10 @@ struct SettingsView: View {
                 Text("Your local data will be pushed to iCloud. Any differences on other devices will be resolved on their next sync.")
             case .forceRestore:
                 Text("Local data will be cleared and replaced from iCloud the next time you open Just….")
+            case .clearArticles:
+                Text("All \(allArticles.count) fetched articles will be deleted. Your queue, Brain, and streak are unaffected. Articles will re-appear on the next fetch.")
+            case .deduplicateArticles:
+                Text("\(duplicateCount) duplicate article\(duplicateCount == 1 ? "" : "s") will be removed, keeping the richest copy of each.")
             }
         }
     }
@@ -347,6 +380,181 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Reading Section
+
+    private var readingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("READING")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Article grading")
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint)
+                        if !IntelligenceService.isAvailable {
+                            Text("Requires Apple Intelligence.")
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+                        } else if gradingEnabled && !allArticles.isEmpty {
+                            Text(gradingProgressLabel)
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                    }
+                    Spacer()
+                    Toggle("", isOn: $gradingEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                        .disabled(!IntelligenceService.isAvailable)
+                        .onChange(of: gradingEnabled) { _, enabled in
+                            if enabled {
+                                RSSFetchService.gradeInProcess(
+                                    container: context.container,
+                                    tracker: gradingTracker
+                                )
+                            }
+                        }
+                }
+
+                if gradingEnabled && IntelligenceService.isAvailable {
+                    gradingActionRow
+                    gradeBreakdown
+                }
+
+                HStack {
+                    Text("Hide noise from digest")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(gradingEnabled && IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint)
+                        .padding(.leading, 16)
+                    Spacer()
+                    Toggle("", isOn: $hideNoise)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                        .disabled(!gradingEnabled || !IntelligenceService.isAvailable)
+                }
+            }
+        }
+    }
+
+    private var gradeBreakdown: some View {
+        VStack(spacing: 6) {
+            gradeRow(label: "Strong",   grade: .strong,  count: gradeCounts.strong)
+            gradeRow(label: "Worth it", grade: .worthIt, count: gradeCounts.worthIt)
+            gradeRow(label: "Noise",    grade: .noise,   count: gradeCounts.noise)
+            ungradedRow(count: gradeCounts.ungraded)
+        }
+        .padding(.leading, 16)
+    }
+
+    private func gradeRow(label: String, grade: ArticleQualityGrade, count: Int) -> some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { i in
+                    Circle()
+                        .fill(i < grade.filledCount ? grade.color : grade.color.opacity(0.2))
+                        .frame(width: 5, height: 5)
+                }
+            }
+            .frame(width: 22)
+
+            Text(label)
+                .font(AppTheme.sansSerif(13))
+                .foregroundStyle(appTheme.textFaint)
+
+            Spacer()
+
+            Text("\(count)")
+                .font(AppTheme.sansSerif(13).monospacedDigit())
+                .foregroundStyle(appTheme.textFaint)
+        }
+    }
+
+    private func ungradedRow(count: Int) -> some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Circle()
+                        .fill(appTheme.accent.opacity(0.2))
+                        .frame(width: 5, height: 5)
+                }
+            }
+            .frame(width: 22)
+
+            Text("Ungraded")
+                .font(AppTheme.sansSerif(13))
+                .foregroundStyle(appTheme.textFaint)
+
+            Spacer()
+
+            Text("\(count)")
+                .font(AppTheme.sansSerif(13).monospacedDigit())
+                .foregroundStyle(appTheme.textFaint)
+        }
+    }
+
+    private var gradeCounts: (strong: Int, worthIt: Int, noise: Int, ungraded: Int) {
+        var strong = 0, worthIt = 0, noise = 0, ungraded = 0
+        for article in allArticles {
+            switch article.qualityGrade {
+            case .strong:  strong  += 1
+            case .worthIt: worthIt += 1
+            case .noise:   noise   += 1
+            case nil:      ungraded += 1
+            }
+        }
+        return (strong, worthIt, noise, ungraded)
+    }
+
+    @ViewBuilder
+    private var gradingActionRow: some View {
+        if gradingTracker.isRunning {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .scaleEffect(0.75)
+                    .tint(appTheme.accent)
+                Text("Grading…")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+                Spacer()
+            }
+            .padding(.leading, 16)
+        } else if let error = gradingTracker.lastError {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: 13))
+                    .foregroundStyle(AppTheme.danger)
+                Text(error)
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(AppTheme.danger.opacity(0.85))
+                Spacer()
+                Button("Retry") {
+                    gradingTracker.lastError = nil
+                    RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
+                }
+                .font(AppTheme.sansSerif(13, weight: .medium))
+                .foregroundStyle(appTheme.accent)
+            }
+            .padding(.leading, 16)
+        } else {
+            let ungradedCount = allArticles.filter { $0.qualityGrade == nil }.count
+            if ungradedCount > 0 {
+                HStack {
+                    Spacer()
+                    Button("Grade now") {
+                        RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
+                    }
+                    .font(AppTheme.sansSerif(13, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+                }
+                .padding(.leading, 16)
+            }
+        }
+    }
+
     // MARK: - Theme Section
 
     private var themeSection: some View {
@@ -379,26 +587,40 @@ struct SettingsView: View {
                 .foregroundStyle(appTheme.textFaint)
                 .tracking(2)
 
-            Button {
-                activeDialog = .resetEverything
-            } label: {
-                HStack {
-                    Spacer()
-                    Text("Reset everything.")
-                        .font(AppTheme.sansSerif(15, weight: .medium))
-                        .foregroundStyle(AppTheme.danger)
-                    Spacer()
+            if duplicateCount > 0 {
+                dangerButton("Remove \(duplicateCount) duplicate article\(duplicateCount == 1 ? "" : "s").") {
+                    activeDialog = .deduplicateArticles
                 }
-                .frame(height: 48)
-                .background(AppTheme.danger.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.cardRadius)
-                        .stroke(AppTheme.danger.opacity(0.25), lineWidth: 1)
-                )
             }
-            .buttonStyle(.plain)
+
+            dangerButton("Clear all articles.") {
+                activeDialog = .clearArticles
+            }
+
+            dangerButton("Reset everything.") {
+                activeDialog = .resetEverything
+            }
         }
+    }
+
+    private func dangerButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Spacer()
+                Text(label)
+                    .font(AppTheme.sansSerif(15, weight: .medium))
+                    .foregroundStyle(AppTheme.danger)
+                Spacer()
+            }
+            .frame(height: 48)
+            .background(AppTheme.danger.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius)
+                    .stroke(AppTheme.danger.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Version Footer
@@ -424,11 +646,13 @@ struct SettingsView: View {
 
     private var dialogTitle: String {
         switch activeDialog {
-        case .clearStreak:    "Clear streak?"
-        case .resetEverything: "Reset everything?"
-        case .forceUpload:    "Upload to iCloud?"
-        case .forceRestore:   "Restore from iCloud?"
-        case nil:             ""
+        case .clearStreak:          "Clear streak?"
+        case .resetEverything:      "Reset everything?"
+        case .forceUpload:          "Upload to iCloud?"
+        case .forceRestore:         "Restore from iCloud?"
+        case .clearArticles:        "Clear all articles?"
+        case .deduplicateArticles:  "Remove duplicates?"
+        case nil:                   ""
         }
     }
 
@@ -483,6 +707,16 @@ struct SettingsView: View {
         let days = (try? context.fetch(FetchDescriptor<ReadingDay>())) ?? []
         days.forEach { context.delete($0) }
         try? context.save()
+    }
+
+    private func clearAllArticles() {
+        let articles = (try? context.fetch(FetchDescriptor<RSSArticle>())) ?? []
+        articles.forEach { context.delete($0) }
+        try? context.save()
+    }
+
+    private func removeDuplicateArticles() {
+        RSSFetchService.deduplicateInProcess(container: context.container)
     }
 
     private func resetEverything() {

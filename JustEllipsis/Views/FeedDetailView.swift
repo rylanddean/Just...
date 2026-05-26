@@ -6,6 +6,7 @@ struct FeedDetailView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
+    @Environment(GradingProgressTracker.self) private var gradingTracker
     @Query private var articles: [RSSArticle]
     @Query private var queue: [QueuedLink]
 
@@ -14,8 +15,10 @@ struct FeedDetailView: View {
     init(feed: RSSFeed) {
         self.feed = feed
         let feedID = feed.id
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
         _articles = Query(
-            filter: #Predicate<RSSArticle> { $0.feedID == feedID },
+            filter: #Predicate<RSSArticle> { $0.feedID == feedID && $0.publishedAt >= cutoff },
             sort: \RSSArticle.publishedAt,
             order: .reverse
         )
@@ -93,7 +96,7 @@ struct FeedDetailView: View {
     private func refetch() {
         guard !isFetching else { return }
         isFetching = true
-        RSSFetchService.fetchSingle(feedID: feed.id, url: feed.url, container: context.container)
+        RSSFetchService.fetchSingle(feedID: feed.id, url: feed.url, container: context.container, tracker: gradingTracker)
         Task {
             try? await Task.sleep(for: .seconds(2))
             isFetching = false
@@ -123,6 +126,8 @@ private struct ArticleRow: View {
     let onAdd: () -> Void
 
     @Environment(\.appTheme) private var appTheme
+    @Environment(GradingProgressTracker.self) private var gradingTracker
+    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
     @State private var justAdded = false
 
     private var displaySummary: String? {
@@ -165,6 +170,14 @@ private struct ArticleRow: View {
                         Text("\(mins) min")
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.textFaint)
+                    }
+
+                    if gradingEnabled &&
+                        (gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil) {
+                        Text("·")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                        ArticleGradeIndicator(articleID: article.id, grade: article.qualityGrade)
                     }
                 }
             }

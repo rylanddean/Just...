@@ -1,13 +1,27 @@
 import Foundation
 import SwiftData
 import BackgroundTasks
+import OSLog
 @preconcurrency import FeedKit
+
+private let gradingLog = Logger(subsystem: "com.rylandean.justellipsis", category: "Grading")
 
 // MARK: - Service
 
 struct RSSFetchService {
 
-    static let backgroundTaskID = "com.rylandean.justellipsis.rssfetch"
+    static let backgroundTaskID        = "com.rylandean.justellipsis.rssfetch"
+    static let gradingBackgroundTaskID = "com.rylandean.justellipsis.grading"
+
+    // Schedule an opportunistic background grading run. No-ops if grading is disabled.
+    // Safe to call repeatedly — BGTaskScheduler deduplicates pending requests.
+    static func scheduleGradingBackgroundTaskIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: "grading.enabled") else { return }
+        let request = BGProcessingTaskRequest(identifier: gradingBackgroundTaskID)
+        request.requiresNetworkConnectivity = false
+        request.requiresExternalPower = false
+        try? BGTaskScheduler.shared.submit(request)
+    }
 
     // UserDefaults keys — read here and written by SettingsView via @AppStorage.
     static let fetchHourKey   = "rss.fetchHour"
@@ -46,23 +60,47 @@ struct RSSFetchService {
 
     // Called from in-process refresh (e.g. when user opens Feeds tab).
     // Pruning is intentionally omitted here — it runs once daily via performDailyJob
-    // in the background task. Running it here would delete articles older than 7 days
-    // that were just fetched, making infrequently-updated feeds appear empty.
     @MainActor
-    static func fetchInProcess(container: ModelContainer) {
+    @discardableResult
+    static func fetchInProcess(container: ModelContainer, tracker: GradingProgressTracker) -> Task<Void, Never> {
         Task.detached(priority: .background) {
             let actor = RSSFetchActor(modelContainer: container)
             await actor.fetchAll()
+            await actor.pruneOldArticles()
             await actor.summarizePendingArticles()
+            await actor.gradeNewArticles(tracker: tracker)
+            scheduleGradingBackgroundTaskIfNeeded()
+        }
+    }
+
+    // Deduplicate RSSArticle rows by URL, keeping the richest record per URL.
+    static func deduplicateInProcess(container: ModelContainer) {
+        Task.detached(priority: .background) {
+            let actor = RSSFetchActor(modelContainer: container)
+            await actor.deduplicateArticles()
+        }
+    }
+
+    // Grade any ungraded articles without doing a network fetch — used when grading is first enabled.
+    @MainActor
+    static func gradeInProcess(container: ModelContainer, tracker: GradingProgressTracker) {
+        Task.detached(priority: .background) {
+            let actor = RSSFetchActor(modelContainer: container)
+            await actor.gradeNewArticles(tracker: tracker)
+            scheduleGradingBackgroundTaskIfNeeded()
         }
     }
 
     // Fetch a single newly-added feed immediately so its articles appear right away.
     @MainActor
-    static func fetchSingle(feedID: UUID, url: String, container: ModelContainer) {
+    static func fetchSingle(feedID: UUID, url: String, container: ModelContainer, tracker: GradingProgressTracker) {
         Task.detached(priority: .userInitiated) {
             let actor = RSSFetchActor(modelContainer: container)
             await actor.fetchOne(feedID: feedID, urlString: url)
+            await actor.pruneOldArticles()
+            await actor.summarizePendingArticles()
+            await actor.gradeNewArticles(tracker: tracker)
+            scheduleGradingBackgroundTaskIfNeeded()
         }
     }
 }
@@ -126,22 +164,64 @@ actor RSSFetchActor {
         }
     }
 
-    // Prune articles older than 30 days that haven't been promoted to the queue.
+    // Prune articles published before the start of yesterday.
+    // QueuedLink records are separate and unaffected; isQueued articles are kept
+    // so queue-display code can still resolve them by URL during the same session.
     func pruneOldArticles() async {
-        let cutoff = Date(timeIntervalSinceNow: -30 * 24 * 60 * 60)
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
         let descriptor = FetchDescriptor<RSSArticle>(
             predicate: #Predicate { $0.publishedAt < cutoff && !$0.isQueued }
         )
         guard let stale = try? modelContext.fetch(descriptor) else { return }
+        guard !stale.isEmpty else { return }
+        gradingLog.info("pruneOldArticles: removing \(stale.count) article(s) older than yesterday")
         stale.forEach { modelContext.delete($0) }
         try? modelContext.save()
     }
 
-    // Full daily job: fetch all feeds, prune stale articles, make picks, promote to queue.
+    // Remove duplicate RSSArticle rows that share the same URL.
+    // For each duplicate group, keeps the record with the most data
+    // (grade > summary > description > earliest inserted).
+    func deduplicateArticles() async {
+        let all = (try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? []
+        var seen: [String: RSSArticle] = [:]
+        var toDelete: [RSSArticle] = []
+
+        for article in all {
+            if let existing = seen[article.url] {
+                let keepNew = articleRichness(article) > articleRichness(existing)
+                if keepNew {
+                    toDelete.append(existing)
+                    seen[article.url] = article
+                } else {
+                    toDelete.append(article)
+                }
+            } else {
+                seen[article.url] = article
+            }
+        }
+
+        guard !toDelete.isEmpty else { return }
+        gradingLog.info("deduplicateArticles: removing \(toDelete.count) duplicate(s)")
+        toDelete.forEach { modelContext.delete($0) }
+        try? modelContext.save()
+    }
+
+    private func articleRichness(_ a: RSSArticle) -> Int {
+        var score = 0
+        if a.qualityGrade != nil  { score += 4 }
+        if a.summary != nil       { score += 2 }
+        if a.feedDescription != nil { score += 1 }
+        return score
+    }
+
+    // Full daily job: fetch all feeds, prune stale articles, grade, make picks, promote to queue.
     func performDailyJob() async {
         await fetchAll()
         await pruneOldArticles()
         await summarizePendingArticles()
+        await gradeNewArticles(tracker: nil)
 
         // Extract Sendable snapshots before crossing the isolation boundary.
         let articleSnapshots: [ArticleSnapshot] = ((try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? [])
@@ -252,6 +332,79 @@ actor RSSFetchActor {
         if !stubs.isEmpty { try? modelContext.save() }
     }
 
+    // Grades ungraded articles using on-device AI. No-ops when grading is disabled or AI is unavailable.
+    // Pass nil tracker from background tasks where there is no UI to update.
+    func gradeNewArticles(tracker: GradingProgressTracker?) async {
+        guard #available(iOS 26, *) else {
+            gradingLog.debug("gradeNewArticles: skipped — iOS 26 unavailable")
+            return
+        }
+        guard UserDefaults.standard.bool(forKey: "grading.enabled") else {
+            gradingLog.debug("gradeNewArticles: skipped — grading.enabled is false")
+            return
+        }
+        guard IntelligenceService.isAvailable else {
+            gradingLog.warning("gradeNewArticles: skipped — Apple Intelligence unavailable")
+            if let tracker { await MainActor.run { tracker.markFailed() } }
+            return
+        }
+
+        struct Stub: Sendable {
+            let id: PersistentIdentifier
+            let articleID: UUID
+            let title: String
+            let desc: String
+            let source: String?
+        }
+        let descriptor = FetchDescriptor<RSSArticle>(
+            sortBy: [SortDescriptor(\RSSArticle.publishedAt, order: .reverse)]
+        )
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        let stubs: [Stub] = all.compactMap { article in
+            guard article.qualityGrade == nil else { return nil }
+            let desc = article.summary ?? article.feedDescription ?? ""
+            let source = URL(string: article.url).flatMap { url in
+                url.host.map { host in
+                    host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+                }
+            }
+            return Stub(id: article.persistentModelID, articleID: article.id,
+                        title: article.title, desc: desc, source: source)
+        }
+
+        guard !stubs.isEmpty else {
+            if let tracker { await MainActor.run { tracker.markFinished() } }
+            return
+        }
+
+        gradingLog.info("gradeNewArticles: \(stubs.count) ungraded (newest first)")
+
+        var graded = 0
+        var failed = 0
+        for stub in stubs {
+            guard !Task.isCancelled else {
+                let remaining = stubs.count - graded - failed
+                gradingLog.info("gradeNewArticles: cancelled — \(graded) graded, \(remaining) remaining")
+                if let tracker { await MainActor.run { tracker.markCancelled(graded: graded, remaining: remaining) } }
+                return
+            }
+            if let tracker { await MainActor.run { tracker.markActive(stub.articleID) } }
+            let grade = await IntelligenceService.gradeQuality(title: stub.title, description: stub.desc, source: stub.source)
+            gradingLog.debug("gradeNewArticles: '\(stub.title.prefix(60))' → \(grade.map { "\($0)" } ?? "nil (→ worthIt fallback)")")
+            if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
+                article.qualityGrade = grade ?? .worthIt
+                try? modelContext.save()
+                graded += 1
+            } else {
+                gradingLog.warning("gradeNewArticles: failed to resolve model for '\(stub.title.prefix(60))'")
+                failed += 1
+            }
+            if let tracker { await MainActor.run { tracker.markDone(stub.articleID) } }
+        }
+        gradingLog.info("gradeNewArticles: done — \(graded) graded, \(failed) failed")
+        if let tracker { await MainActor.run { tracker.markFinished() } }
+    }
+
     // Pure parsing — runs on the cooperative pool, returns a Sendable value.
     private static func parseFeed(urlString: String) async -> [ParsedArticle] {
         guard let url = URL(string: urlString) else { return [] }
@@ -333,6 +486,6 @@ actor RSSFetchActor {
             .replacingOccurrences(of: "&quot;", with: "\"")
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return String(stripped.prefix(500))
+        return String(stripped.prefix(2000))
     }
 }

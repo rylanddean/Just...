@@ -5,6 +5,7 @@ struct FeedsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
     @Environment(AppRouter.self) private var router
+    @Environment(GradingProgressTracker.self) private var gradingTracker
     @Query(sort: \RSSFeed.title) private var feeds: [RSSFeed]
 
     @State private var showAddByURL = false
@@ -367,7 +368,7 @@ struct FeedsView: View {
         let feed = RSSFeed(url: url, title: title, category: category)
         context.insert(feed)
         try? context.save()
-        RSSFetchService.fetchSingle(feedID: feed.id, url: url, container: context.container)
+        RSSFetchService.fetchSingle(feedID: feed.id, url: url, container: context.container, tracker: gradingTracker)
     }
 
     private func unsubscribe(_ feed: RSSFeed) {
