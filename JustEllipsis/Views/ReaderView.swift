@@ -9,9 +9,16 @@ struct ReaderView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.appTheme) private var appTheme
 
-    @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
-    @AppStorage(ReaderTextSize.defaultsKey) private var readerTextSize: Double = ReaderTextSize.defaultValue
-    private var readerTheme: ReaderTheme { ReaderTheme(rawValue: themeRaw) ?? .ember }
+    @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:         String = "ember"
+    @AppStorage(ReaderTextSize.defaultsKey)      private var readerTextSize:   Double = ReaderTextSize.defaultValue
+    @AppStorage(NightModeService.startHourKey)   private var nightStartHour:   Int    = NightModeService.defaultStartHour
+    @AppStorage(NightModeService.startMinuteKey) private var nightStartMinute: Int    = NightModeService.defaultStartMinute
+    @AppStorage(NightModeService.overrideKey)    private var nightOverride:    String = "auto"
+
+    private var effectiveReaderTheme: ReaderTheme {
+        let base = ReaderTheme(rawValue: themeRaw) ?? .ember
+        return NightModeService.isActive(hour: nightStartHour, minute: nightStartMinute, override: nightOverride) ? .night : base
+    }
 
     @State private var viewModel = ReaderViewModel()
     @State private var pendingEntry: BrainEntry?
@@ -324,7 +331,7 @@ struct ReaderView: View {
             ZStack(alignment: .bottom) {
                 ReaderWebView(
                     html: content.body,
-                    theme: readerTheme,
+                    theme: effectiveReaderTheme,
                     fontSize: CGFloat(readerTextSize),
                     onScrollProgress: { progress in
                         viewModel.readProgress = progress

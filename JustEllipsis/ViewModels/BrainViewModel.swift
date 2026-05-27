@@ -7,6 +7,8 @@ import Observation
 final class BrainViewModel {
 
     var searchText: String = ""
+    var selectedTopic: String? = nil
+    var rememberedEntry: BrainEntry? = nil
 
     // MARK: - Rank
 
@@ -25,16 +27,46 @@ final class BrainViewModel {
     // MARK: - Filtering
 
     func filtered(_ entries: [BrainEntry]) -> [BrainEntry] {
+        var result = entries
+
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return entries }
-        return entries.filter { entry in
-            entry.title.lowercased().contains(q)
-            || entry.domain.lowercased().contains(q)
-            || (entry.reflection?.lowercased().contains(q) == true)
+        if !q.isEmpty {
+            result = result.filter { entry in
+                entry.title.lowercased().contains(q)
+                || entry.domain.lowercased().contains(q)
+                || (entry.reflection?.lowercased().contains(q) == true)
+            }
         }
+
+        if let topic = selectedTopic {
+            let t = topic.lowercased()
+            result = result.filter { entry in
+                entry.title.lowercased().contains(t)
+                || (entry.reflection?.lowercased().contains(t) == true)
+                || (entry.dna?.lowercased().contains(t) == true)
+            }
+        }
+
+        return result
     }
 
-    // MARK: - Brain Diet
+    func toggleTopic(_ topic: String) {
+        selectedTopic = selectedTopic == topic ? nil : topic
+    }
+
+    // MARK: - Remember This
+
+    /// Picks one older entry (> 14 days), preferring entries with reflections.
+    /// Only sets once per view lifetime.
+    func setRememberedEntry(from entries: [BrainEntry]) {
+        guard rememberedEntry == nil, entries.count > 10 else { return }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+        let older = entries.filter { $0.readAt < cutoff }
+        let withReflection = older.filter { !($0.reflection ?? "").isEmpty }
+        rememberedEntry = (withReflection.isEmpty ? older : withReflection).randomElement()
+    }
+
+    // MARK: - Insights
 
     func weeklyDNA(entries: [BrainEntry]) -> [String] {
         let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
@@ -60,6 +92,18 @@ final class BrainViewModel {
         return freq.sorted { $0.value > $1.value }.prefix(3).map { (domain: $0.key, count: $0.value) }
     }
 
+    /// Returns 28 booleans: index 0 = 27 days ago, index 27 = today.
+    func monthlyActivity(entries: [BrainEntry]) -> [Bool] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return (0..<28).map { offset in
+            guard let day = calendar.date(byAdding: .day, value: -(27 - offset), to: today),
+                  let next = calendar.date(byAdding: .day, value: 1, to: day) else { return false }
+            return entries.contains { $0.readAt >= day && $0.readAt < next }
+        }
+    }
+
+    // Legacy — kept for compatibility
     func weeklyActivity(entries: [BrainEntry]) -> [Bool] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())

@@ -7,13 +7,19 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
     @Environment(GradingProgressTracker.self) private var gradingTracker
-    @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
-    @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
-    @AppStorage(JustEllipsisApp.iCloudSyncKey) private var iCloudSyncEnabled: Bool = false
-    @AppStorage("rss.fetchHour")   private var fetchHour:   Int = RSSFetchService.defaultFetchHour
-    @AppStorage("rss.fetchMinute") private var fetchMinute: Int = RSSFetchService.defaultFetchMinute
-    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
-    @AppStorage("digest.hideNoise") private var hideNoise: Bool = false
+    @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:         String = "ember"
+    @AppStorage("streak.minReadsPerDay")         private var minReadsPerDay:   Int    = 1
+    @AppStorage(JustEllipsisApp.iCloudSyncKey)   private var iCloudSyncEnabled: Bool  = false
+    @AppStorage("rss.fetchHour")                 private var fetchHour:        Int    = RSSFetchService.defaultFetchHour
+    @AppStorage("rss.fetchMinute")               private var fetchMinute:      Int    = RSSFetchService.defaultFetchMinute
+    @AppStorage("grading.enabled")               private var gradingEnabled:   Bool   = false
+    @AppStorage("digest.hideNoise")              private var hideNoise:        Bool   = false
+    @AppStorage(NightModeService.startHourKey)   private var nightStartHour:       Int    = NightModeService.defaultStartHour
+    @AppStorage(NightModeService.startMinuteKey) private var nightStartMinute:     Int    = NightModeService.defaultStartMinute
+    @AppStorage(NightModeService.overrideKey)    private var nightOverride:        String = "auto"
+    @AppStorage("activityRings.enabled")         private var activityRingsEnabled: Bool   = false
+
+    @Environment(HealthKitService.self) private var healthKit
 
     @Query private var allArticles: [RSSArticle]
 
@@ -76,6 +82,8 @@ struct SettingsView: View {
                         streakSection
                         feedsSection
                         readingSection
+                        healthSection
+                        nightModeSection
                         themeSection
                         dangerSection
                         versionFooter
@@ -563,6 +571,101 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Health Section
+
+    private var healthSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("HEALTH")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Activity rings")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(HealthKitService.isAvailable ? appTheme.heading : appTheme.textFaint)
+                    if !HealthKitService.isAvailable {
+                        Text("Not available on this device.")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                    } else {
+                        Text("Fitness rings appear once your daily reading goal is met.")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                    }
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $activityRingsEnabled)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .disabled(!HealthKitService.isAvailable)
+                    .onChange(of: activityRingsEnabled) { _, enabled in
+                        guard enabled else { return }
+                        Task {
+                            await healthKit.requestAuthorization()
+                            await healthKit.fetchTodaySummary()
+                        }
+                    }
+            }
+        }
+    }
+
+    // MARK: - Night Mode Section
+
+    private var nightStartBinding: Binding<Date> {
+        Binding(
+            get: {
+                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                comps.hour   = nightStartHour
+                comps.minute = nightStartMinute
+                return Calendar.current.date(from: comps) ?? Date()
+            },
+            set: { date in
+                let comps      = Calendar.current.dateComponents([.hour, .minute], from: date)
+                nightStartHour   = comps.hour   ?? NightModeService.defaultStartHour
+                nightStartMinute = comps.minute ?? NightModeService.defaultStartMinute
+            }
+        )
+    }
+
+    private var nightModeSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("NIGHT MODE")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Starts at")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(nightOverride == "off" ? appTheme.textFaint : appTheme.heading)
+                    Text("Blue light removed to help you sleep.")
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+
+                Spacer()
+
+                DatePicker("", selection: nightStartBinding, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .disabled(nightOverride == "off")
+                    .opacity(nightOverride == "off" ? 0.4 : 1)
+            }
+
+            Picker("", selection: $nightOverride) {
+                Text("Auto").tag("auto")
+                Text("On").tag("on")
+                Text("Off").tag("off")
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
     // MARK: - Theme Section
 
     private var themeSection: some View {
@@ -576,7 +679,7 @@ struct SettingsView: View {
                 columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
                 spacing: 12
             ) {
-                ForEach(ReaderTheme.allCases) { theme in
+                ForEach(ReaderTheme.pickerCases) { theme in
                     ThemeTile(theme: theme, isSelected: theme == selectedTheme) {
                         handleSelection(theme)
                     }

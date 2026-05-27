@@ -14,8 +14,6 @@ struct ReflectView: View {
     @State private var placeholder: String = ""
     @FocusState private var textFocused: Bool
 
-    private var secondsSpent: Int { 60 - viewModel.secondsRemaining }
-
     var body: some View {
         ZStack {
             appTheme.background.ignoresSafeArea()
@@ -44,17 +42,6 @@ struct ReflectView: View {
             placeholder = prompt ?? IntelligenceService.randomFallbackPrompt()
             viewModel.startCountdown()
         }
-        .onChange(of: textFocused) { _, focused in
-            if focused { viewModel.pauseCountdown() } else { viewModel.resumeCountdown() }
-        }
-        .onChange(of: viewModel.secondsRemaining) { _, rem in
-            if rem == 0 {
-                if viewModel.save(entry: entry, secondsSpent: secondsSpent, context: context) {
-                    dismiss()
-                    onComplete()
-                }
-            }
-        }
         .preferredColorScheme(appTheme.colorScheme)
     }
 
@@ -64,8 +51,7 @@ struct ReflectView: View {
         HStack {
             CountdownRing(
                 total: 60,
-                remaining: viewModel.secondsRemaining,
-                isPaused: textFocused
+                remaining: viewModel.secondsRemaining
             )
 
             Spacer()
@@ -104,9 +90,12 @@ struct ReflectView: View {
     }
 
     private var bottomBar: some View {
-        HStack {
+        let hasText = !viewModel.text.trimmingCharacters(in: .whitespaces).isEmpty
+        let saveEnabled = viewModel.canSave && hasText
+
+        return HStack {
             Button {
-                if viewModel.save(entry: entry, secondsSpent: secondsSpent, context: context) {
+                if viewModel.save(entry: entry, context: context) {
                     dismiss()
                     onComplete()
                 }
@@ -117,13 +106,9 @@ struct ReflectView: View {
                     .frame(height: 44)
                     .frame(maxWidth: .infinity)
             }
-            .background(
-                viewModel.text.trimmingCharacters(in: .whitespaces).isEmpty
-                    ? appTheme.accent.opacity(0.3)
-                    : appTheme.accent
-            )
+            .background(saveEnabled ? appTheme.accent : appTheme.accent.opacity(0.3))
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .disabled(viewModel.text.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(!saveEnabled)
 
             Spacer().frame(width: 16)
 

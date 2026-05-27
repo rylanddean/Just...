@@ -3,8 +3,9 @@ import SwiftUI
 struct BrainDietPanel: View {
     let entries: [BrainEntry]
     let viewModel: BrainViewModel
+    let selectedTopic: String?
+    let onTopicSelected: (String) -> Void
 
-    @AppStorage("brainDietExpanded") private var isExpanded: Bool = false
     @Environment(\.appTheme) private var appTheme
 
     private var weeklyWords: [String] { viewModel.weeklyDNA(entries: entries) }
@@ -12,108 +13,78 @@ struct BrainDietPanel: View {
         viewModel.reflectionStats(entries: entries)
     }
     private var domains: [(domain: String, count: Int)] { viewModel.topDomains(entries: entries) }
-    private var activity: [Bool] { viewModel.weeklyActivity(entries: entries) }
+    private var activity: [Bool] { viewModel.monthlyActivity(entries: entries) }
     private var activeDays: Int { activity.filter { $0 }.count }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button {
-                isExpanded.toggle()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "chart.bar.doc.horizontal")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(appTheme.accent)
+        VStack(alignment: .leading, spacing: 14) {
+            summaryRow
 
-                    Text("WHAT YOU'VE BEEN READING")
-                        .font(AppTheme.sansSerif(10, weight: .medium))
-                        .tracking(2)
-                        .foregroundStyle(appTheme.accent)
-
-                    Spacer()
-
-                    ZStack {
-                        Image(systemName: "chevron.right")
-                            .opacity(isExpanded ? 0 : 1)
-                        Image(systemName: "chevron.down")
-                            .opacity(isExpanded ? 1 : 0)
+            if !weeklyWords.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    label("THIS WEEK")
+                    FlowLayout(spacing: 6) {
+                        ForEach(weeklyWords, id: \.self) { word in
+                            let isSelected = selectedTopic == word
+                            Button {
+                                onTopicSelected(word)
+                            } label: {
+                                Text(word)
+                                    .font(AppTheme.sansSerif(12, weight: .medium))
+                                    .foregroundStyle(isSelected ? (appTheme.isLight ? .white : appTheme.background) : appTheme.accent)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        isSelected ? appTheme.accent : appTheme.accent.opacity(0.12),
+                                        in: Capsule()
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .animation(.easeInOut(duration: 0.15), value: isSelected)
+                        }
                     }
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(appTheme.textFaint)
-                    .frame(width: 14, height: 14, alignment: .center)
-                    .animation(.easeInOut(duration: 0.2), value: isExpanded)
                 }
             }
-            .buttonStyle(.plain)
 
-            if isExpanded {
-                VStack(alignment: .leading, spacing: 14) {
-                    summaryRow
+            if !domains.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    label("TOP SOURCES")
+                    VStack(spacing: 6) {
+                        ForEach(Array(domains.prefix(3).enumerated()), id: \.offset) { index, item in
+                            HStack(spacing: 10) {
+                                Text("\(index + 1)")
+                                    .font(AppTheme.sansSerif(11))
+                                    .foregroundStyle(appTheme.textFaint)
+                                    .frame(width: 12, alignment: .leading)
 
-                    if !weeklyWords.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            label("THIS WEEK'S DNA")
-                            FlowLayout(spacing: 8) {
-                                ForEach(weeklyWords, id: \.self) { word in
-                                    Text(word)
-                                        .font(AppTheme.sansSerif(12, weight: .medium))
-                                        .foregroundStyle(appTheme.accent)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(appTheme.accent.opacity(0.12), in: Capsule())
-                                }
-                            }
-                        }
-                    }
+                                Text(item.domain)
+                                    .font(AppTheme.sansSerif(13, weight: .medium))
+                                    .foregroundStyle(appTheme.heading)
+                                    .lineLimit(1)
 
-                    if !domains.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            label("TOP SOURCES")
-                            VStack(spacing: 8) {
-                                ForEach(Array(domains.prefix(3).enumerated()), id: \.offset) { index, item in
-                                    HStack(spacing: 10) {
-                                        Text("\(index + 1)")
-                                            .font(AppTheme.sansSerif(11))
-                                            .foregroundStyle(appTheme.textFaint)
-                                            .frame(width: 12, alignment: .leading)
+                                Spacer()
 
-                                        Text(item.domain)
-                                            .font(AppTheme.sansSerif(13, weight: .medium))
-                                            .foregroundStyle(appTheme.heading)
-                                            .lineLimit(1)
-
-                                        Spacer()
-
-                                        Text("\(item.count)")
-                                            .font(AppTheme.sansSerif(11, weight: .medium))
-                                            .foregroundStyle(appTheme.textFaint)
-                                            .padding(.horizontal, 7)
-                                            .padding(.vertical, 4)
-                                            .background(appTheme.background, in: Capsule())
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        label("LAST 7 DAYS")
-                        HStack(spacing: 6) {
-                            ForEach(0..<7, id: \.self) { index in
-                                VStack(spacing: 5) {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(activity[index] ? appTheme.accent : appTheme.separator)
-                                        .frame(height: 20)
-                                    Text(dayLetter(for: index))
-                                        .font(AppTheme.sansSerif(9))
-                                        .foregroundStyle(appTheme.textFaint)
-                                }
-                                .frame(maxWidth: .infinity)
+                                Text("\(item.count)")
+                                    .font(AppTheme.sansSerif(11, weight: .medium))
+                                    .foregroundStyle(appTheme.textFaint)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(appTheme.background, in: Capsule())
                             }
                         }
                     }
                 }
-                .padding(.top, 12)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    label("4 WEEKS")
+                    Spacer()
+                    Text("\(activeDays) active")
+                        .font(AppTheme.sansSerif(10))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+                activityGrid
             }
         }
         .padding(AppTheme.cardPadding)
@@ -122,11 +93,31 @@ struct BrainDietPanel: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
     }
 
+    // MARK: - Activity grid (4 rows × 7 cols = 28 days)
+
+    private var activityGrid: some View {
+        VStack(spacing: 4) {
+            ForEach(0..<4, id: \.self) { row in
+                HStack(spacing: 4) {
+                    ForEach(0..<7, id: \.self) { col in
+                        let index = row * 7 + col
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(activity[index] ? appTheme.accent : appTheme.separator)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 14)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Summary pills
+
     private var summaryRow: some View {
         HStack(spacing: 8) {
             summaryPill(title: "Kept", value: "\(Int(stats.kept * 100))%")
-            summaryPill(title: "Avg", value: formattedAvg)
-            summaryPill(title: "Active", value: "\(activeDays)/7")
+            summaryPill(title: "Avg think", value: formattedAvg)
+            summaryPill(title: "Active", value: "\(activeDays)/28")
         }
     }
 
@@ -159,14 +150,6 @@ struct BrainDietPanel: View {
             .font(AppTheme.sansSerif(10, weight: .medium))
             .foregroundStyle(appTheme.textFaint)
             .tracking(1.6)
-    }
-
-    private func dayLetter(for offset: Int) -> String {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        guard let date = calendar.date(byAdding: .day, value: -(6 - offset), to: today) else { return "" }
-        let weekday = calendar.component(.weekday, from: date)
-        return ["S", "M", "T", "W", "T", "F", "S"][weekday - 1]
     }
 }
 

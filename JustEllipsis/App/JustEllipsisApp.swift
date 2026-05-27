@@ -8,6 +8,7 @@ struct JustEllipsisApp: App {
     let container: ModelContainer = makeContainer()
     @State private var router = AppRouter()
     @State private var gradingTracker = GradingProgressTracker()
+    @State private var healthKit = HealthKitService()
 
     init() {
         registerRSSBackgroundTask()
@@ -20,6 +21,7 @@ struct JustEllipsisApp: App {
                 .modelContainer(container)
                 .environment(router)
                 .environment(gradingTracker)
+                .environment(healthKit)
                 .onOpenURL { url in
                     handleOpenURL(url)
                 }
@@ -81,6 +83,7 @@ struct JustEllipsisApp: App {
     // Handles feed URLs launched from Safari/other apps.
     // Supported examples:
     // - feed://example.com/feed.xml
+    // - feeds://example.com/feed.xml
     // - feed:https://example.com/feed.xml
     // - justellipsis://add-feed?url=https://example.com/feed.xml
     private func handleOpenURL(_ url: URL) {
@@ -94,7 +97,7 @@ struct JustEllipsisApp: App {
         let resolved: String?
 
         switch scheme {
-        case "feed":
+        case "feed", "feeds":
             if let host = incomingURL.host, !host.isEmpty {
                 // feed://example.com/feed.xml -> https://example.com/feed.xml
                 var components = URLComponents()
@@ -119,6 +122,14 @@ struct JustEllipsisApp: App {
             }?.value
             resolved = deepLinkURL
 
+        case "file":
+            // Opened via "Open in Just…" banner in Safari — iOS downloads the RSS/Atom XML
+            // to a temp file and passes the file URL here. Scan the raw XML for the
+            // atom:link rel="self" element, which carries the canonical feed URL.
+            guard let data = try? Data(contentsOf: incomingURL),
+                  let xml = String(data: data, encoding: .utf8) else { return nil }
+            resolved = Self.extractAtomSelfLink(from: xml)
+
         case "http", "https":
             // For future universal-link support, allow direct web URLs too.
             resolved = incomingURL.absoluteString
@@ -136,6 +147,24 @@ struct JustEllipsisApp: App {
         }
 
         return resolved
+    }
+
+    // Extracts the href from the first <atom:link rel="self"> (or <link rel="self">)
+    // element in raw RSS/Atom XML. Handles both attribute orderings.
+    private static func extractAtomSelfLink(from xml: String) -> String? {
+        let patterns = [
+            #"<(?:atom:)?link\b[^>]*\brel="self"[^>]*\bhref="([^"]+)""#,
+            #"<(?:atom:)?link\b[^>]*\bhref="([^"]+)"[^>]*\brel="self""#
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { continue }
+            let nsRange = NSRange(xml.startIndex..., in: xml)
+            if let match = regex.firstMatch(in: xml, range: nsRange),
+               let range = Range(match.range(at: 1), in: xml) {
+                return String(xml[range])
+            }
+        }
+        return nil
     }
 
     // MARK: - ModelContainer

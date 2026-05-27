@@ -22,10 +22,9 @@ final class ReaderViewModel {
 
         // Capture primitives before any await so we don't send the model object
         // across the actor boundary.
-        let urlString = link.url
+        let urlString  = link.url
         let cachedHTML = link.cachedHTML
-        let themeRaw = UserDefaults.standard.string(forKey: ReaderTheme.defaultsKey) ?? "ember"
-        let theme = ReaderTheme(rawValue: themeRaw) ?? .ember
+        let theme      = Self.effectiveTheme()
 
         do {
             let result = try await fetchContent(urlString: urlString, cachedHTML: cachedHTML, theme: theme)
@@ -77,8 +76,7 @@ final class ReaderViewModel {
         error = nil
         isLoading = true
         isJSRendering = false
-        let themeRaw = UserDefaults.standard.string(forKey: ReaderTheme.defaultsKey) ?? "ember"
-        let theme = ReaderTheme(rawValue: themeRaw) ?? .ember
+        let theme = Self.effectiveTheme()
         do {
             let result = try await fetchContent(urlString: urlString, cachedHTML: nil, theme: theme)
             content = result.content
@@ -91,6 +89,15 @@ final class ReaderViewModel {
     // MARK: - Private
 
     private static let log = Logger(subsystem: "com.rylandean.justellipsis", category: "ReaderViewModel")
+
+    private static func effectiveTheme() -> ReaderTheme {
+        let defaults      = UserDefaults.standard
+        let base          = ReaderTheme(rawValue: defaults.string(forKey: ReaderTheme.defaultsKey) ?? "ember") ?? .ember
+        let hour          = (defaults.object(forKey: NightModeService.startHourKey)   as? Int) ?? NightModeService.defaultStartHour
+        let minute        = (defaults.object(forKey: NightModeService.startMinuteKey) as? Int) ?? NightModeService.defaultStartMinute
+        let override      = defaults.string(forKey: NightModeService.overrideKey) ?? "auto"
+        return NightModeService.isActive(hour: hour, minute: minute, override: override) ? .night : base
+    }
 
     private func fetchContent(
         urlString: String,

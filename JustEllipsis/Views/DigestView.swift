@@ -11,9 +11,9 @@ struct DigestView: View {
     @Query private var queue: [QueuedLink]
     @Query(sort: \BrainEntry.readAt, order: .reverse) private var brainEntries: [BrainEntry]
 
-    @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
-    @AppStorage("grading.enabled") private var gradingEnabled: Bool = false
-    @AppStorage("digest.hideNoise") private var hideNoise: Bool = false
+    @AppStorage("streak.minReadsPerDay")  private var minReadsPerDay:       Int  = 1
+    @AppStorage("grading.enabled")       private var gradingEnabled:        Bool = false
+    @AppStorage("digest.hideNoise")      private var hideNoise:             Bool = false
 
     @State private var isFetching = false
 

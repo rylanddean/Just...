@@ -43,11 +43,20 @@ struct ReaderWebView: UIViewRepresentable {
         webView.scrollView.backgroundColor = bgColor
         if context.coordinator.loadedHTML != html {
             context.coordinator.loadedHTML = html
+            context.coordinator.appliedNightMode = nil  // reset so injection fires after load
+            context.coordinator.appliedFontSize = -1  // reset so font size reapplies after load
             context.coordinator.didTrigger = false
             context.coordinator.wasNearBottom = false
             webView.loadHTMLString(html, baseURL: nil)
         } else {
             context.coordinator.applyFontSizeIfNeeded(on: webView)
+            // When night mode toggles on a page that is already loaded, update
+            // colours via a CSS override instead of reloading the whole article.
+            let isNight = (theme == .night)
+            if context.coordinator.appliedNightMode != isNight {
+                context.coordinator.appliedNightMode = isNight
+                context.coordinator.applyNightModeCSS(isNight, theme: theme, on: webView)
+            }
         }
     }
 
@@ -60,7 +69,8 @@ struct ReaderWebView: UIViewRepresentable {
         var didTrigger = false
         var wasNearBottom = false
         var requestedFontSize: CGFloat = CGFloat(ReaderTextSize.defaultValue)
-        private var appliedFontSize: CGFloat = -1
+        var appliedNightMode: Bool? = nil
+        var appliedFontSize: CGFloat = -1
 
         init(
             onScrollProgress: @escaping (Double) -> Void,
@@ -72,6 +82,26 @@ struct ReaderWebView: UIViewRepresentable {
             self.onNearBottom = onNearBottom
             self.onOverScrollDelta = onOverScrollDelta
             self.onReflectTrigger = onReflectTrigger
+        }
+
+        func applyNightModeCSS(_ isNight: Bool, theme: ReaderTheme, on webView: WKWebView) {
+            let js: String
+            if isNight {
+                let bg      = theme.bgHex
+                let text    = theme.textHex
+                let heading = theme.headingHex
+                let accent  = theme.accentHex
+                js = """
+                (function(){
+                    var s=document.getElementById('jst-nm');
+                    if(!s){s=document.createElement('style');s.id='jst-nm';document.head&&document.head.appendChild(s);}
+                    s.textContent='html,body{background:\(bg)!important;color:\(text)!important;}h1,h2,h3,h4{color:\(heading)!important;}a{color:\(accent)!important;}';
+                })();
+                """
+            } else {
+                js = "(function(){var s=document.getElementById('jst-nm');if(s)s.parentNode.removeChild(s);})();"
+            }
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
         func applyFontSizeIfNeeded(on webView: WKWebView) {

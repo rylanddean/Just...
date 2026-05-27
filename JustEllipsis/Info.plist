@@ -11,6 +11,33 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Just…</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>RSS Feed</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.rylandean.justellipsis.rss-feed</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Atom Feed</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.rylandean.justellipsis.atom-feed</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -33,6 +60,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>feed</string>
+				<string>feeds</string>
 			</array>
 		</dict>
 		<dict>
@@ -51,6 +79,8 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Activity ring progress appears once you've met your daily reading goal — a quiet reminder to also move.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Voice reflections are transcribed on-device. Audio never leaves your phone.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
@@ -80,6 +110,54 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.xml</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>RSS Feed</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.rylandean.justellipsis.rss-feed</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>rss</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/rss+xml</string>
+					<string>application/x-rss+xml</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.xml</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Atom Feed</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.rylandean.justellipsis.atom-feed</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>atom</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/atom+xml</string>
+				</array>
+			</dict>
+		</dict>
 	</array>
 </dict>
 </plist>

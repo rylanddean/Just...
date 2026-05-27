@@ -9,7 +9,10 @@ struct HomeView: View {
     @Query private var feeds: [RSSFeed]
     @Query private var brainEntries: [BrainEntry]
 
-    @AppStorage("streak.minReadsPerDay") private var minReadsPerDay: Int = 1
+    @AppStorage("streak.minReadsPerDay")   private var minReadsPerDay:       Int  = 1
+    @AppStorage("activityRings.enabled")  private var activityRingsEnabled: Bool = false
+
+    @Environment(HealthKitService.self) private var healthKit
 
     @State private var showAddLink: Bool = false
     @State private var showSettings: Bool = false
@@ -18,6 +21,13 @@ struct HomeView: View {
     private var streak: Int { StreakEngine.calculateStreak(from: readingDays, minReads: minReadsPerDay).current }
     private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays, minReads: minReadsPerDay) }
     private var recentActivity: [Bool] { StreakEngine.recentActivity(days: readingDays, count: 7, minReads: minReadsPerDay) }
+
+    private var showActivityCard: Bool {
+        activityRingsEnabled
+            && HealthKitService.isAvailable
+            && healthKit.summary != nil
+            && StreakEngine.hasReadToday(days: readingDays, minReads: minReadsPerDay)
+    }
 
     private var picks: [QueuedLink] { queue.filter { $0.source == .aiPick } }
     private var manual: [QueuedLink] { queue.filter { $0.source != .aiPick } }
@@ -34,6 +44,22 @@ struct HomeView: View {
                         StreakHeader(streak: streak, isAtRisk: isAtRisk, recentActivity: recentActivity)
 
                         List {
+                            // Activity rings card — shown after daily goal is met
+                            if showActivityCard, let summary = healthKit.summary {
+                                Section {
+                                    ActivityRingsCard(summary: summary)
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(EdgeInsets(
+                                            top: 8,
+                                            leading: AppTheme.pagePadding,
+                                            bottom: 4,
+                                            trailing: AppTheme.pagePadding
+                                        ))
+                                }
+                                .listSectionSeparator(.hidden)
+                            }
+
                             // Picked for you section
                             if !picks.isEmpty {
                                 Section {

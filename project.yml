@@ -41,11 +41,45 @@ targets:
       properties:
         CFBundleName: "Just…"
         CFBundleDisplayName: "Just…"
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: com.rylandean.justellipsis.rss-feed
+            UTTypeDescription: RSS Feed
+            UTTypeConformsTo:
+              - public.xml
+              - public.data
+            UTTypeTagSpecification:
+              public.mime-type:
+                - application/rss+xml
+                - application/x-rss+xml
+              public.filename-extension:
+                - rss
+          - UTTypeIdentifier: com.rylandean.justellipsis.atom-feed
+            UTTypeDescription: Atom Feed
+            UTTypeConformsTo:
+              - public.xml
+              - public.data
+            UTTypeTagSpecification:
+              public.mime-type:
+                - application/atom+xml
+              public.filename-extension:
+                - atom
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: RSS Feed
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.rylandean.justellipsis.rss-feed
+          - CFBundleTypeName: Atom Feed
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.rylandean.justellipsis.atom-feed
         CFBundleURLTypes:
           - CFBundleTypeRole: Viewer
             CFBundleURLName: com.rylandean.justellipsis.feed
             CFBundleURLSchemes:
               - feed
+              - feeds
           - CFBundleTypeRole: Viewer
             CFBundleURLName: com.rylandean.justellipsis.deeplink
             CFBundleURLSchemes:
@@ -63,6 +97,7 @@ targets:
         UILaunchScreen: {}
         NSMicrophoneUsageDescription: "Voice reflections are transcribed on-device. Audio never leaves your phone."
         NSSpeechRecognitionUsageDescription: "Speech recognition powers voice reflections. All recognition is on-device."
+        NSHealthShareUsageDescription: "Activity ring progress appears once you've met your daily reading goal — a quiet reminder to also move."
         ITSAppUsesNonExemptEncryption: false
         UIRequiresFullScreen: false
         UIDeviceFamily:
@@ -96,6 +131,7 @@ targets:
     dependencies:
       - package: SwiftSoup
       - package: FeedKit
+      - sdk: HealthKit.framework
       - target: JustEllipsisShareExtension   # embeds the extension in the app bundle
 
   # ── Share Extension ───────────────────────────────────────────────────────

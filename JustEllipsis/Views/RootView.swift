@@ -6,15 +6,34 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppRouter.self) private var router
     @Environment(GradingProgressTracker.self) private var gradingTracker
+    @Environment(HealthKitService.self) private var healthKit
+    @AppStorage("activityRings.enabled") private var activityRingsEnabled: Bool = false
+    @AppStorage("hasCompletedOnboarding")  private var hasCompletedOnboarding: Bool = false
 
     @State private var hasRunInitialStartupWork = false
     @State private var lastStartupWorkAt: Date = .distantPast
 
-    @AppStorage(ReaderTheme.defaultsKey) private var themeRaw: String = "ember"
-    private var activeTheme: AppTheme { AppTheme(theme: ReaderTheme(rawValue: themeRaw) ?? .ember) }
+    @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:         String = "ember"
+    @AppStorage(NightModeService.startHourKey)   private var nightStartHour:   Int    = NightModeService.defaultStartHour
+    @AppStorage(NightModeService.startMinuteKey) private var nightStartMinute: Int    = NightModeService.defaultStartMinute
+    @AppStorage(NightModeService.overrideKey)    private var nightOverride:    String = "auto"
+
+    private var activeTheme: AppTheme {
+        let base    = ReaderTheme(rawValue: themeRaw) ?? .ember
+        let isNight = NightModeService.isActive(hour: nightStartHour, minute: nightStartMinute, override: nightOverride)
+        return AppTheme(theme: isNight ? .night : base)
+    }
 
     var body: some View {
         @Bindable var router = router
+
+        if !hasCompletedOnboarding {
+            OnboardingView {
+                hasCompletedOnboarding = true
+                runStartupWorkIfNeeded(force: true)
+            }
+            .environment(\.appTheme, activeTheme)
+        } else {
         TabView(selection: $router.selectedTab) {
             HomeView()
                 .tag(0)
@@ -55,6 +74,7 @@ struct RootView: View {
                 gradingTracker.reset()
             }
         }
+        } // else hasCompletedOnboarding
     }
 
     // MARK: - Share Extension handoff
@@ -84,5 +104,8 @@ struct RootView: View {
         processPendingLinks()
         RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
         PrefetchService.prefetchInProcess(container: context.container)
+        if activityRingsEnabled {
+            Task { await healthKit.fetchTodaySummary() }
+        }
     }
 }

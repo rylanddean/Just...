@@ -7,8 +7,13 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
     case sage  = "sage"
     case sepia = "sepia"
     case paper = "paper"
+    case night = "night"   // applied automatically; not shown in the theme picker
 
     var id: String { rawValue }
+
+    // The subset of themes the user can manually choose. Night is excluded because
+    // it is applied by NightModeService, not selected directly.
+    static let pickerCases: [ReaderTheme] = [.ember, .slate, .dusk, .sage, .sepia, .paper]
 
     var displayName: String {
         switch self {
@@ -18,6 +23,7 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
         case .sage:  "Sage"
         case .sepia: "Sepia"
         case .paper: "Paper"
+        case .night: "Night"
         }
     }
 
@@ -29,6 +35,7 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
         case .sage:  "#0F1612"
         case .sepia: "#F4ECD8"
         case .paper: "#FAFAF8"
+        case .night: "#130D07"
         }
     }
 
@@ -40,6 +47,7 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
         case .sage:  "#171E19"
         case .sepia: "#EAE0CA"
         case .paper: "#F0F0EE"
+        case .night: "#1D1409"
         }
     }
 
@@ -51,6 +59,7 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
         case .sage:  "#C8D8C0"
         case .sepia: "#3D2B1F"
         case .paper: "#1A1A1A"
+        case .night: "#A88560"
         }
     }
 
@@ -62,6 +71,7 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
         case .sage:  "#6FBF73"
         case .sepia: "#8B4513"
         case .paper: "#E05C2A"
+        case .night: "#C07820"
         }
     }
 
@@ -73,6 +83,7 @@ enum ReaderTheme: String, CaseIterable, Identifiable {
         case .sage:  "#E0EDD8"
         case .sepia: "#1A0804"
         case .paper: "#111111"
+        case .night: "#C4A068"
         }
     }
 
