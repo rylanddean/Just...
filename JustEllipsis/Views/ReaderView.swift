@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import SafariServices
 
 struct ReaderView: View {
     let link: QueuedLink
@@ -14,6 +15,7 @@ struct ReaderView: View {
 
     @State private var viewModel = ReaderViewModel()
     @State private var pendingEntry: BrainEntry?
+    @State private var safariURL: URL?
     @State private var isNearBottom = false
     @State private var overScrollDelta: CGFloat = 0
     @State private var isTextSizeControlVisible = false
@@ -66,6 +68,10 @@ struct ReaderView: View {
                 await viewModel.load(link: link, context: context)
             }
             .preferredColorScheme(appTheme.colorScheme)
+            .sheet(item: $safariURL) { url in
+                SafariView(url: url)
+                    .ignoresSafeArea()
+            }
         }
     }
 
@@ -103,11 +109,17 @@ struct ReaderView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .tint(appTheme.accent)
-            Text(loadingMessages[loadingMessageIndex])
-                .font(AppTheme.sansSerif(13))
-                .foregroundStyle(appTheme.text.opacity(0.5))
-                .contentTransition(.opacity)
-                .animation(.easeInOut(duration: 0.2), value: loadingMessageIndex)
+            if viewModel.isJSRendering {
+                Text("Extracting content.")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+            } else {
+                Text(loadingMessages[loadingMessageIndex])
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+                    .contentTransition(.opacity)
+                    .animation(.easeInOut(duration: 0.2), value: loadingMessageIndex)
+            }
         }
         .task(id: viewModel.isLoading) {
             guard viewModel.isLoading else { return }
@@ -172,11 +184,21 @@ struct ReaderView: View {
             .padding(AppTheme.pagePadding)
             .background(appTheme.text.opacity(0.05))
 
-            Button("Try again") {
-                Task { await viewModel.load(link: link, context: context) }
+            HStack(spacing: 24) {
+                Button("Try again") {
+                    Task { await viewModel.load(link: link, context: context) }
+                }
+                .font(AppTheme.sansSerif(14, weight: .medium))
+                .foregroundStyle(appTheme.accent)
+
+                if let url = URL(string: link.url) {
+                    Button("Open in browser") {
+                        safariURL = url
+                    }
+                    .font(AppTheme.sansSerif(14, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.4))
+                }
             }
-            .font(AppTheme.sansSerif(14, weight: .medium))
-            .foregroundStyle(appTheme.accent)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.top, 20)
@@ -201,13 +223,21 @@ struct ReaderView: View {
             case .invalidURL:
                 return "This doesn't appear to be a valid link."
             case .emptyContent:
-                return "This link didn't return readable content. It may be paywalled or require JavaScript."
+                return "This link didn't return readable content. It may be behind a login or paywall."
             case .httpError(let code) where code == 404:
                 return "This link no longer exists."
             case .httpError(let code) where code >= 400 && code < 500:
                 return "This link isn't publicly accessible. It may require a login."
             case .httpError:
                 return "The server returned an error. Try again later."
+            }
+        }
+        if let jsError = error as? JSRenderer.JSRenderError {
+            switch jsError {
+            case .timeout:
+                return "This page took too long to render. It may require a login."
+            case .navigationFailed:
+                return "This link couldn't be loaded in the reader."
             }
         }
         return "Something went wrong. Try again later."
@@ -415,4 +445,23 @@ struct ReaderView: View {
         }
         try? context.save()
     }
+}
+
+// MARK: - In-app browser
+
+// URL needs to be Identifiable to drive .sheet(item:)
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
+}
+
+private struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let vc = SFSafariViewController(url: url)
+        vc.preferredControlTintColor = UIColor(named: "AccentColor")
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }

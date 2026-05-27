@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Observation
+import os
 
 @Observable
 @MainActor
@@ -8,6 +9,7 @@ final class ReaderViewModel {
 
     var content: StrippedContent?
     var isLoading: Bool = true
+    var isJSRendering: Bool = false
     var error: Error?
     var readProgress: Double = 0.0   // 0.0–1.0, driven by WKWebView scroll position
     var generatedPrompt: String? = nil
@@ -16,6 +18,7 @@ final class ReaderViewModel {
     func load(link: QueuedLink, context: ModelContext) async {
         error = nil
         isLoading = true
+        isJSRendering = false
 
         // Capture primitives before any await so we don't send the model object
         // across the actor boundary.
@@ -25,7 +28,7 @@ final class ReaderViewModel {
         let theme = ReaderTheme(rawValue: themeRaw) ?? .ember
 
         do {
-            let result = try await ContentFetcher.fetch(urlString: urlString, cachedHTML: cachedHTML, theme: theme)
+            let result = try await fetchContent(urlString: urlString, cachedHTML: cachedHTML, theme: theme)
             content = result.content
 
             // Write back to model on @MainActor (we're already here)
@@ -73,15 +76,47 @@ final class ReaderViewModel {
     func loadURL(_ urlString: String) async {
         error = nil
         isLoading = true
+        isJSRendering = false
         let themeRaw = UserDefaults.standard.string(forKey: ReaderTheme.defaultsKey) ?? "ember"
         let theme = ReaderTheme(rawValue: themeRaw) ?? .ember
         do {
-            let result = try await ContentFetcher.fetch(urlString: urlString, theme: theme)
+            let result = try await fetchContent(urlString: urlString, cachedHTML: nil, theme: theme)
             content = result.content
         } catch {
             self.error = error
         }
         isLoading = false
+    }
+
+    // MARK: - Private
+
+    private static let log = Logger(subsystem: "com.rylandean.justellipsis", category: "ReaderViewModel")
+
+    private func fetchContent(
+        urlString: String,
+        cachedHTML: String?,
+        theme: ReaderTheme
+    ) async throws -> FetchResult {
+        do {
+            return try await ContentFetcher.fetch(urlString: urlString, cachedHTML: cachedHTML, theme: theme)
+        } catch ContentFetcher.FetchError.emptyContent {
+            guard let url = URL(string: urlString) else { throw ContentFetcher.FetchError.invalidURL }
+            Self.log.debug("fetchContent: URLSession returned emptyContent — trying JSRenderer for \(urlString)")
+            isJSRendering = true
+            do {
+                let renderedHTML = try await JSRenderer.shared.render(url: url)
+                let stripped = try ContentFetcher.strip(html: renderedHTML, sourceURL: url, theme: theme)
+                Self.log.debug("fetchContent: JSRenderer words=\(stripped.estimatedWordCount)")
+                guard stripped.estimatedWordCount >= 50 else {
+                    Self.log.error("fetchContent: JSRenderer also returned sparse content — emptyContent")
+                    throw ContentFetcher.FetchError.emptyContent
+                }
+                return FetchResult(content: stripped, rawHTML: renderedHTML)
+            } catch let jsError as JSRenderer.JSRenderError {
+                Self.log.error("fetchContent: JSRenderer failed — \(String(describing: jsError))")
+                throw jsError
+            }
+        }
     }
 
     func markAsRead(link: QueuedLink, context: ModelContext) {
@@ -97,8 +132,6 @@ final class ReaderViewModel {
         context.delete(link)
         try? context.save()
     }
-
-    // MARK: - Private
 
     @available(iOS 26, *)
     private func generateSummary(for body: String) async {

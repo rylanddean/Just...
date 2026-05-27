@@ -45,7 +45,9 @@ struct PrefetchService {
         let session = URLSession(configuration: config)
 
         do {
-            let (data, response) = try await session.data(from: url)
+            var request = URLRequest(url: url)
+            request.setValue(ContentFetcher.safariUserAgent, forHTTPHeaderField: "User-Agent")
+            let (data, response) = try await session.data(for: request)
 
             guard let http = response as? HTTPURLResponse else { return .transientFailure }
             guard http.statusCode < 400 else { return .invalid }
