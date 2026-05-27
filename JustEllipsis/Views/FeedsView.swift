@@ -565,6 +565,15 @@ private struct FeedRow: View {
                             .padding(.vertical, 2)
                             .background(appTheme.surface)
                             .clipShape(Capsule())
+                    } else if feed.feedType == .scraped {
+                        Text("WEB")
+                            .font(AppTheme.sansSerif(10, weight: .medium))
+                            .foregroundStyle(appTheme.textFaint)
+                            .kerning(1.5)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(appTheme.separator)
+                            .clipShape(Capsule())
                     }
                 }
 

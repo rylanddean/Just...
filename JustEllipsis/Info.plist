@@ -6,7 +6,6 @@
 	<array>
 		<string>com.rylandean.justellipsis.prefetch</string>
 		<string>com.rylandean.justellipsis.rssfetch</string>
-		<string>com.rylandean.justellipsis.grading</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
@@ -22,6 +21,8 @@
 	<string>Just…</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -46,8 +47,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

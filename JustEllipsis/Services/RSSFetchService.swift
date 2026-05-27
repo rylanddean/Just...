@@ -43,10 +43,8 @@ struct RSSFetchService {
         request.requiresExternalPower = false
 
         if let todayTarget = cal.date(from: components), todayTarget > Date() {
-            // Target time is still ahead today — use it.
             request.earliestBeginDate = todayTarget
         } else {
-            // Already past today's target — schedule for the same time tomorrow.
             let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date())) ?? Date()
             var tomorrowComponents = cal.dateComponents([.year, .month, .day], from: tomorrow)
             tomorrowComponents.hour   = hour
@@ -134,6 +132,14 @@ struct ParsedArticle: Sendable {
     let feedDescription: String?
 }
 
+// MARK: - Feed parse result (intermediate, Sendable)
+
+private struct FeedParseResult: Sendable {
+    let articles: [ParsedArticle]
+    let feedType: FeedType
+    let resolvedURL: String?  // non-nil if feed discovery found a real RSS/Atom URL
+}
+
 // MARK: - Fetch actor (background SwiftData context)
 
 @ModelActor
@@ -141,11 +147,13 @@ actor RSSFetchActor {
 
     // Fetch a single feed by ID — used immediately after subscribing.
     func fetchOne(feedID: UUID, urlString: String) async {
-        let articles = await Self.parseFeed(urlString: urlString)
-        store(articles: articles, feedID: feedID)
+        let descriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
+        let isScraped = (try? modelContext.fetch(descriptor).first)?.feedType == .scraped
+        let result = await Self.parseFeed(urlString: urlString, treatAsScraped: isScraped)
+        store(result: result, feedID: feedID)
     }
 
-    // Fetch all non-paused feeds, parse with FeedKit, store new RSSArticle records.
+    // Fetch all non-paused feeds, parse, store new RSSArticle records.
     func fetchAll() async {
         let descriptor = FetchDescriptor<RSSFeed>(
             predicate: #Predicate { !$0.isPaused }
@@ -156,27 +164,32 @@ actor RSSFetchActor {
             for feed in feeds {
                 let feedID = feed.id
                 let urlString = feed.url
+                let isScraped = feed.feedType == .scraped
                 group.addTask {
-                    let articles = await Self.parseFeed(urlString: urlString)
-                    await self.store(articles: articles, feedID: feedID)
+                    let result = await Self.parseFeed(urlString: urlString, treatAsScraped: isScraped)
+                    await self.store(result: result, feedID: feedID)
                 }
             }
         }
     }
 
     // Prune articles published before the start of yesterday.
-    // QueuedLink records are separate and unaffected; isQueued articles are kept
-    // so queue-display code can still resolve them by URL during the same session.
+    // Scraped feeds are excluded — their articles accumulate until manually removed.
     func pruneOldArticles() async {
         let startOfToday = Calendar.current.startOfDay(for: Date())
         let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
+
+        let allFeeds = (try? modelContext.fetch(FetchDescriptor<RSSFeed>())) ?? []
+        let scrapedIDs = Set(allFeeds.filter { $0.feedType == .scraped }.map { $0.id })
+
         let descriptor = FetchDescriptor<RSSArticle>(
             predicate: #Predicate { $0.publishedAt < cutoff && !$0.isQueued }
         )
         guard let stale = try? modelContext.fetch(descriptor) else { return }
-        guard !stale.isEmpty else { return }
-        gradingLog.info("pruneOldArticles: removing \(stale.count) article(s) older than yesterday")
-        stale.forEach { modelContext.delete($0) }
+        let toDelete = stale.filter { !scrapedIDs.contains($0.feedID) }
+        guard !toDelete.isEmpty else { return }
+        gradingLog.info("pruneOldArticles: removing \(toDelete.count) article(s) older than yesterday")
+        toDelete.forEach { modelContext.delete($0) }
         try? modelContext.save()
     }
 
@@ -210,8 +223,8 @@ actor RSSFetchActor {
 
     private func articleRichness(_ a: RSSArticle) -> Int {
         var score = 0
-        if a.qualityGrade != nil  { score += 4 }
-        if a.summary != nil       { score += 2 }
+        if a.qualityGrade != nil    { score += 4 }
+        if a.summary != nil         { score += 2 }
         if a.feedDescription != nil { score += 1 }
         return score
     }
@@ -223,7 +236,6 @@ actor RSSFetchActor {
         await summarizePendingArticles()
         await gradeNewArticles(tracker: nil)
 
-        // Extract Sendable snapshots before crossing the isolation boundary.
         let articleSnapshots: [ArticleSnapshot] = ((try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? [])
             .filter { !$0.isQueued }
             .map { ArticleSnapshot(persistentModelID: $0.persistentModelID, url: $0.url, title: $0.title, feedID: $0.feedID, publishedAt: $0.publishedAt) }
@@ -258,7 +270,6 @@ actor RSSFetchActor {
                 source: .aiPick
             )
             modelContext.insert(link)
-            // Mark the original RSSArticle as queued so it isn't re-picked.
             if let original = try? modelContext.model(for: snap.persistentModelID) as? RSSArticle {
                 original.isQueued = true
             }
@@ -279,6 +290,20 @@ actor RSSFetchActor {
 
     // MARK: - Private
 
+    // Stores articles and updates feedType / resolvedURL on the parent RSSFeed if they changed.
+    private func store(result: FeedParseResult, feedID: UUID) {
+        let descriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
+        if let feed = try? modelContext.fetch(descriptor).first {
+            let newRaw = result.feedType.rawValue
+            if feed.feedTypeRaw != newRaw { feed.feedTypeRaw = newRaw }
+            if let resolved = result.resolvedURL, feed.url != resolved { feed.url = resolved }
+            if feed.feedTypeRaw != newRaw || (result.resolvedURL != nil) {
+                try? modelContext.save()
+            }
+        }
+        store(articles: result.articles, feedID: feedID)
+    }
+
     private func store(articles: [ParsedArticle], feedID: UUID) {
         // Check existing URLs globally — not just for this feed — so the same URL
         // syndicated by two subscribed feeds never creates duplicate RSSArticle rows.
@@ -286,8 +311,7 @@ actor RSSFetchActor {
             (try? modelContext.fetch(FetchDescriptor<RSSArticle>()))?.map { $0.url } ?? []
         )
 
-        // Also deduplicate within the incoming batch itself (handles malformed feeds
-        // that repeat the same <link> across multiple items).
+        // Also deduplicate within the incoming batch itself.
         var seenInBatch = Set<String>()
 
         var inserted = 0
@@ -405,8 +429,38 @@ actor RSSFetchActor {
         if let tracker { await MainActor.run { tracker.markFinished() } }
     }
 
-    // Pure parsing — runs on the cooperative pool, returns a Sendable value.
-    private static func parseFeed(urlString: String) async -> [ParsedArticle] {
+    // MARK: - Parsing
+
+    // Orchestrates FeedKit → WebFeedScraper fallback.
+    // treatAsScraped skips FeedKit for feeds already known to require scraping.
+    private static func parseFeed(urlString: String, treatAsScraped: Bool = false) async -> FeedParseResult {
+        if !treatAsScraped {
+            let articles = await parseFeedKit(urlString: urlString)
+            if !articles.isEmpty {
+                return FeedParseResult(articles: articles, feedType: .rss, resolvedURL: nil)
+            }
+        }
+
+        guard let scraped = await WebFeedScraper.scrape(urlString: urlString) else {
+            return FeedParseResult(articles: [], feedType: treatAsScraped ? .scraped : .rss, resolvedURL: nil)
+        }
+
+        // Scraper found a real alternate feed — try FeedKit on that URL.
+        if let discoveredURL = scraped.discoveredFeedURL {
+            let articles = await parseFeedKit(urlString: discoveredURL)
+            if !articles.isEmpty {
+                return FeedParseResult(articles: articles, feedType: .rss, resolvedURL: discoveredURL)
+            }
+        }
+
+        return FeedParseResult(
+            articles: scraped.articles,
+            feedType: scraped.articles.isEmpty ? (treatAsScraped ? .scraped : .rss) : .scraped,
+            resolvedURL: nil
+        )
+    }
+
+    private static func parseFeedKit(urlString: String) async -> [ParsedArticle] {
         guard let url = URL(string: urlString) else { return [] }
 
         let config = URLSessionConfiguration.default
@@ -417,18 +471,13 @@ actor RSSFetchActor {
         guard let (data, _) = try? await session.data(from: url) else { return [] }
 
         return await withCheckedContinuation { continuation in
-            // FeedKit parsing is synchronous — push off main thread.
             Task.detached(priority: .background) {
                 let parser = FeedParser(data: data)
                 let result = parser.parse()
-                let articles: [ParsedArticle]
                 switch result {
-                case .success(let feed):
-                    articles = Self.extract(feed: feed)
-                case .failure:
-                    articles = []
+                case .success(let feed): continuation.resume(returning: Self.extract(feed: feed))
+                case .failure:          continuation.resume(returning: [])
                 }
-                continuation.resume(returning: articles)
             }
         }
     }
@@ -479,12 +528,12 @@ actor RSSFetchActor {
         let stripped = html
             .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
             .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&lt;",  with: "<")
+            .replacingOccurrences(of: "&gt;",  with: ">")
             .replacingOccurrences(of: "&nbsp;", with: " ")
             .replacingOccurrences(of: "&apos;", with: "'")
             .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+",  with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return String(stripped.prefix(2000))
     }
