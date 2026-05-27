@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import SafariServices
 
 struct ReaderView: View {
     let link: QueuedLink
@@ -14,6 +15,7 @@ struct ReaderView: View {
 
     @State private var viewModel = ReaderViewModel()
     @State private var pendingEntry: BrainEntry?
+    @State private var safariURL: URL?
     @State private var isNearBottom = false
     @State private var overScrollDelta: CGFloat = 0
     @State private var isTextSizeControlVisible = false
@@ -66,6 +68,10 @@ struct ReaderView: View {
                 await viewModel.load(link: link, context: context)
             }
             .preferredColorScheme(appTheme.colorScheme)
+            .sheet(item: $safariURL) { url in
+                SafariView(url: url)
+                    .ignoresSafeArea()
+            }
         }
     }
 
@@ -178,11 +184,21 @@ struct ReaderView: View {
             .padding(AppTheme.pagePadding)
             .background(appTheme.text.opacity(0.05))
 
-            Button("Try again") {
-                Task { await viewModel.load(link: link, context: context) }
+            HStack(spacing: 24) {
+                Button("Try again") {
+                    Task { await viewModel.load(link: link, context: context) }
+                }
+                .font(AppTheme.sansSerif(14, weight: .medium))
+                .foregroundStyle(appTheme.accent)
+
+                if let url = URL(string: link.url) {
+                    Button("Open in browser") {
+                        safariURL = url
+                    }
+                    .font(AppTheme.sansSerif(14, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.4))
+                }
             }
-            .font(AppTheme.sansSerif(14, weight: .medium))
-            .foregroundStyle(appTheme.accent)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppTheme.pagePadding)
             .padding(.top, 20)
@@ -429,4 +445,23 @@ struct ReaderView: View {
         }
         try? context.save()
     }
+}
+
+// MARK: - In-app browser
+
+// URL needs to be Identifiable to drive .sheet(item:)
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
+}
+
+private struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let vc = SFSafariViewController(url: url)
+        vc.preferredControlTintColor = UIColor(named: "AccentColor")
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }

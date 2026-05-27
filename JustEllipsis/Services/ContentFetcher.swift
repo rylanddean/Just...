@@ -134,36 +134,46 @@ struct ContentFetcher: Sendable {
     // MARK: - Strip
 
     static func strip(html: String, sourceURL: URL, knownDomain: String? = nil, theme: ReaderTheme = .ember) throws -> StrippedContent {
-        // Pre-strip <script> and <style> blocks at the text level before SwiftSoup
-        // parses the document. SwiftSoup's HTML5 tokenizer can misplace elements that
-        // follow large script blocks when the JS contains HTML-like strings — removing
-        // them first prevents content paragraphs from being absorbed into script nodes.
+        // Pre-strip <script>, <style>, and <svg> blocks at the text level before
+        // SwiftSoup parses the document. SwiftSoup's HTML5 tokenizer can misplace
+        // elements that follow large JS or SVG blocks — removing them first prevents
+        // content paragraphs from being absorbed into noise nodes.
         let cleanedHTML = Self.preStripScriptsAndStyles(from: html)
-        log.debug("strip: pre-stripped \(html.count)→\(cleanedHTML.count) bytes (scripts+styles removed)")
+        log.debug("strip: pre-stripped \(html.count)→\(cleanedHTML.count) bytes (scripts+styles+svgs removed)")
         let doc = try SwiftSoup.parse(cleanedHTML, sourceURL.absoluteString)
 
         let pageTitle = (try? doc.title()) ?? sourceURL.host ?? "Untitled"
         let domain = knownDomain ?? extractDomain(from: sourceURL)
 
         // Remove noise elements.
-        // Use [class~=word] (whitespace-delimited word match) not [class*=word]
-        // (substring match) to avoid false positives — e.g. [class*=ad] would
-        // strip "leading-relaxed", "shadow-md", "gradient-*", "headline", etc.
+        // Prefer [class*=specificword] (substring) for ad/tracker selectors rather than
+        // [class~=ad] (word-boundary) — SwiftSoup's ~= selector appears to behave as
+        // substring matching in some parse contexts, which caused it to kill article
+        // paragraphs on sites like LeadDev. Ad containers are covered by [class*=advert],
+        // [class*=adsense], and [class*=adsbygoogle] which are specific enough to be safe.
+        // [class*=icon] is intentionally omitted: it's too broad (matches "blaize-icon",
+        // "favicon", any wrapper with "icon" in its name) and SVG icons are already
+        // pre-stripped before SwiftSoup sees the document.
         let noiseSelectors = [
             "img", "video", "figure", "picture", "iframe",
             "svg", "canvas", "form", "input", "button", "select", "textarea",
             "nav", "header", "footer", "aside",
             "noscript",
-            "[class~=ad]", "[class*=advert]", "[class*=adsense]", "[class*=adsbygoogle]",
-            "[class*=banner]", "[class*=social]",
-            "[class*=icon]",
-            "[class*=comment]", "[class*=related]", "[class*=share]",
+            "[class*=advert]", "[class*=adsense]", "[class*=adsbygoogle]",
+            "[class*=social]",
+            "[class*=comment]", "[class*=related]",
             "[class*=subscribe]", "[class*=newsletter]",
             "[id*=advertisement]", "[id*=adsense]", "[id*=sidebar]", "[id*=comments]"
         ]
+        var pCountBefore = (try? doc.select("p").array().count) ?? 0
         for sel in noiseSelectors {
             if let elements = try? doc.select(sel) {
                 try? elements.remove()
+            }
+            let pCountAfter = (try? doc.select("p").array().count) ?? 0
+            if pCountAfter < pCountBefore {
+                log.debug("strip: noise '\(sel)' removed \(pCountBefore - pCountAfter) <p> (was \(pCountBefore), now \(pCountAfter))")
+                pCountBefore = pCountAfter
             }
         }
 
@@ -210,15 +220,18 @@ struct ContentFetcher: Sendable {
 
     // MARK: - Private Helpers
 
-    // Strips <script> and <style> blocks from raw HTML before SwiftSoup parses it.
+    // Strips <script>, <style>, and <svg> blocks from raw HTML before SwiftSoup parses it.
     // SwiftSoup's HTML5 tokenizer can misplace elements that follow large JS blocks
     // when the JavaScript contains HTML-like strings — removing them first ensures
     // the article paragraphs land in the correct position in the parsed DOM.
+    // SVGs are also pre-stripped because large inline SVGs (e.g. social-share icons
+    // with many <path> elements) can cause SwiftSoup to silently misparse surrounding
+    // DOM structure, swallowing article paragraphs into noise elements.
     // Uses a simple string scan rather than NSRegularExpression to avoid regex
     // backreference quirks with very large script blocks.
     private static func preStripScriptsAndStyles(from html: String) -> String {
         var result = html
-        for tag in ["script", "style"] {
+        for tag in ["script", "style", "svg"] {
             let open = "<\(tag)"
             let close = "</\(tag)>"
             var pieces: [String] = []
@@ -248,7 +261,7 @@ struct ContentFetcher: Sendable {
         let substantialParas = (try? root.select("p").array().filter {
             ((try? $0.text().count) ?? 0) > 35
         }.count) ?? 0
-        log.debug("strip: body has \(totalParas) <p> total, \(substantialParas) with >35 chars after noise removal")
+        log.debug("strip: root has \(totalParas) <p> total, \(substantialParas) with >35 chars after noise removal")
 
         if let preferred = findPreferredContentElement(in: root) {
             return preferred
