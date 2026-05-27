@@ -15,8 +15,14 @@ struct FeedDetailView: View {
     init(feed: RSSFeed) {
         self.feed = feed
         let feedID = feed.id
-        let startOfToday = Calendar.current.startOfDay(for: Date())
-        let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
+        let cutoff: Date
+        if feed.feedType == .scraped {
+            let startOfToday = Calendar.current.startOfDay(for: Date())
+            cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
+        } else {
+            let startOfToday = Calendar.current.startOfDay(for: Date())
+            cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
+        }
         _articles = Query(
             filter: #Predicate<RSSArticle> { $0.feedID == feedID && $0.publishedAt >= cutoff },
             sort: \RSSArticle.publishedAt,
@@ -34,18 +40,30 @@ struct FeedDetailView: View {
                 emptyState
             } else {
                 List {
-                    ForEach(articles) { article in
-                        ArticleRow(article: article, isQueued: queuedURLs.contains(article.url)) {
-                            addToQueue(article)
+                    Section {
+                        ForEach(articles) { article in
+                            ArticleRow(article: article, isQueued: queuedURLs.contains(article.url)) {
+                                addToQueue(article)
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(
+                                top: 5,
+                                leading: AppTheme.pagePadding,
+                                bottom: 5,
+                                trailing: AppTheme.pagePadding
+                            ))
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(
-                            top: 5,
-                            leading: AppTheme.pagePadding,
-                            bottom: 5,
-                            trailing: AppTheme.pagePadding
-                        ))
+                    } header: {
+                        if feed.feedType == .scraped {
+                            Text("Web feed — dates may be approximate.")
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+                                .textCase(nil)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, AppTheme.pagePadding)
+                                .padding(.vertical, 6)
+                        }
                     }
                 }
                 .listStyle(.plain)

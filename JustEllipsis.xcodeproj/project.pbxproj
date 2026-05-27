@@ -24,6 +24,7 @@
 		55A0A2EBE317C3AC1EF10C03 /* JustEllipsisShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		56DE24619050B42942363268 /* ContentFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */; };
 		65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC480E509A335B23D95C2896 /* StreakHeader.swift */; };
+		688CEC6AED164C8E57D6F3F7 /* WebFeedScraper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F971C6F6E981C20C719708AC /* WebFeedScraper.swift */; };
 		6BE477B9B2D7D5CA9D0D6EFB /* ActivityChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BE1C9EB59A42E35267C8A4 /* ActivityChart.swift */; };
 		6EABD4077863C185AED53BE3 /* FeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 92B21AB1AB3467409DA79854 /* FeedKit */; };
 		6F55A95F2635E6E07C126DC7 /* ContentFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */; };
@@ -159,6 +160,7 @@
 		F232598215B53DB59A71324A /* ReflectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectView.swift; sourceTree = "<group>"; };
 		F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainViewModel.swift; sourceTree = "<group>"; };
 		F8881FBE57095A67C1C24497 /* BrainEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEntry.swift; sourceTree = "<group>"; };
+		F971C6F6E981C20C719708AC /* WebFeedScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFeedScraper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -206,6 +208,7 @@
 				00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */,
 				94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */,
 				CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */,
+				F971C6F6E981C20C719708AC /* WebFeedScraper.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -518,6 +521,7 @@
 				7C28C1742A5A65634AE19449 /* SettingsView.swift in Sources */,
 				3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */,
 				65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */,
+				688CEC6AED164C8E57D6F3F7 /* WebFeedScraper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -554,7 +558,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -678,7 +682,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
