@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import SwiftSoup
+import os
 
 struct StrippedContent: Sendable {
     let title: String
@@ -24,6 +25,7 @@ enum ReaderTextSize {
 
 struct ContentFetcher: Sendable {
     private static let wrapperFallbackWordThreshold = 320
+    private static let log = Logger(subsystem: "com.rylandean.justellipsis", category: "ContentFetcher")
 
     // MARK: - Reader CSS (injected into WKWebView)
 
@@ -65,6 +67,9 @@ struct ContentFetcher: Sendable {
 
     // MARK: - Fetch
 
+    // Match the WKWebView UA so bot-detection treats URLSession requests the same as browser renders.
+    static let safariUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+
     /// Fetch and strip a URL. Pass `cachedHTML` if the raw HTML is already stored on disk.
     /// Returns the stripped content AND the raw HTML to cache (the caller writes it back to the model).
     static func fetch(urlString: String, cachedHTML: String? = nil, theme: ReaderTheme = .ember) async throws -> FetchResult {
@@ -72,6 +77,7 @@ struct ContentFetcher: Sendable {
         let domain = extractDomain(from: url)
 
         if let cached = cachedHTML, !cached.isEmpty {
+            log.debug("fetch: cache hit for \(domain) (\(cached.count) bytes)")
             var content = try strip(html: cached, sourceURL: url, knownDomain: domain, theme: theme)
             var rawHTML = cached
 
@@ -81,19 +87,27 @@ struct ContentFetcher: Sendable {
                 current: content,
                 theme: theme
             ) {
+                log.debug("fetch: wrapper upgrade accepted from cache")
                 content = upgraded.content
                 rawHTML = upgraded.rawHTML
             }
 
+            log.debug("fetch: cache path words=\(content.estimatedWordCount) — \(content.estimatedWordCount < 50 ? "FAIL (emptyContent)" : "OK")")
             if content.estimatedWordCount < 50 {
                 throw FetchError.emptyContent
             }
             return FetchResult(content: content, rawHTML: rawHTML)
         }
 
-        let (data, response) = try await URLSession.shared.data(from: url)
-        if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-            throw FetchError.httpError(http.statusCode)
+        log.debug("fetch: fresh URLSession for \(urlString)")
+        var request = URLRequest(url: url)
+        request.setValue(ContentFetcher.safariUserAgent, forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        log.debug("fetch: HTTP \(statusCode) — \(data.count) bytes from \(domain)")
+        if statusCode >= 400 {
+            log.error("fetch: HTTP error \(statusCode) for \(urlString)")
+            throw FetchError.httpError(statusCode)
         }
         let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
         var content = try strip(html: html, sourceURL: url, knownDomain: domain, theme: theme)
@@ -105,10 +119,12 @@ struct ContentFetcher: Sendable {
             current: content,
             theme: theme
         ) {
+            log.debug("fetch: wrapper upgrade accepted from fresh HTML")
             content = upgraded.content
             rawHTML = upgraded.rawHTML
         }
 
+        log.debug("fetch: fresh path words=\(content.estimatedWordCount) — \(content.estimatedWordCount < 50 ? "FAIL (emptyContent)" : "OK")")
         if content.estimatedWordCount < 50 {
             throw FetchError.emptyContent
         }
@@ -118,7 +134,13 @@ struct ContentFetcher: Sendable {
     // MARK: - Strip
 
     static func strip(html: String, sourceURL: URL, knownDomain: String? = nil, theme: ReaderTheme = .ember) throws -> StrippedContent {
-        let doc = try SwiftSoup.parse(html, sourceURL.absoluteString)
+        // Pre-strip <script> and <style> blocks at the text level before SwiftSoup
+        // parses the document. SwiftSoup's HTML5 tokenizer can misplace elements that
+        // follow large script blocks when the JS contains HTML-like strings — removing
+        // them first prevents content paragraphs from being absorbed into script nodes.
+        let cleanedHTML = Self.preStripScriptsAndStyles(from: html)
+        log.debug("strip: pre-stripped \(html.count)→\(cleanedHTML.count) bytes (scripts+styles removed)")
+        let doc = try SwiftSoup.parse(cleanedHTML, sourceURL.absoluteString)
 
         let pageTitle = (try? doc.title()) ?? sourceURL.host ?? "Untitled"
         let domain = knownDomain ?? extractDomain(from: sourceURL)
@@ -131,7 +153,7 @@ struct ContentFetcher: Sendable {
             "img", "video", "figure", "picture", "iframe",
             "svg", "canvas", "form", "input", "button", "select", "textarea",
             "nav", "header", "footer", "aside",
-            "script", "style", "noscript",
+            "noscript",
             "[class~=ad]", "[class*=advert]", "[class*=adsense]", "[class*=adsbygoogle]",
             "[class*=banner]", "[class*=social]",
             "[class*=icon]",
@@ -148,6 +170,9 @@ struct ContentFetcher: Sendable {
         // Find the content subtree with highest paragraph density
         let body = try doc.body() ?? doc
         let candidate = findContentElement(in: body)
+        let candidateTag = (try? candidate.tagName()) ?? "?"
+        let candidateClass = (try? candidate.className()) ?? ""
+        log.debug("strip: selected element <\(candidateTag)> class=\"\(candidateClass.prefix(80))\"")
         let articleHTML = (try? candidate.html()) ?? (try? body.html()) ?? ""
 
         // Wrap in full HTML document with injected CSS
@@ -167,6 +192,7 @@ struct ContentFetcher: Sendable {
         let words = plainText.split(separator: " ").count
         let readingMinutes = max(1, words / 238)
 
+        log.debug("strip: words=\(words) title=\"\(pageTitle.prefix(60))\"")
         return StrippedContent(
             title: pageTitle,
             body: fullHTML,
@@ -184,12 +210,52 @@ struct ContentFetcher: Sendable {
 
     // MARK: - Private Helpers
 
+    // Strips <script> and <style> blocks from raw HTML before SwiftSoup parses it.
+    // SwiftSoup's HTML5 tokenizer can misplace elements that follow large JS blocks
+    // when the JavaScript contains HTML-like strings — removing them first ensures
+    // the article paragraphs land in the correct position in the parsed DOM.
+    // Uses a simple string scan rather than NSRegularExpression to avoid regex
+    // backreference quirks with very large script blocks.
+    private static func preStripScriptsAndStyles(from html: String) -> String {
+        var result = html
+        for tag in ["script", "style"] {
+            let open = "<\(tag)"
+            let close = "</\(tag)>"
+            var pieces: [String] = []
+            var cursor = result.startIndex
+
+            while cursor < result.endIndex {
+                if let openRange = result.range(of: open, options: .caseInsensitive, range: cursor..<result.endIndex) {
+                    pieces.append(String(result[cursor..<openRange.lowerBound]))
+                    if let closeRange = result.range(of: close, options: .caseInsensitive, range: openRange.lowerBound..<result.endIndex) {
+                        cursor = closeRange.upperBound
+                    } else {
+                        cursor = result.endIndex
+                    }
+                } else {
+                    pieces.append(String(result[cursor...]))
+                    cursor = result.endIndex
+                }
+            }
+
+            result = pieces.joined()
+        }
+        return result
+    }
+
     private static func findContentElement(in root: Element) -> Element {
+        let totalParas = (try? root.select("p").array().count) ?? 0
+        let substantialParas = (try? root.select("p").array().filter {
+            ((try? $0.text().count) ?? 0) > 35
+        }.count) ?? 0
+        log.debug("strip: body has \(totalParas) <p> total, \(substantialParas) with >35 chars after noise removal")
+
         if let preferred = findPreferredContentElement(in: root) {
             return preferred
         }
 
         guard let paragraphs = try? root.select("p"), !paragraphs.isEmpty() else {
+            log.debug("strip: no <p> elements found in body — returning body as-is")
             return root
         }
 
@@ -231,14 +297,23 @@ struct ContentFetcher: Sendable {
             guard let elements = try? root.select(selector), !elements.isEmpty() else { continue }
             for element in elements.array() {
                 let score = contentScore(for: element)
+                let tag = (try? element.tagName()) ?? "?"
+                let cls = (try? element.className()) ?? ""
+                log.debug("strip: selector '\(selector)' → <\(tag)> class='\(cls.prefix(60))' score=\(score)")
                 guard score >= 120 else { continue }
                 if best == nil || score > best!.score {
                     best = (element, score)
                 }
             }
-            if best != nil { break }
+            if best != nil {
+                log.debug("strip: preferred selector matched \"\(selector)\" score=\(best!.score)")
+                break
+            }
         }
 
+        if best == nil {
+            log.debug("strip: no preferred selector matched — falling back to paragraph scoring")
+        }
         return best?.element
     }
 
@@ -264,20 +339,33 @@ struct ContentFetcher: Sendable {
         theme: ReaderTheme
     ) async throws -> FetchResult? {
         guard current.estimatedWordCount <= wrapperFallbackWordThreshold else {
+            log.debug("wrapperUpgrade: skipped (words=\(current.estimatedWordCount) > threshold=\(wrapperFallbackWordThreshold))")
             return nil
         }
         guard let targetURL = extractPrimaryOutboundURL(from: html, sourceURL: sourceURL) else {
+            log.debug("wrapperUpgrade: no outbound URL found in \(sourceURL.host ?? "?")")
+            return nil
+        }
+        log.debug("wrapperUpgrade: trying \(targetURL.absoluteString.prefix(120))")
+
+        // Treat any outbound-fetch failure as a non-fatal miss — return nil so the
+        // caller falls back to the original content rather than surfacing a misleading error.
+        var outboundRequest = URLRequest(url: targetURL)
+        outboundRequest.setValue(ContentFetcher.safariUserAgent, forHTTPHeaderField: "User-Agent")
+        guard let (data, response) = try? await URLSession.shared.data(for: outboundRequest),
+              (response as? HTTPURLResponse).map({ $0.statusCode < 400 }) ?? true else {
+            log.debug("wrapperUpgrade: outbound fetch failed or returned HTTP error — skipping")
+            return nil
+        }
+        let targetHTML = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
+        guard let stripped = try? strip(html: targetHTML, sourceURL: targetURL, theme: theme) else {
+            log.debug("wrapperUpgrade: strip failed on outbound page")
             return nil
         }
 
-        let (data, response) = try await URLSession.shared.data(from: targetURL)
-        if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-            throw FetchError.httpError(http.statusCode)
-        }
-        let targetHTML = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
-        let stripped = try strip(html: targetHTML, sourceURL: targetURL, theme: theme)
-
-        let hasMeaningfulGain = stripped.estimatedWordCount >= max(150, current.estimatedWordCount * 2)
+        let threshold = max(150, current.estimatedWordCount * 2)
+        let hasMeaningfulGain = stripped.estimatedWordCount >= threshold
+        log.debug("wrapperUpgrade: outbound words=\(stripped.estimatedWordCount) need=\(threshold) gain=\(hasMeaningfulGain)")
         guard hasMeaningfulGain else { return nil }
         return FetchResult(content: stripped, rawHTML: targetHTML)
     }

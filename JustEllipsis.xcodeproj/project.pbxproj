@@ -23,6 +23,7 @@
 		5200F218FCDCDE23A0BFB0A5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F138A6A626CF6CF070B7A67E /* Assets.xcassets */; };
 		55A0A2EBE317C3AC1EF10C03 /* JustEllipsisShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		56DE24619050B42942363268 /* ContentFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */; };
+		630F914959F3D4838F912C44 /* JSRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9D7E057E235E52465D0592 /* JSRenderer.swift */; };
 		65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC480E509A335B23D95C2896 /* StreakHeader.swift */; };
 		688CEC6AED164C8E57D6F3F7 /* WebFeedScraper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F971C6F6E981C20C719708AC /* WebFeedScraper.swift */; };
 		6BE477B9B2D7D5CA9D0D6EFB /* ActivityChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BE1C9EB59A42E35267C8A4 /* ActivityChart.swift */; };
@@ -113,6 +114,7 @@
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
 		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		369CC02046EDB9D512264A8B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		3B9D7E057E235E52465D0592 /* JSRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSRenderer.swift; sourceTree = "<group>"; };
 		3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
 		3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFetcherTests.swift; sourceTree = "<group>"; };
 		3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLinkIntent.swift; sourceTree = "<group>"; };
@@ -204,6 +206,7 @@
 				84722707AA336D1073651EEF /* CloudSyncService.swift */,
 				C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */,
 				BD6345AF40A371C990B21023 /* IntelligenceService.swift */,
+				3B9D7E057E235E52465D0592 /* JSRenderer.swift */,
 				2E682902D7E4F05A13644A84 /* PrefetchService.swift */,
 				00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */,
 				94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */,
@@ -500,6 +503,7 @@
 				71E142A7D93F5DE88AF64BF2 /* GradingProgressTracker.swift in Sources */,
 				854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */,
 				1A8F7B7E1F4EF583D9485183 /* IntelligenceService.swift in Sources */,
+				630F914959F3D4838F912C44 /* JSRenderer.swift in Sources */,
 				8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */,
 				2344727D36DCEF1C39989C66 /* LinkCard.swift in Sources */,
 				942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */,

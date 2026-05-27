@@ -103,11 +103,17 @@ struct ReaderView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .tint(appTheme.accent)
-            Text(loadingMessages[loadingMessageIndex])
-                .font(AppTheme.sansSerif(13))
-                .foregroundStyle(appTheme.text.opacity(0.5))
-                .contentTransition(.opacity)
-                .animation(.easeInOut(duration: 0.2), value: loadingMessageIndex)
+            if viewModel.isJSRendering {
+                Text("Extracting content.")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+            } else {
+                Text(loadingMessages[loadingMessageIndex])
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+                    .contentTransition(.opacity)
+                    .animation(.easeInOut(duration: 0.2), value: loadingMessageIndex)
+            }
         }
         .task(id: viewModel.isLoading) {
             guard viewModel.isLoading else { return }
@@ -201,13 +207,21 @@ struct ReaderView: View {
             case .invalidURL:
                 return "This doesn't appear to be a valid link."
             case .emptyContent:
-                return "This link didn't return readable content. It may be paywalled or require JavaScript."
+                return "This link didn't return readable content. It may be behind a login or paywall."
             case .httpError(let code) where code == 404:
                 return "This link no longer exists."
             case .httpError(let code) where code >= 400 && code < 500:
                 return "This link isn't publicly accessible. It may require a login."
             case .httpError:
                 return "The server returned an error. Try again later."
+            }
+        }
+        if let jsError = error as? JSRenderer.JSRenderError {
+            switch jsError {
+            case .timeout:
+                return "This page took too long to render. It may require a login."
+            case .navigationFailed:
+                return "This link couldn't be loaded in the reader."
             }
         }
         return "Something went wrong. Try again later."
