@@ -521,10 +521,12 @@ actor RSSFetchActor {
     // No-ops on iOS < 26 or when Apple Intelligence is unavailable.
     func tagPendingArticles() async {
         guard #available(iOS 26, *) else {
+            print("[Topics] skipped — iOS 26 unavailable")
             topicsLog.warning("tagPendingArticles: skipped — iOS 26 unavailable")
             return
         }
         guard IntelligenceService.isAvailable else {
+            print("[Topics] skipped — Apple Intelligence unavailable")
             topicsLog.warning("tagPendingArticles: skipped — Apple Intelligence unavailable")
             return
         }
@@ -547,6 +549,7 @@ actor RSSFetchActor {
         }
 
         let alreadyTagged = all.count - stubs.count
+        print("[Topics] \(stubs.count) untagged, \(alreadyTagged) already tagged")
         topicsLog.warning("tagPendingArticles: \(stubs.count) untagged, \(alreadyTagged) already tagged")
 
         guard !stubs.isEmpty else { return }
@@ -562,14 +565,16 @@ actor RSSFetchActor {
             }
             do {
                 let topics = try await IntelligenceService.extractTopics(title: stub.title)
+                print("[Topics] '\(stub.title.prefix(60))' → \(topics.joined(separator: ", "))")
                 topicsLog.debug("tagPendingArticles: '\(stub.title.prefix(60))' → \(topics.joined(separator: ", "))")
                 article.topics = topics
                 tagged += 1
             } catch {
+                print("[Topics] error for '\(stub.title.prefix(60))' — \(error)")
                 topicsLog.error("tagPendingArticles: guardrail/error for '\(stub.title.prefix(60))' — \(error)")
-                // Assign feed fallback so this article is tagged and won't be retried.
                 if !stub.feedFallback.isEmpty {
                     article.topics = [stub.feedFallback]
+                    print("[Topics] fallback '\(stub.feedFallback)' → '\(stub.title.prefix(60))'")
                     topicsLog.debug("tagPendingArticles: assigned fallback '\(stub.feedFallback)' to '\(stub.title.prefix(60))'")
                     fallbacks += 1
                 } else {
@@ -578,6 +583,7 @@ actor RSSFetchActor {
             }
         }
 
+        print("[Topics] done — \(tagged) AI-tagged, \(fallbacks) fallback, \(failed) failed")
         topicsLog.warning("tagPendingArticles: done — \(tagged) AI-tagged, \(fallbacks) fallback, \(failed) failed")
         if tagged + fallbacks > 0 { try? modelContext.save() }
     }
