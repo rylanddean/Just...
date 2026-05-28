@@ -16,6 +16,7 @@ struct DigestView: View {
     @AppStorage("digest.hideNoise")      private var hideNoise:             Bool = false
 
     @State private var isFetching = false
+    @State private var selectedTopic: String = "All"
 
     init() {
         let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
@@ -33,6 +34,26 @@ struct DigestView: View {
 
     private var feedLookup: [UUID: RSSFeed] {
         Dictionary(uniqueKeysWithValues: feeds.map { ($0.id, $0) })
+    }
+
+    // Priority: AI topics → feed category → feed title (always non-empty for valid feeds).
+    private func topicLabels(for article: RSSArticle) -> [String] {
+        if !article.topics.isEmpty { return article.topics }
+        guard let feed = feedLookup[article.feedID] else { return [] }
+        if !feed.category.isEmpty { return [feed.category] }
+        return feed.title.isEmpty ? [] : [feed.title]
+    }
+
+    private var availableTopics: [String] {
+        let all = todayArticles + yesterdayArticles + earlierArticles
+        var counts: [String: Int] = [:]
+        for article in all {
+            for label in topicLabels(for: article) {
+                counts[label, default: 0] += 1
+            }
+        }
+        let top = counts.sorted { $0.value > $1.value }.prefix(20).map(\.key)
+        return ["All"] + top
     }
 
     private var todayArticles: [RSSArticle] {
@@ -154,29 +175,34 @@ struct DigestView: View {
     private var digestItems: [DigestItem] {
         var items: [DigestItem] = []
 
+        let topicMatch: (RSSArticle) -> Bool = { [self] article in
+            guard selectedTopic != "All" else { return true }
+            return topicLabels(for: article).contains(selectedTopic)
+        }
+
         // Compute recommendations once; exclude those URLs from the date sections
         // so each article appears in exactly one place.
-        let recs = recommendations
+        let recs = recommendations?.filter(topicMatch)
         let recURLs: Set<String> = recs.map { Set($0.map { $0.url }) } ?? []
 
-        if let recs {
+        if let recs, !recs.isEmpty {
             items.append(.brainHeader)
             items.append(contentsOf: recs.map { .article($0) })
         }
 
-        let today = todayArticles.filter { !recURLs.contains($0.url) }
+        let today = todayArticles.filter { !recURLs.contains($0.url) }.filter(topicMatch)
         if !today.isEmpty {
             items.append(.dateHeader("TODAY"))
             items.append(contentsOf: today.map { .article($0) })
         }
 
-        let yesterday = yesterdayArticles.filter { !recURLs.contains($0.url) }
+        let yesterday = yesterdayArticles.filter { !recURLs.contains($0.url) }.filter(topicMatch)
         if !yesterday.isEmpty {
             items.append(.dateHeader("YESTERDAY"))
             items.append(contentsOf: yesterday.map { .article($0) })
         }
 
-        let earlier = earlierArticles.filter { !recURLs.contains($0.url) }
+        let earlier = earlierArticles.filter { !recURLs.contains($0.url) }.filter(topicMatch)
         if !earlier.isEmpty {
             items.append(.dateHeader("EARLIER"))
             items.append(contentsOf: earlier.map { .article($0) })
@@ -190,10 +216,18 @@ struct DigestView: View {
             ZStack {
                 appTheme.background.ignoresSafeArea()
 
-                if articles.isEmpty {
-                    emptyState
-                } else {
-                    digestList
+                VStack(spacing: 0) {
+                    if availableTopics.count > 1 {
+                        topicFilterBar
+                    }
+
+                    if articles.isEmpty {
+                        emptyState
+                    } else if digestItems.isEmpty {
+                        filteredEmptyState
+                    } else {
+                        digestList
+                    }
                 }
             }
             .navigationTitle("Digest")
@@ -217,6 +251,9 @@ struct DigestView: View {
             }
             .toolbarBackground(appTheme.background, for: .navigationBar)
             .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+            .onChange(of: availableTopics) { _, newTopics in
+                if !newTopics.contains(selectedTopic) { selectedTopic = "All" }
+            }
         }
     }
 
@@ -272,6 +309,7 @@ struct DigestView: View {
     private func refetch() {
         guard !isFetching else { return }
         isFetching = true
+        selectedTopic = "All"
         let task = RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
         Task {
             await task.value
@@ -296,6 +334,40 @@ struct DigestView: View {
     }
 
     // MARK: - Helpers
+
+    private var topicFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(availableTopics, id: \.self) { topic in
+                    Button {
+                        selectedTopic = topic
+                    } label: {
+                        Text(topic)
+                            .font(AppTheme.sansSerif(13, weight: selectedTopic == topic ? .semibold : .regular))
+                            .foregroundStyle(selectedTopic == topic ? appTheme.background : appTheme.textFaint)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(selectedTopic == topic ? appTheme.accent : appTheme.surface)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, AppTheme.pagePadding)
+        }
+        .padding(.vertical, 10)
+        .background(appTheme.background)
+    }
+
+    private var filteredEmptyState: some View {
+        Spacer()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(
+                Text("Nothing here.")
+                    .font(AppTheme.sansSerif(15))
+                    .foregroundStyle(appTheme.textFaint)
+            )
+    }
 
     private var brainDivider: some View {
         HStack(spacing: 5) {

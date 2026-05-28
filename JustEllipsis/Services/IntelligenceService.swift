@@ -62,6 +62,22 @@ struct ArticleDNA {
 
 @available(iOS 26, *)
 @Generable
+struct ArticleTopics {
+    @Guide(description: """
+        2–4 specific, recognizable topic labels for the article.
+        Title-cased nouns or noun phrases only. No verbs, no sentences.
+        Aim for the level of a Wikipedia article title: specific enough to be meaningful,
+        not so specific it names a single piece of news, not so broad it means nothing.
+        Good: "iOS", "Nintendo", "OpenAI", "Climate Policy", "Rust", "Machine Learning",
+              "Housing", "SpaceX", "React", "NBA", "Nutrition", "Kubernetes"
+        Bad: "Technology" (too broad), "iPhone 16 battery fix" (too narrow), "interesting" (not a topic)
+        Return as a comma-separated list with no extra punctuation.
+        """)
+    var labels: String
+}
+
+@available(iOS 26, *)
+@Generable
 struct ArticleQualityAssessment {
     @Guide(description: """
         Grade this article for a reader who values original thinking and focused attention.
@@ -151,6 +167,21 @@ extension IntelligenceService {
             generating: ArticleDNA.self
         )
         return response.content.concepts
+    }
+
+    // MARK: Article Topics
+
+    static func extractTopics(title: String, description: String) async throws -> [String] {
+        let input = description.isEmpty ? title : "\(title)\n\n\(String(description.prefix(1000)))"
+        let session = LanguageModelSession()
+        let response = try await session.respond(
+            to: "Extract specific topic labels for this article:\n\n\(input)",
+            generating: ArticleTopics.self
+        )
+        return response.content.labels
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     // MARK: Article Quality Grading

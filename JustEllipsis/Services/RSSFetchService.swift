@@ -5,6 +5,7 @@ import OSLog
 @preconcurrency import FeedKit
 
 private let gradingLog = Logger(subsystem: "com.rylandean.justellipsis", category: "Grading")
+private let topicsLog  = Logger(subsystem: "com.rylandean.justellipsis", category: "Topics")
 
 // MARK: - Service
 
@@ -69,6 +70,7 @@ struct RSSFetchService {
             await actor.fetchAll()
             await actor.pruneOldArticles()
             await actor.summarizePendingArticles()
+            await actor.tagPendingArticles()
             await actor.gradeNewArticles(tracker: tracker)
             scheduleGradingBackgroundTaskIfNeeded()
         }
@@ -100,6 +102,7 @@ struct RSSFetchService {
             await actor.fetchOne(feedID: feedID, urlString: url)
             await actor.pruneOldArticles()
             await actor.summarizePendingArticles()
+            await actor.tagPendingArticles()
             await actor.gradeNewArticles(tracker: tracker)
             scheduleGradingBackgroundTaskIfNeeded()
         }
@@ -344,6 +347,7 @@ actor RSSFetchActor {
         await fetchAll()
         await pruneOldArticles()
         await summarizePendingArticles()
+        await tagPendingArticles()
         await gradeNewArticles(tracker: nil)
 
         let articleSnapshots: [ArticleSnapshot] = ((try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? [])
@@ -511,6 +515,54 @@ actor RSSFetchActor {
             markFetched(feedID: feedID, latestArticleAt: latestNewArticleDate)
             try? modelContext.save()
         }
+    }
+
+    // Generates AI topic labels for articles that haven't been tagged yet.
+    // No-ops on iOS < 26 or when Apple Intelligence is unavailable.
+    func tagPendingArticles() async {
+        guard #available(iOS 26, *) else {
+            topicsLog.debug("tagPendingArticles: skipped — iOS 26 unavailable")
+            return
+        }
+        guard IntelligenceService.isAvailable else {
+            topicsLog.warning("tagPendingArticles: skipped — Apple Intelligence unavailable")
+            return
+        }
+
+        struct Stub: Sendable { let id: PersistentIdentifier; let title: String; let desc: String }
+        let all = (try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? []
+        let stubs: [Stub] = all.compactMap { article in
+            guard article.topics.isEmpty else { return nil }
+            let desc = article.summary ?? article.feedDescription ?? ""
+            return Stub(id: article.persistentModelID, title: article.title, desc: desc)
+        }
+
+        let alreadyTagged = all.count - stubs.count
+        topicsLog.info("tagPendingArticles: \(stubs.count) untagged, \(alreadyTagged) already tagged")
+
+        guard !stubs.isEmpty else { return }
+
+        var tagged = 0
+        var failed = 0
+        for stub in stubs {
+            do {
+                let topics = try await IntelligenceService.extractTopics(title: stub.title, description: stub.desc)
+                topicsLog.debug("tagPendingArticles: '\(stub.title.prefix(60))' → \(topics.joined(separator: ", "))")
+                if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
+                    article.topics = topics
+                    tagged += 1
+                } else {
+                    topicsLog.warning("tagPendingArticles: failed to resolve model for '\(stub.title.prefix(60))'")
+                    failed += 1
+                }
+            } catch {
+                topicsLog.error("tagPendingArticles: extractTopics threw for '\(stub.title.prefix(60))' — \(error)")
+                failed += 1
+            }
+        }
+
+        topicsLog.info("tagPendingArticles: done — \(tagged) tagged, \(failed) failed")
+        if tagged > 0 { try? modelContext.save() }
     }
 
     // Generates AI two-sentence summaries for articles that have a description but no summary yet.

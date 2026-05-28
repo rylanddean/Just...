@@ -14,6 +14,7 @@ final class RSSArticle {
     var summary: String?
     var estimatedReadingMinutes: Int?
     var qualityGrade: ArticleQualityGrade?
+    var topics: [String] = []
 
     init(feedID: UUID, url: String, title: String, publishedAt: Date, feedDescription: String? = nil) {
         self.feedID = feedID
