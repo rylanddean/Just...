@@ -192,11 +192,26 @@ extension IntelligenceService {
         if !description.isEmpty { parts.append("Content:\n\(String(description.prefix(2000)))") }
         let input = parts.joined(separator: "\n")
         let session = LanguageModelSession()
-        let response = try? await session.respond(
-            to: "Grade this article:\n\n\(input)",
-            generating: ArticleQualityAssessment.self
-        )
-        let raw = response?.content.grade
+
+        // Wrap in a 20 s timeout: safety-guardrail hangs never stall the grading pipeline.
+        let rawGrade = await withTaskGroup(of: String?.self) { group in
+            group.addTask {
+                let r = try? await session.respond(
+                    to: "Grade this article:\n\n\(input)",
+                    generating: ArticleQualityAssessment.self
+                )
+                return r?.content.grade
+            }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(20))
+                return nil
+            }
+            let result = await group.next() ?? nil
+            group.cancelAll()
+            return result
+        }
+
+        let raw = rawGrade?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
             .replacingOccurrences(of: " ", with: "")

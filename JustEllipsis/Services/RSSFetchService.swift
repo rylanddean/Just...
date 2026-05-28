@@ -71,11 +71,11 @@ struct RSSFetchService {
             await actor.fetchAll()
             print("[Fetch] fetchAll done — starting pruneOldArticles")
             await actor.pruneOldArticles()
-            print("[Fetch] pruneOldArticles done — starting summarizePendingArticles")
-            await actor.summarizePendingArticles()
-            print("[Fetch] summarizePendingArticles done — starting tagPendingArticles")
+            print("[Fetch] pruneOldArticles done — starting tagPendingArticles")
             await actor.tagPendingArticles()
-            print("[Fetch] tagPendingArticles done — starting gradeNewArticles")
+            print("[Fetch] tagPendingArticles done — starting summarizePendingArticles")
+            await actor.summarizePendingArticles()
+            print("[Fetch] summarizePendingArticles done — starting gradeNewArticles")
             await actor.gradeNewArticles(tracker: tracker)
             print("[Fetch] gradeNewArticles done")
             scheduleGradingBackgroundTaskIfNeeded()
@@ -107,8 +107,8 @@ struct RSSFetchService {
             let actor = RSSFetchActor(modelContainer: container)
             await actor.fetchOne(feedID: feedID, urlString: url)
             await actor.pruneOldArticles()
-            await actor.summarizePendingArticles()
             await actor.tagPendingArticles()
+            await actor.summarizePendingArticles()
             await actor.gradeNewArticles(tracker: tracker)
             scheduleGradingBackgroundTaskIfNeeded()
         }
@@ -352,8 +352,8 @@ actor RSSFetchActor {
     func performDailyJob() async {
         await fetchAll()
         await pruneOldArticles()
-        await summarizePendingArticles()
         await tagPendingArticles()
+        await summarizePendingArticles()
         await gradeNewArticles(tracker: nil)
 
         let articleSnapshots: [ArticleSnapshot] = ((try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? [])
@@ -546,74 +546,151 @@ actor RSSFetchActor {
         let allFeeds = (try? modelContext.fetch(FetchDescriptor<RSSFeed>())) ?? []
         let feedMap = Dictionary(uniqueKeysWithValues: allFeeds.map { ($0.id, $0) })
 
-        let all = (try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? []
-        let stubs: [Stub] = all.compactMap { article in
-            guard article.topics.isEmpty else { return nil }
-            let feed = feedMap[article.feedID]
-            let fallback = feed.map { $0.category.isEmpty ? $0.title : $0.category } ?? ""
-            return Stub(id: article.persistentModelID, title: article.title, feedFallback: fallback)
-        }
+        let descriptor = FetchDescriptor<RSSArticle>(
+            sortBy: [SortDescriptor(\RSSArticle.publishedAt, order: .reverse)]
+        )
+        let all = (try? modelContext.fetch(descriptor)) ?? []
 
-        let alreadyTagged = all.count - stubs.count
-        print("[Topics] \(stubs.count) untagged, \(alreadyTagged) already tagged")
-        topicsLog.warning("tagPendingArticles: \(stubs.count) untagged, \(alreadyTagged) already tagged")
+        // Build stubs newest-first, capping at 30. Newer articles appear in the digest
+        // first, so they benefit most from getting specific topic chips quickly.
+        let cap = 30
+        var stubs: [Stub] = []
+        var alreadyTagged = 0
+        for article in all {
+            if article.topics.isEmpty {
+                if stubs.count < cap {
+                    let feed = feedMap[article.feedID]
+                    let fallback = feed.map { $0.category.isEmpty ? $0.title : $0.category } ?? ""
+                    stubs.append(Stub(id: article.persistentModelID, title: article.title, feedFallback: fallback))
+                }
+            } else {
+                alreadyTagged += 1
+            }
+        }
+        let totalUntagged = all.count - alreadyTagged
+        print("[Topics] processing \(stubs.count) of \(totalUntagged) untagged (newest first, capped at \(cap)), \(alreadyTagged) already tagged")
+        topicsLog.warning("tagPendingArticles: processing \(stubs.count) of \(totalUntagged) untagged (newest first, capped at \(cap)), \(alreadyTagged) already tagged")
 
         guard !stubs.isEmpty else { return }
 
         var tagged = 0
         var fallbacks = 0
         var failed = 0
-        for stub in stubs {
+        var unsaved = 0
+        let total = stubs.count
+        for (i, stub) in stubs.enumerated() {
+            guard !Task.isCancelled else {
+                topicsLog.warning("tagPendingArticles: cancelled at \(i)/\(total)")
+                break
+            }
             guard let article = try? modelContext.model(for: stub.id) as? RSSArticle else {
                 topicsLog.warning("tagPendingArticles: failed to resolve model for '\(stub.title.prefix(60))'")
                 failed += 1
                 continue
             }
-            do {
-                let topics = try await IntelligenceService.extractTopics(title: stub.title)
-                print("[Topics] '\(stub.title.prefix(60))' → \(topics.joined(separator: ", "))")
-                topicsLog.debug("tagPendingArticles: '\(stub.title.prefix(60))' → \(topics.joined(separator: ", "))")
+            let title = stub.title
+            let aiTopics = await withTaskGroup(of: [String]?.self) { group in
+                group.addTask { try? await IntelligenceService.extractTopics(title: title) }
+                group.addTask {
+                    try? await Task.sleep(for: .seconds(15))
+                    return nil
+                }
+                let result = await group.next() ?? nil
+                group.cancelAll()
+                return result
+            }
+            if let topics = aiTopics, !topics.isEmpty {
                 article.topics = topics
                 tagged += 1
-            } catch {
-                print("[Topics] error for '\(stub.title.prefix(60))' — \(error)")
-                topicsLog.error("tagPendingArticles: guardrail/error for '\(stub.title.prefix(60))' — \(error)")
+                print("[Topics] \(i + 1)/\(total) '\(stub.title.prefix(60))' → \(topics.joined(separator: ", "))")
+            } else {
                 if !stub.feedFallback.isEmpty {
                     article.topics = [stub.feedFallback]
-                    print("[Topics] fallback '\(stub.feedFallback)' → '\(stub.title.prefix(60))'")
-                    topicsLog.debug("tagPendingArticles: assigned fallback '\(stub.feedFallback)' to '\(stub.title.prefix(60))'")
                     fallbacks += 1
+                    print("[Topics] \(i + 1)/\(total) fallback '\(stub.feedFallback)' for '\(stub.title.prefix(60))'")
                 } else {
                     failed += 1
+                    print("[Topics] \(i + 1)/\(total) failed '\(stub.title.prefix(60))'")
                 }
             }
+            unsaved += 1
+            if unsaved >= 10 {
+                try? modelContext.save()
+                unsaved = 0
+            }
         }
-
+        if unsaved > 0 { try? modelContext.save() }
         print("[Topics] done — \(tagged) AI-tagged, \(fallbacks) fallback, \(failed) failed")
         topicsLog.warning("tagPendingArticles: done — \(tagged) AI-tagged, \(fallbacks) fallback, \(failed) failed")
-        if tagged + fallbacks > 0 { try? modelContext.save() }
     }
 
     // Generates AI two-sentence summaries for articles that have a description but no summary yet.
     // No-ops on iOS < 26 or when Apple Intelligence is unavailable.
+    // Each call is wrapped in a 15 s timeout: safety-guardrail hangs never stall the pipeline.
     func summarizePendingArticles() async {
         guard #available(iOS 26, *) else { return }
         guard IntelligenceService.isAvailable else { return }
 
         struct Stub: Sendable { let id: PersistentIdentifier; let title: String; let desc: String }
-        let all = (try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? []
-        let stubs: [Stub] = all.compactMap { article in
-            guard let desc = article.feedDescription, article.summary == nil else { return nil }
-            return Stub(id: article.persistentModelID, title: article.title, desc: desc)
-        }
-
-        for stub in stubs {
-            guard let generated = try? await IntelligenceService.summarizeFeedItem(title: stub.title, description: stub.desc) else { continue }
-            if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
-                article.summary = generated
+        let fetchDescriptor = FetchDescriptor<RSSArticle>(
+            sortBy: [SortDescriptor(\RSSArticle.publishedAt, order: .reverse)]
+        )
+        let all = (try? modelContext.fetch(fetchDescriptor)) ?? []
+        let cap = 30
+        var stubs: [Stub] = []
+        var alreadyDone = 0
+        var totalPending = 0
+        for article in all {
+            if let desc = article.feedDescription, article.summary == nil {
+                totalPending += 1
+                if stubs.count < cap {
+                    stubs.append(Stub(id: article.persistentModelID, title: article.title, desc: desc))
+                }
+            } else if article.summary != nil {
+                alreadyDone += 1
             }
         }
-        if !stubs.isEmpty { try? modelContext.save() }
+        print("[Summarize] processing \(stubs.count) of \(totalPending) pending (newest first, capped at \(cap)), \(alreadyDone) already done")
+
+        var summarized = 0
+        var skipped = 0
+        var unsaved = 0
+        let total = stubs.count
+        for (i, stub) in stubs.enumerated() {
+            guard !Task.isCancelled else {
+                print("[Summarize] cancelled at \(i)/\(total)")
+                break
+            }
+            let title = stub.title
+            let desc  = stub.desc
+            let summary = await withTaskGroup(of: String?.self) { group in
+                group.addTask { try? await IntelligenceService.summarizeFeedItem(title: title, description: desc) }
+                group.addTask {
+                    try? await Task.sleep(for: .seconds(15))
+                    return nil
+                }
+                let result = await group.next() ?? nil
+                group.cancelAll()
+                return result
+            }
+            guard let generated = summary, !generated.isEmpty else {
+                skipped += 1
+                print("[Summarize] \(i + 1)/\(total) timeout/skip '\(stub.title.prefix(60))'")
+                continue
+            }
+            if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
+                article.summary = generated
+                summarized += 1
+                unsaved += 1
+                print("[Summarize] \(i + 1)/\(total) done '\(stub.title.prefix(60))'")
+                if unsaved >= 10 {
+                    try? modelContext.save()
+                    unsaved = 0
+                }
+            }
+        }
+        if unsaved > 0 { try? modelContext.save() }
+        print("[Summarize] done — \(summarized) generated, \(skipped) skipped")
     }
 
     // Grades ungraded articles using on-device AI. No-ops when grading is disabled or AI is unavailable.

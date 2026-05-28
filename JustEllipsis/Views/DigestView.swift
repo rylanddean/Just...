@@ -38,10 +38,12 @@ struct DigestView: View {
 
     // Priority: AI topics → feed category → feed title (always non-empty for valid feeds).
     private func topicLabels(for article: RSSArticle) -> [String] {
-        if !article.topics.isEmpty { return article.topics }
-        guard let feed = feedLookup[article.feedID] else { return [] }
-        if !feed.category.isEmpty { return [feed.category] }
-        return feed.title.isEmpty ? [] : [feed.title]
+        article.topics
+    }
+
+    private var hasUntaggedArticles: Bool {
+        let all = todayArticles + yesterdayArticles + earlierArticles
+        return !all.isEmpty && all.contains { $0.topics.isEmpty }
     }
 
     private var availableTopics: [String] {
@@ -52,7 +54,7 @@ struct DigestView: View {
                 counts[label, default: 0] += 1
             }
         }
-        let top = counts.sorted { $0.value > $1.value }.prefix(20).map(\.key)
+        let top = counts.sorted { $0.value > $1.value }.prefix(10).map(\.key)
         return ["All"] + top
     }
 
@@ -217,9 +219,7 @@ struct DigestView: View {
                 appTheme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    if availableTopics.count > 1 {
-                        topicFilterBar
-                    }
+                    tagFilterArea
 
                     if articles.isEmpty {
                         emptyState
@@ -334,6 +334,43 @@ struct DigestView: View {
     }
 
     // MARK: - Helpers
+
+    @ViewBuilder
+    private var tagFilterArea: some View {
+        if IntelligenceService.isAvailable {
+            if hasUntaggedArticles {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Text("All")
+                            .font(AppTheme.sansSerif(13, weight: .semibold))
+                            .foregroundStyle(appTheme.background)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(appTheme.accent)
+                            .clipShape(Capsule())
+
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .tint(appTheme.textFaint)
+                            Text("Generating tag filters…")
+                                .font(AppTheme.sansSerif(13))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(appTheme.surface)
+                        .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, AppTheme.pagePadding)
+                }
+                .padding(.vertical, 10)
+                .background(appTheme.background)
+            } else if availableTopics.count > 1 {
+                topicFilterBar
+            }
+        }
+    }
 
     private var topicFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
