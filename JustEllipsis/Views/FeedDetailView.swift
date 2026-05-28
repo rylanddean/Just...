@@ -15,13 +15,15 @@ struct FeedDetailView: View {
     init(feed: RSSFeed) {
         self.feed = feed
         let feedID = feed.id
+        let startOfToday = Calendar.current.startOfDay(for: Date())
         let cutoff: Date
-        if feed.feedType == .scraped {
-            let startOfToday = Calendar.current.startOfDay(for: Date())
-            cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
-        } else {
-            let startOfToday = Calendar.current.startOfDay(for: Date())
-            cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
+        switch feed.feedType {
+        case .scraped:
+            cutoff = Calendar.current.date(byAdding: .day, value: -7,  to: startOfToday) ?? startOfToday
+        case .newsletter:
+            cutoff = Calendar.current.date(byAdding: .day, value: -30, to: startOfToday) ?? startOfToday
+        case .rss:
+            cutoff = Calendar.current.date(byAdding: .day, value: -1,  to: startOfToday) ?? startOfToday
         }
         _articles = Query(
             filter: #Predicate<RSSArticle> { $0.feedID == feedID && $0.publishedAt >= cutoff },
@@ -40,6 +42,31 @@ struct FeedDetailView: View {
                 emptyState
             } else {
                 List {
+                    // Reading address — shown at the top of newsletter feeds
+                    if feed.feedType == .newsletter, let email = feed.newsletterEmail {
+                        Section {
+                            NewsletterAddressRow(email: email)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: 5,
+                                    leading: AppTheme.pagePadding,
+                                    bottom: 5,
+                                    trailing: AppTheme.pagePadding
+                                ))
+                        } header: {
+                            Text("YOUR READING ADDRESS")
+                                .font(AppTheme.sansSerif(11, weight: .medium))
+                                .foregroundStyle(appTheme.accent)
+                                .kerning(2)
+                                .textCase(nil)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, AppTheme.pagePadding)
+                                .padding(.top, 8)
+                                .padding(.bottom, 4)
+                        }
+                    }
+
                     Section {
                         ForEach(articles) { article in
                             ArticleRow(article: article, isQueued: queuedURLs.contains(article.url)) {
@@ -99,13 +126,29 @@ struct FeedDetailView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Text("Nothing fetched yet.")
-                .font(AppTheme.sansSerif(16, weight: .medium))
-                .foregroundStyle(appTheme.heading)
+            if feed.feedType == .newsletter {
+                Text("Waiting for first edition.")
+                    .font(AppTheme.sansSerif(16, weight: .medium))
+                    .foregroundStyle(appTheme.heading)
 
-            Text("Articles appear after the next fetch.")
-                .font(AppTheme.sansSerif(14))
-                .foregroundStyle(appTheme.textFaint)
+                Text("New editions appear here automatically.")
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(appTheme.textFaint)
+
+                if let email = feed.newsletterEmail {
+                    NewsletterAddressRow(email: email)
+                        .padding(.horizontal, AppTheme.pagePadding)
+                        .padding(.top, 8)
+                }
+            } else {
+                Text("Nothing fetched yet.")
+                    .font(AppTheme.sansSerif(16, weight: .medium))
+                    .foregroundStyle(appTheme.heading)
+
+                Text("Articles appear after the next fetch.")
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(appTheme.textFaint)
+            }
         }
     }
 
@@ -133,6 +176,45 @@ struct FeedDetailView: View {
         context.insert(link)
         article.isQueued = true
         try? context.save()
+    }
+}
+
+// MARK: - Newsletter address row
+
+private struct NewsletterAddressRow: View {
+    let email: String
+
+    @Environment(\.appTheme) private var appTheme
+    @State private var justCopied = false
+
+    var body: some View {
+        Button {
+            UIPasteboard.general.string = email
+            justCopied = true
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                justCopied = false
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text(email)
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.heading)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 14))
+                    .foregroundStyle(justCopied ? appTheme.accent : appTheme.textFaint)
+                    .animation(.easeInOut(duration: 0.15), value: justCopied)
+            }
+            .padding(AppTheme.cardPadding)
+            .background(appTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -123,6 +123,29 @@ extension FeedDirectoryItem {
     }
 }
 
+// MARK: - Newsletter directory item (decoded from newsletters.json)
+
+/// A pre-defined newsletter entry from the curated awesome-newsletters list.
+/// `url` is the newsletter's subscribe/website page — fed directly into the
+/// KtN flow as the pre-filled website URL.
+struct NewsletterDirectoryItem: Codable, Identifiable, Sendable {
+    var id: String { url }
+    let name: String
+    let url: String
+    let category: String
+    let description: String
+}
+
+extension NewsletterDirectoryItem {
+    static func loadAll() -> [NewsletterDirectoryItem] {
+        guard let fileURL = Bundle.main.url(forResource: "newsletters", withExtension: "json"),
+              let data = try? Data(contentsOf: fileURL),
+              let items = try? JSONDecoder().decode([NewsletterDirectoryItem].self, from: data)
+        else { return [] }
+        return items
+    }
+}
+
 // MARK: - Parsed article (intermediate, Sendable for actor crossing)
 
 struct ParsedArticle: Sendable {
@@ -173,22 +196,32 @@ actor RSSFetchActor {
         }
     }
 
-    // Prune articles published more than 7 days ago.
-    // Scraped feeds are excluded — their articles accumulate until manually removed.
+    // Prune articles published before their feed type's retention window.
+    // Scraped feeds: never pruned (accumulate until unsubscribed).
+    // Newsletter feeds: 30-day window (editions are infrequent; readers need time).
+    // RSS feeds: 1-day window (standard behaviour).
     func pruneOldArticles() async {
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
+        let rssCutoff        = Calendar.current.date(byAdding: .day, value: -1,  to: startOfToday) ?? startOfToday
+        let newsletterCutoff = Calendar.current.date(byAdding: .day, value: -30, to: startOfToday) ?? startOfToday
 
         let allFeeds = (try? modelContext.fetch(FetchDescriptor<RSSFeed>())) ?? []
-        let scrapedIDs = Set(allFeeds.filter { $0.feedType == .scraped }.map { $0.id })
+        let scrapedIDs    = Set(allFeeds.filter { $0.feedType == .scraped    }.map { $0.id })
+        let newsletterIDs = Set(allFeeds.filter { $0.feedType == .newsletter }.map { $0.id })
 
         let descriptor = FetchDescriptor<RSSArticle>(
-            predicate: #Predicate { $0.publishedAt < cutoff && !$0.isQueued }
+            predicate: #Predicate { !$0.isQueued }
         )
-        guard let stale = try? modelContext.fetch(descriptor) else { return }
-        let toDelete = stale.filter { !scrapedIDs.contains($0.feedID) }
+        guard let candidates = try? modelContext.fetch(descriptor) else { return }
+
+        let toDelete = candidates.filter { article in
+            if scrapedIDs.contains(article.feedID)    { return false }
+            if newsletterIDs.contains(article.feedID) { return article.publishedAt < newsletterCutoff }
+            return article.publishedAt < rssCutoff
+        }
+
         guard !toDelete.isEmpty else { return }
-        gradingLog.info("pruneOldArticles: removing \(toDelete.count) article(s) older than yesterday")
+        gradingLog.info("pruneOldArticles: removing \(toDelete.count) article(s)")
         toDelete.forEach { modelContext.delete($0) }
         try? modelContext.save()
     }
@@ -294,12 +327,21 @@ actor RSSFetchActor {
     private func store(result: FeedParseResult, feedID: UUID) {
         let descriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
         if let feed = try? modelContext.fetch(descriptor).first {
-            let newRaw = result.feedType.rawValue
-            if feed.feedTypeRaw != newRaw { feed.feedTypeRaw = newRaw }
-            if let resolved = result.resolvedURL, feed.url != resolved { feed.url = resolved }
-            if feed.feedTypeRaw != newRaw || (result.resolvedURL != nil) {
-                try? modelContext.save()
+            var changed = false
+            // Newsletter feeds always fetch as a standard Atom feed via FeedKit.
+            // The parse result carries .rss, but we must not overwrite the stored .newsletter type.
+            if feed.feedType != .newsletter {
+                let newRaw = result.feedType.rawValue
+                if feed.feedTypeRaw != newRaw {
+                    feed.feedTypeRaw = newRaw
+                    changed = true
+                }
             }
+            if let resolved = result.resolvedURL, feed.url != resolved {
+                feed.url = resolved
+                changed = true
+            }
+            if changed { try? modelContext.save() }
         }
         store(articles: result.articles, feedID: feedID)
     }

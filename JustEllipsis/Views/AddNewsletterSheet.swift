@@ -1,5 +1,8 @@
 import SwiftUI
 import WebKit
+import OSLog
+
+private let ktnLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "JustEllipsis", category: "KtN")
 
 // MARK: - Sheet
 
@@ -10,8 +13,16 @@ struct AddNewsletterSheet: View {
     @Environment(\.appTheme) private var appTheme
 
     /// Captured on the URL-entry screen; passed to the in-app subscribe browser.
-    @State private var newsletterWebsiteURL = ""
-    @State private var path: [Step] = []
+    @State private var newsletterWebsiteURL: String
+    /// When a pre-filled URL is provided (e.g. from the newsletter directory) we
+    /// skip the URL-entry screen and land directly on the KtN webview.
+    @State private var path: [Step]
+
+    init(prefilledURL: String = "", onSubscribe: @escaping (_ feedURL: String, _ email: String, _ title: String) -> Void) {
+        self.onSubscribe = onSubscribe
+        self._newsletterWebsiteURL = State(initialValue: prefilledURL)
+        self._path = State(initialValue: prefilledURL.isEmpty ? [] : [.ktn])
+    }
 
     enum Step: Hashable {
         case ktn
@@ -125,6 +136,10 @@ struct AddNewsletterSheet: View {
 final class WebViewState {
     var isLoading = true
     var loadError: String? = nil
+    /// Updated on every navigation finish — lets host views react to URL changes.
+    var currentURL: URL? = nil
+    /// Page title at the time of the last navigation finish.
+    var currentTitle: String = ""
 }
 
 // MARK: - Step 2: KtN screen
@@ -138,6 +153,12 @@ private struct KtNScreen: View {
     @Environment(\.appTheme) private var appTheme
     @State private var webState = WebViewState()
     @State private var webViewID = UUID()
+
+    /// True when the webview has landed on a /feeds/<id> success page.
+    private var isOnSuccessPage: Bool {
+        guard let path = webState.currentURL?.path else { return false }
+        return KillTheNewsletterWebView.extractFeedId(from: path) != nil
+    }
 
     var body: some View {
         ZStack {
@@ -185,9 +206,38 @@ private struct KtNScreen: View {
                 Button("Cancel") { onCancel() }
                     .foregroundStyle(appTheme.accent)
             }
+            // Manual fallback: visible once we're on the /feeds/<id> success page.
+            // Handles cases where the JS message bridge silently fails.
+            if isOnSuccessPage {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Continue") { advanceFromSuccessPage() }
+                        .font(AppTheme.sansSerif(15, weight: .semibold))
+                        .foregroundStyle(appTheme.accent)
+                }
+            }
         }
         .toolbarBackground(appTheme.background, for: .navigationBar)
         .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+        .onChange(of: webState.currentURL) { _, newURL in
+            ktnLog.debug("KtNScreen: currentURL changed → \(newURL?.absoluteString ?? "nil") isOnSuccessPage=\(self.isOnSuccessPage)")
+        }
+    }
+
+    /// Called when the user taps Continue on the success page.
+    /// Extracts feed data from the tracked URL/title rather than relying on JS.
+    private func advanceFromSuccessPage() {
+        guard let path = webState.currentURL?.path,
+              let feedId = KillTheNewsletterWebView.extractFeedId(from: path)
+        else { return }
+
+        let rawTitle = webState.currentTitle
+        let title = rawTitle
+            .replacingOccurrences(of: " | Kill the Newsletter!", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let email   = "\(feedId)@kill-the-newsletter.com"
+        let feedURL = "https://kill-the-newsletter.com/feeds/\(feedId).xml"
+        onFeedCreated(email, feedURL, title.isEmpty ? "Newsletter" : title)
     }
 }
 
@@ -231,6 +281,7 @@ struct KillTheNewsletterWebView: UIViewRepresentable {
         if #available(iOS 16.4, *) { webView.isInspectable = true }
         #endif
         webView.load(URLRequest(url: URL(string: "https://kill-the-newsletter.com")!))
+        context.coordinator.startObserving(webView)
         return webView
     }
 
@@ -241,7 +292,18 @@ struct KillTheNewsletterWebView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+        coordinator.urlObservation = nil
+        coordinator.titleObservation = nil
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "feedCreated")
+    }
+
+    // Extracts the feed ID from a /feeds/<id> path. Returns nil for any other path.
+    static func extractFeedId(from path: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: "^/feeds/([A-Za-z0-9]{8,})$"),
+              let match = regex.firstMatch(in: path, range: NSRange(path.startIndex..., in: path)),
+              let range = Range(match.range(at: 1), in: path)
+        else { return nil }
+        return String(path[range])
     }
 
     // Runs at document-end. Detects /feeds/<id> (the KtN success page).
@@ -264,59 +326,115 @@ struct KillTheNewsletterWebView: UIViewRepresentable {
         var onFeedCreated: (String, String, String) -> Void
         private var didReport = false
 
+        /// KVO tokens — held for the lifetime of the WKWebView.
+        fileprivate var urlObservation: NSKeyValueObservation?
+        fileprivate var titleObservation: NSKeyValueObservation?
+
         init(state: WebViewState, onFeedCreated: @escaping (String, String, String) -> Void) {
             self.state = state
             self.onFeedCreated = onFeedCreated
         }
 
-        // Reset the loading indicator on every new navigation so internal
-        // page links (e.g. back to home) also show a brief loading state.
+        // MARK: KVO
+
+        /// Attach KVO observers to the web view. Called once from makeUIView.
+        /// KtN uses client-side JS navigation after form submission, so
+        /// WKNavigationDelegate alone won't catch the /feeds/<id> redirect.
+        /// Observing `url` directly fires on every URL change including pushState.
+        func startObserving(_ webView: WKWebView) {
+            urlObservation = webView.observe(\.url, options: .new) { [weak self] wv, _ in
+                self?.handleURLChange(in: wv)
+            }
+            titleObservation = webView.observe(\.title, options: .new) { [weak self] wv, _ in
+                let t = wv.title ?? ""
+                ktnLog.debug("KVO title → \(t)")
+                self?.state.currentTitle = t
+            }
+        }
+
+        private func handleURLChange(in webView: WKWebView) {
+            guard let url = webView.url else { return }
+            ktnLog.debug("KVO url → \(url.absoluteString)")
+            state.currentURL = url
+
+            guard !didReport,
+                  let feedId = KillTheNewsletterWebView.extractFeedId(from: url.path)
+            else { return }
+
+            didReport = true
+            ktnLog.info("KVO detected feedId=\(feedId)")
+
+            let email   = "\(feedId)@kill-the-newsletter.com"
+            let feedURL = "https://kill-the-newsletter.com/feeds/\(feedId).xml"
+
+            // Title may not be set yet at URL-change time — ask the page directly.
+            webView.evaluateJavaScript("document.title") { [weak self] result, error in
+                if let error { ktnLog.error("evaluateJavaScript(title) error: \(error)") }
+                let rawTitle = (result as? String) ?? ""
+                let title = rawTitle
+                    .replacingOccurrences(of: " | Kill the Newsletter!", with: "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                ktnLog.info("KVO title from JS: \(title)")
+                self?.onFeedCreated(email, feedURL, title.isEmpty ? "Newsletter" : title)
+            }
+        }
+
+        // MARK: WKNavigationDelegate
+
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-            DispatchQueue.main.async { self.state.isLoading = true }
+            ktnLog.debug("didCommit: \(webView.url?.absoluteString ?? "nil")")
+            state.isLoading = true
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            DispatchQueue.main.async { self.state.isLoading = false }
+            let urlStr = webView.url?.absoluteString ?? "nil"
+            ktnLog.debug("didFinish: url=\(urlStr) didReport=\(self.didReport)")
+            state.isLoading = false
+            // KVO handles detection; JS injection is a belt-and-suspenders fallback
+            // for any edge case where pushState fires without triggering KVO.
             guard !didReport else { return }
-            // Belt-and-suspenders: re-run the detection script after navigation
-            // completes in case client-side routing skipped document-end injection.
-            webView.evaluateJavaScript(KillTheNewsletterWebView.detectionJS, completionHandler: nil)
+            webView.evaluateJavaScript(KillTheNewsletterWebView.detectionJS) { result, error in
+                if let error { ktnLog.error("JS injection error: \(error)") }
+                else { ktnLog.debug("JS injection result: \(String(describing: result))") }
+            }
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            DispatchQueue.main.async {
-                self.state.isLoading = false
-                self.state.loadError = "Couldn't load the page. Check your connection and try again."
-            }
+            ktnLog.error("didFailProvisionalNavigation: \(error)")
+            state.isLoading = false
+            state.loadError = "Couldn't load the page. Check your connection and try again."
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            DispatchQueue.main.async {
-                self.state.isLoading = false
-                self.state.loadError = "Couldn't load the page. Check your connection and try again."
-            }
+            ktnLog.error("didFail: \(error)")
+            state.isLoading = false
+            state.loadError = "Couldn't load the page. Check your connection and try again."
         }
+
+        // MARK: WKScriptMessageHandler
 
         func userContentController(
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
+            ktnLog.debug("JS bridge message: \(message.name) body=\(String(describing: message.body))")
             guard !didReport,
                   message.name == "feedCreated",
                   let body = message.body as? [String: Any],
                   let feedId = body["feedId"] as? String, !feedId.isEmpty
-            else { return }
+            else {
+                ktnLog.warning("JS bridge guard failed (didReport=\(self.didReport))")
+                return
+            }
 
             didReport = true
+            ktnLog.info("JS bridge detected feedId=\(feedId)")
 
             let rawTitle = (body["title"] as? String) ?? ""
             let title    = rawTitle.isEmpty ? "Newsletter" : rawTitle
             let email    = "\(feedId)@kill-the-newsletter.com"
             let feedURL  = "https://kill-the-newsletter.com/feeds/\(feedId).xml"
-
-            DispatchQueue.main.async {
-                self.onFeedCreated(email, feedURL, title)
-            }
+            onFeedCreated(email, feedURL, title)
         }
     }
 }
@@ -492,7 +610,7 @@ private struct SubscribeScreen: View {
         .toolbarBackground(appTheme.background, for: .navigationBar)
         .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
         .onAppear {
-            // Pre-copy the email so the user can paste immediately into the subscribe form.
+            // Pre-copy the email so the user can paste it immediately into the subscribe form.
             UIPasteboard.general.string = email
         }
     }
