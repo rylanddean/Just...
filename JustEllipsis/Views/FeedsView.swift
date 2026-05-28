@@ -418,7 +418,7 @@ struct FeedsView: View {
 
     private func addFromURL() async {
         let raw = pasteURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: raw), url.scheme?.hasPrefix("http") == true else {
+        guard let url = FeedURLNormaliser.normalise(raw), url.scheme?.hasPrefix("http") == true else {
             addError = "Not a valid feed URL."
             return
         }
@@ -438,7 +438,7 @@ struct FeedsView: View {
         let category = await autoCategory(for: url, title: title, preview: metadata.preview)
 
         await MainActor.run {
-            subscribe(url: raw, title: title, category: category)
+            subscribe(url: url.absoluteString, title: title, category: category)
             isFetching = false
             customFeedName = ""
             detectedCategoryPreview = nil

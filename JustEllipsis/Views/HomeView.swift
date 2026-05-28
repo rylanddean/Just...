@@ -17,6 +17,9 @@ struct HomeView: View {
     @State private var showAddLink: Bool = false
     @State private var showSettings: Bool = false
     @State private var activeLink: QueuedLink?
+    @State private var safariURL: URL?
+    @State private var substackLink: QueuedLink?
+    @State private var pendingSubstackEntry: BrainEntry?
 
     private var streak: Int { StreakEngine.calculateStreak(from: readingDays, minReads: minReadsPerDay).current }
     private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays, minReads: minReadsPerDay) }
@@ -79,7 +82,7 @@ struct HomeView: View {
 
                                     ForEach(picks) { link in
                                         LinkCard(link: link) {
-                                            activeLink = link
+                                            open(link)
                                         }
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
@@ -107,7 +110,7 @@ struct HomeView: View {
                             // Manual queue
                             ForEach(manual) { link in
                                 LinkCard(link: link) {
-                                    activeLink = link
+                                    open(link)
                                 }
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
@@ -170,6 +173,61 @@ struct HomeView: View {
         .fullScreenCover(item: $activeLink) { link in
             ReaderView(link: link)
         }
+        .sheet(item: $safariURL, onDismiss: {
+            guard let link = substackLink else { return }
+            let title = link.title ?? ContentFetcher.extractDomain(from: URL(string: link.url)!)
+            let domain = link.domain ?? ContentFetcher.extractDomain(from: URL(string: link.url)!)
+            let entry = BrainEntry(url: link.url, title: title, domain: domain)
+            pendingSubstackEntry = entry
+        }) { url in
+            SafariView(url: url)
+                .ignoresSafeArea()
+        }
+        .sheet(item: $pendingSubstackEntry) { entry in
+            ReflectView(entry: entry, link: substackLink!, onComplete: {
+                if let link = substackLink {
+                    markSubstackRead(link)
+                }
+                substackLink = nil
+            })
+        }
+    }
+
+    private func open(_ link: QueuedLink) {
+        if let url = URL(string: link.url),
+           let host = url.host,
+           host.hasSuffix(".substack.com"),
+           url.pathComponents.dropFirst().first == "p" {
+            substackLink = link
+            safariURL = url
+        } else {
+            activeLink = link
+        }
+    }
+
+    private func markSubstackRead(_ link: QueuedLink) {
+        let url = link.url
+        let articleDescriptor = FetchDescriptor<RSSArticle>(
+            predicate: #Predicate { $0.url == url }
+        )
+        if let article = try? context.fetch(articleDescriptor).first {
+            article.isQueued = false
+        }
+        context.delete(link)
+
+        let logical = StreakEngine.logicalDay()
+        let y = logical.year, m = logical.month, d = logical.day
+        let dayDescriptor = FetchDescriptor<ReadingDay>(
+            predicate: #Predicate { $0.year == y && $0.month == m && $0.day == d }
+        )
+        if let existing = try? context.fetch(dayDescriptor).first {
+            existing.linksRead += 1
+        } else {
+            let day = ReadingDay(year: y, month: m, day: d)
+            day.linksRead = 1
+            context.insert(day)
+        }
+        try? context.save()
     }
 
     // MARK: - Picks header
