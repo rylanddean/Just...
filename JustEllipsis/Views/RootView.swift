@@ -121,7 +121,6 @@ struct RootView: View {
         if !force && now.timeIntervalSince(lastStartupWorkAt) < 3 { return }
         lastStartupWorkAt = now
         processPendingLinks()
-        RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
         PrefetchService.prefetchInProcess(container: context.container)
         if activityRingsEnabled {
             Task { await healthKit.fetchTodaySummary() }

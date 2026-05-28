@@ -13,6 +13,9 @@ struct SettingsView: View {
     @AppStorage(JustEllipsisApp.iCloudSyncKey)   private var iCloudSyncEnabled: Bool  = false
     @AppStorage("rss.fetchHour")                   private var fetchHour:                  Int    = RSSFetchService.defaultFetchHour
     @AppStorage("rss.fetchMinute")                 private var fetchMinute:                Int    = RSSFetchService.defaultFetchMinute
+    @AppStorage(RSSFetchService.fetch2EnabledKey)  private var fetch2Enabled:              Bool   = false
+    @AppStorage(RSSFetchService.fetchHour2Key)     private var fetchHour2:                 Int    = RSSFetchService.defaultFetchHour2
+    @AppStorage(RSSFetchService.fetchMinute2Key)   private var fetchMinute2:               Int    = RSSFetchService.defaultFetchMinute2
     @AppStorage(RSSFetchService.retentionDaysKey)  private var articleRetentionDays:       Int    = RSSFetchService.defaultRetentionDays
     @AppStorage("autoArchiveUnreadEnabled")        private var autoArchiveUnreadEnabled:   Bool   = false
     @AppStorage("autoArchiveUnreadDays")           private var autoArchiveUnreadDays:      Int    = 7
@@ -514,6 +517,23 @@ struct SettingsView: View {
         )
     }
 
+    private var fetchTime2Binding: Binding<Date> {
+        Binding(
+            get: {
+                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                comps.hour   = fetchHour2
+                comps.minute = fetchMinute2
+                return Calendar.current.date(from: comps) ?? Date()
+            },
+            set: { date in
+                let comps  = Calendar.current.dateComponents([.hour, .minute], from: date)
+                fetchHour2   = comps.hour   ?? RSSFetchService.defaultFetchHour2
+                fetchMinute2 = comps.minute ?? RSSFetchService.defaultFetchMinute2
+                RSSFetchService.scheduleNextBackgroundTask()
+            }
+        )
+    }
+
     private var feedsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("FEEDS")
@@ -536,6 +556,27 @@ struct SettingsView: View {
                 DatePicker("", selection: fetchTimeBinding, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                     .tint(appTheme.accent)
+            }
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Second fetch")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(appTheme.heading)
+                    Text("Run a second refresh later in the day.")
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+                Spacer()
+                if fetch2Enabled {
+                    DatePicker("", selection: fetchTime2Binding, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                }
+                Toggle("", isOn: $fetch2Enabled)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .onChange(of: fetch2Enabled) { _, _ in RSSFetchService.scheduleNextBackgroundTask() }
             }
 
             Divider().background(appTheme.separator)

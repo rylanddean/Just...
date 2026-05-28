@@ -30,33 +30,49 @@ struct RSSFetchService {
     static let defaultFetchHour   = 7
     static let defaultFetchMinute = 0
 
+    static let fetch2EnabledKey    = "rss.fetch2Enabled"
+    static let fetchHour2Key       = "rss.fetchHour2"
+    static let fetchMinute2Key     = "rss.fetchMinute2"
+    static let defaultFetchHour2   = 18  // 6:00 PM
+    static let defaultFetchMinute2 = 0
+
     static let retentionDaysKey     = "article.retentionDays"
     static let defaultRetentionDays = 2
 
-    static func scheduleNextBackgroundTask() {
-        let hour   = UserDefaults.standard.object(forKey: fetchHourKey)   as? Int ?? defaultFetchHour
-        let minute = UserDefaults.standard.object(forKey: fetchMinuteKey) as? Int ?? defaultFetchMinute
-
+    // Returns the next wall-clock occurrence of hour:minute from now.
+    private static func nextOccurrence(hour: Int, minute: Int) -> Date {
         let cal = Calendar.current
         var components = cal.dateComponents([.year, .month, .day], from: Date())
         components.hour   = hour
         components.minute = minute
+        components.second = 0
+        if let today = cal.date(from: components), today > Date() { return today }
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date())) ?? Date()
+        var tomorrowComps = cal.dateComponents([.year, .month, .day], from: tomorrow)
+        tomorrowComps.hour   = hour
+        tomorrowComps.minute = minute
+        tomorrowComps.second = 0
+        return cal.date(from: tomorrowComps) ?? Date(timeIntervalSinceNow: 86_400)
+    }
+
+    static func scheduleNextBackgroundTask() {
+        let defaults = UserDefaults.standard
+        var nextDate = nextOccurrence(
+            hour:   defaults.object(forKey: fetchHourKey)   as? Int ?? defaultFetchHour,
+            minute: defaults.object(forKey: fetchMinuteKey) as? Int ?? defaultFetchMinute
+        )
+        if defaults.bool(forKey: fetch2EnabledKey) {
+            let next2 = nextOccurrence(
+                hour:   defaults.object(forKey: fetchHour2Key)   as? Int ?? defaultFetchHour2,
+                minute: defaults.object(forKey: fetchMinute2Key) as? Int ?? defaultFetchMinute2
+            )
+            nextDate = min(nextDate, next2)
+        }
 
         let request = BGProcessingTaskRequest(identifier: backgroundTaskID)
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = false
-
-        if let todayTarget = cal.date(from: components), todayTarget > Date() {
-            request.earliestBeginDate = todayTarget
-        } else {
-            let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: Date())) ?? Date()
-            var tomorrowComponents = cal.dateComponents([.year, .month, .day], from: tomorrow)
-            tomorrowComponents.hour   = hour
-            tomorrowComponents.minute = minute
-            request.earliestBeginDate = cal.date(from: tomorrowComponents)
-                ?? Date(timeIntervalSinceNow: 24 * 60 * 60)
-        }
-
+        request.earliestBeginDate = nextDate
         try? BGTaskScheduler.shared.submit(request)
     }
 
