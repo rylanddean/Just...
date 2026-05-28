@@ -26,6 +26,7 @@ final class RSSFeed {
     var isArchived: Bool = false
     // "unread:7", "dead:14", or "manual" — parsed in views for display
     var archiveReason: String? = nil
+    var isFavourite: Bool = false
 
     var feedType: FeedType {
         get { FeedType(rawValue: feedTypeRaw) ?? .rss }

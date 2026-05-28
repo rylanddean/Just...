@@ -413,9 +413,11 @@ actor RSSFetchActor {
     // in so each feed doesn't trigger a redundant full table scan.
     private func store(result: FeedParseResult, feedID: UUID, existingURLs: inout Set<String>) {
         var isNewsletter = false
+        var autoQueue = false
         let descriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
         if let feed = try? modelContext.fetch(descriptor).first {
             isNewsletter = feed.feedType == .newsletter
+            autoQueue = feed.isFavourite
             var changed = false
             // Newsletter feeds always fetch as a standard Atom feed via FeedKit.
             // The parse result carries .rss, but we must not overwrite the stored .newsletter type.
@@ -432,14 +434,15 @@ actor RSSFetchActor {
             }
             if changed { try? modelContext.save() }
         }
-        store(articles: result.articles, feedID: feedID, existingURLs: &existingURLs, backfillDescriptions: isNewsletter)
+        store(articles: result.articles, feedID: feedID, existingURLs: &existingURLs, backfillDescriptions: isNewsletter, autoQueue: autoQueue)
     }
 
-    private func store(articles: [ParsedArticle], feedID: UUID, existingURLs: inout Set<String>, backfillDescriptions: Bool = false) {
+    private func store(articles: [ParsedArticle], feedID: UUID, existingURLs: inout Set<String>, backfillDescriptions: Bool = false, autoQueue: Bool = false) {
         // Also deduplicate within the incoming batch itself.
         var seenInBatch = Set<String>()
 
         var inserted = 0
+        var autoQueuePending: [(url: String, title: String)] = []
         var descriptionBackfills: [(url: String, desc: String)] = []
         var latestNewArticleDate: Date? = nil
         for article in articles {
@@ -460,9 +463,13 @@ actor RSSFetchActor {
                 publishedAt: article.publishedAt,
                 feedDescription: article.feedDescription
             )
+            record.isQueued = autoQueue
             modelContext.insert(record)
             existingURLs.insert(article.url)  // keep set in sync for subsequent feeds
             inserted += 1
+            if autoQueue {
+                autoQueuePending.append((article.url, article.title))
+            }
             latestNewArticleDate = max(latestNewArticleDate ?? .distantPast, article.publishedAt)
         }
 
@@ -474,6 +481,24 @@ actor RSSFetchActor {
                 if current.isEmpty || current.contains("{") {
                     existing.feedDescription = backfill.desc
                 }
+            }
+        }
+
+        // Promote auto-queued articles into QueuedLink so they appear in the reading queue.
+        if !autoQueuePending.isEmpty {
+            let existingQueue = (try? modelContext.fetch(FetchDescriptor<QueuedLink>())) ?? []
+            let existingQueueURLs = Set(existingQueue.map { $0.url })
+            var order = (existingQueue.map { $0.sortOrder }.max() ?? -1) + 1
+            for item in autoQueuePending {
+                guard !existingQueueURLs.contains(item.url) else { continue }
+                let link = QueuedLink(
+                    url: item.url,
+                    sortOrder: order,
+                    title: item.title,
+                    source: .rss(feedID: feedID)
+                )
+                modelContext.insert(link)
+                order += 1
             }
         }
 

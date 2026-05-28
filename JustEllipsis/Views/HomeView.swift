@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct HomeView: View {
     @Environment(\.modelContext) private var context
@@ -9,8 +10,9 @@ struct HomeView: View {
     @Query private var feeds: [RSSFeed]
     @Query private var brainEntries: [BrainEntry]
 
-    @AppStorage("streak.minReadsPerDay")   private var minReadsPerDay:       Int  = 1
-    @AppStorage("activityRings.enabled")  private var activityRingsEnabled: Bool = false
+    @AppStorage("streak.minReadsPerDay")                  private var minReadsPerDay:       Int  = 1
+    @AppStorage("activityRings.enabled")                 private var activityRingsEnabled: Bool = false
+    @AppStorage("notifications.permissionOffered")       private var permissionOffered:    Bool = false
 
     @Environment(HealthKitService.self) private var healthKit
 
@@ -20,6 +22,7 @@ struct HomeView: View {
     @State private var safariURL: URL?
     @State private var substackLink: QueuedLink?
     @State private var pendingSubstackEntry: BrainEntry?
+    @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
     private var streak: Int { StreakEngine.calculateStreak(from: readingDays, minReads: minReadsPerDay).current }
     private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays, minReads: minReadsPerDay) }
@@ -163,6 +166,14 @@ struct HomeView: View {
             }
             .toolbarBackground(appTheme.background, for: .navigationBar)
             .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+            .safeAreaInset(edge: .bottom) {
+                if showPermissionBanner {
+                    permissionBanner
+                }
+            }
+            .task {
+                notificationAuthStatus = await NotificationScheduler.authorizationStatus()
+            }
         }
         .sheet(isPresented: $showAddLink) {
             AddLinkView()
@@ -192,6 +203,37 @@ struct HomeView: View {
                 })
             }
         }
+    }
+
+    // MARK: - Permission Banner
+
+    private var showPermissionBanner: Bool {
+        streak >= 3 && !permissionOffered && notificationAuthStatus == .notDetermined
+    }
+
+    private var permissionBanner: some View {
+        HStack(spacing: 12) {
+            Text("Enable reminders to protect your streak?")
+                .font(AppTheme.sansSerif(13))
+                .foregroundStyle(appTheme.text)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+
+            Button("Enable") {
+                permissionOffered = true
+                Task {
+                    _ = await NotificationScheduler.requestPermission()
+                    notificationAuthStatus = await NotificationScheduler.authorizationStatus()
+                }
+            }
+            .font(AppTheme.sansSerif(13, weight: .semibold))
+            .foregroundStyle(appTheme.accent)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 12)
+        .background(appTheme.surface)
+        .overlay(Rectangle().frame(height: 1).foregroundStyle(appTheme.separator), alignment: .top)
     }
 
     private func open(_ link: QueuedLink) {

@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import CoreData
+import UserNotifications
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -22,6 +23,15 @@ struct SettingsView: View {
     @AppStorage(NightModeService.startMinuteKey) private var nightStartMinute:     Int    = NightModeService.defaultStartMinute
     @AppStorage(NightModeService.overrideKey)    private var nightOverride:        String = "auto"
     @AppStorage("activityRings.enabled")         private var activityRingsEnabled: Bool   = false
+
+    @AppStorage(NotificationScheduler.morningEnabledKey)  private var morningEnabled:  Bool = false
+    @AppStorage(NotificationScheduler.morningHourKey)     private var morningHour:     Int  = NotificationScheduler.defaultMorningHour
+    @AppStorage(NotificationScheduler.morningMinuteKey)   private var morningMinute:   Int  = NotificationScheduler.defaultMorningMinute
+    @AppStorage(NotificationScheduler.eveningEnabledKey)  private var eveningEnabled:  Bool = false
+    @AppStorage(NotificationScheduler.eveningHourKey)     private var eveningHour:     Int  = NotificationScheduler.defaultEveningHour
+    @AppStorage(NotificationScheduler.eveningMinuteKey)   private var eveningMinute:   Int  = NotificationScheduler.defaultEveningMinute
+
+    @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
     @Environment(HealthKitService.self) private var healthKit
 
@@ -84,6 +94,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 32) {
                         syncSection
                         streakSection
+                        remindersSection
                         feedsSection
                         readingSection
                         healthSection
@@ -344,6 +355,142 @@ struct SettingsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
+    }
+
+    // MARK: - Reminders Section
+
+    private var morningTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                c.hour   = morningHour
+                c.minute = morningMinute
+                return Calendar.current.date(from: c) ?? Date()
+            },
+            set: { date in
+                let c      = Calendar.current.dateComponents([.hour, .minute], from: date)
+                morningHour   = c.hour   ?? NotificationScheduler.defaultMorningHour
+                morningMinute = c.minute ?? NotificationScheduler.defaultMorningMinute
+            }
+        )
+    }
+
+    private var eveningTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                c.hour   = eveningHour
+                c.minute = eveningMinute
+                return Calendar.current.date(from: c) ?? Date()
+            },
+            set: { date in
+                let c      = Calendar.current.dateComponents([.hour, .minute], from: date)
+                eveningHour   = c.hour   ?? NotificationScheduler.defaultEveningHour
+                eveningMinute = c.minute ?? NotificationScheduler.defaultEveningMinute
+            }
+        )
+    }
+
+    private var remindersSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("REMINDERS")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            if notificationAuthStatus == .denied {
+                HStack {
+                    Text("Notification permission required.")
+                        .font(AppTheme.sansSerif(14))
+                        .foregroundStyle(appTheme.textFaint)
+                    Spacer()
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.accent)
+                }
+            } else {
+                // Morning queue nudge
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Morning nudge")
+                                .font(AppTheme.sansSerif(15))
+                                .foregroundStyle(appTheme.heading)
+                            Text("Reminder to read if your queue isn't empty.")
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $morningEnabled)
+                            .labelsHidden()
+                            .tint(appTheme.accent)
+                            .onChange(of: morningEnabled) { _, enabled in
+                                if enabled { Task { await requestPermissionIfNeeded() } }
+                            }
+                    }
+
+                    if morningEnabled {
+                        HStack {
+                            Text("Time")
+                                .font(AppTheme.sansSerif(13))
+                                .foregroundStyle(appTheme.textFaint)
+                            Spacer()
+                            DatePicker("", selection: morningTimeBinding, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .tint(appTheme.accent)
+                        }
+                    }
+                }
+
+                Divider().background(appTheme.separator)
+
+                // Evening streak reminder
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Streak reminder")
+                                .font(AppTheme.sansSerif(15))
+                                .foregroundStyle(appTheme.heading)
+                            Text("Alert in the evening if your streak is still at risk.")
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $eveningEnabled)
+                            .labelsHidden()
+                            .tint(appTheme.accent)
+                            .onChange(of: eveningEnabled) { _, enabled in
+                                if enabled { Task { await requestPermissionIfNeeded() } }
+                            }
+                    }
+
+                    if eveningEnabled {
+                        HStack {
+                            Text("Time")
+                                .font(AppTheme.sansSerif(13))
+                                .foregroundStyle(appTheme.textFaint)
+                            Spacer()
+                            DatePicker("", selection: eveningTimeBinding, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .tint(appTheme.accent)
+                        }
+                    }
+                }
+            }
+        }
+        .task {
+            notificationAuthStatus = await NotificationScheduler.authorizationStatus()
+        }
+    }
+
+    private func requestPermissionIfNeeded() async {
+        guard notificationAuthStatus == .notDetermined else { return }
+        _ = await NotificationScheduler.requestPermission()
+        notificationAuthStatus = await NotificationScheduler.authorizationStatus()
     }
 
     // MARK: - Feeds Section

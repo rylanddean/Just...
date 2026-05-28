@@ -9,11 +9,12 @@ struct ReaderView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.appTheme) private var appTheme
 
-    @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:         String = "ember"
-    @AppStorage(ReaderTextSize.defaultsKey)      private var readerTextSize:   Double = ReaderTextSize.defaultValue
-    @AppStorage(NightModeService.startHourKey)   private var nightStartHour:   Int    = NightModeService.defaultStartHour
-    @AppStorage(NightModeService.startMinuteKey) private var nightStartMinute: Int    = NightModeService.defaultStartMinute
-    @AppStorage(NightModeService.overrideKey)    private var nightOverride:    String = "auto"
+    @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:           String = "ember"
+    @AppStorage(ReaderTextSize.defaultsKey)      private var readerTextSize:     Double = ReaderTextSize.defaultValue
+    @AppStorage(ReaderLineSpacing.defaultsKey)   private var readerLineSpacing:  Double = ReaderLineSpacing.defaultValue
+    @AppStorage(NightModeService.startHourKey)   private var nightStartHour:     Int    = NightModeService.defaultStartHour
+    @AppStorage(NightModeService.startMinuteKey) private var nightStartMinute:   Int    = NightModeService.defaultStartMinute
+    @AppStorage(NightModeService.overrideKey)    private var nightOverride:      String = "auto"
 
     private var effectiveReaderTheme: ReaderTheme {
         let base = ReaderTheme(rawValue: themeRaw) ?? .ember
@@ -349,6 +350,7 @@ struct ReaderView: View {
                     html: content.body,
                     theme: effectiveReaderTheme,
                     fontSize: CGFloat(readerTextSize),
+                    lineSpacing: CGFloat(readerLineSpacing),
                     onScrollProgress: { progress in
                         viewModel.readProgress = progress
                     },
@@ -384,38 +386,76 @@ struct ReaderView: View {
     }
 
     private var textSizeControl: some View {
-        HStack(spacing: 10) {
-            Text("Text")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.text.opacity(0.45))
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Text("Text")
+                    .font(AppTheme.sansSerif(11, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.45))
+                    .frame(width: 38, alignment: .leading)
 
-            Button {
-                readerTextSize = max(ReaderTextSize.minValue, readerTextSize - 1)
-            } label: {
-                Image(systemName: "textformat.size.smaller")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(appTheme.text.opacity(0.55))
+                Button {
+                    readerTextSize = max(ReaderTextSize.minValue, readerTextSize - 1)
+                } label: {
+                    Image(systemName: "textformat.size.smaller")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(appTheme.text.opacity(0.55))
+                }
+                .buttonStyle(.plain)
+
+                Slider(
+                    value: Binding(
+                        get: { readerTextSize },
+                        set: { readerTextSize = min(max($0, ReaderTextSize.minValue), ReaderTextSize.maxValue) }
+                    ),
+                    in: ReaderTextSize.minValue...ReaderTextSize.maxValue,
+                    step: 1
+                )
+                .tint(appTheme.accent)
+
+                Button {
+                    readerTextSize = min(ReaderTextSize.maxValue, readerTextSize + 1)
+                } label: {
+                    Image(systemName: "textformat.size.larger")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(appTheme.text.opacity(0.55))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
-            Slider(
-                value: Binding(
-                    get: { readerTextSize },
-                    set: { readerTextSize = min(max($0, ReaderTextSize.minValue), ReaderTextSize.maxValue) }
-                ),
-                in: ReaderTextSize.minValue...ReaderTextSize.maxValue,
-                step: 1
-            )
-            .tint(appTheme.accent)
+            HStack(spacing: 10) {
+                Text("Lines")
+                    .font(AppTheme.sansSerif(11, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.45))
+                    .frame(width: 38, alignment: .leading)
 
-            Button {
-                readerTextSize = min(ReaderTextSize.maxValue, readerTextSize + 1)
-            } label: {
-                Image(systemName: "textformat.size.larger")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(appTheme.text.opacity(0.55))
+                Button {
+                    readerLineSpacing = max(ReaderLineSpacing.minValue, (round(readerLineSpacing * 10) - 1) / 10)
+                } label: {
+                    Image(systemName: "arrow.down.and.line.horizontal.and.arrow.up")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(appTheme.text.opacity(0.55))
+                }
+                .buttonStyle(.plain)
+
+                Slider(
+                    value: Binding(
+                        get: { readerLineSpacing },
+                        set: { readerLineSpacing = min(max($0, ReaderLineSpacing.minValue), ReaderLineSpacing.maxValue) }
+                    ),
+                    in: ReaderLineSpacing.minValue...ReaderLineSpacing.maxValue,
+                    step: 0.1
+                )
+                .tint(appTheme.accent)
+
+                Button {
+                    readerLineSpacing = min(ReaderLineSpacing.maxValue, (round(readerLineSpacing * 10) + 1) / 10)
+                } label: {
+                    Image(systemName: "arrow.up.and.line.horizontal.and.arrow.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(appTheme.text.opacity(0.55))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 

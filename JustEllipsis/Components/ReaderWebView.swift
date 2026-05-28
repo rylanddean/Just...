@@ -16,6 +16,7 @@ struct ReaderWebView: UIViewRepresentable {
     let html: String
     var theme: ReaderTheme = .ember
     var fontSize: CGFloat = CGFloat(ReaderTextSize.defaultValue)
+    var lineSpacing: CGFloat = CGFloat(ReaderLineSpacing.defaultValue)
     var onScrollProgress: (Double) -> Void = { _ in }
     var onNearBottom: (Bool) -> Void = { _ in }
     var onOverScrollDelta: (CGFloat) -> Void = { _ in }
@@ -55,6 +56,7 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onReflectTrigger = onReflectTrigger
         context.coordinator.onLinkTapped = onLinkTapped
         context.coordinator.requestedFontSize = fontSize
+        context.coordinator.requestedLineSpacing = lineSpacing
         let bgColor = UIColor(theme.bg)
         webView.backgroundColor = bgColor
         webView.scrollView.backgroundColor = bgColor
@@ -62,11 +64,13 @@ struct ReaderWebView: UIViewRepresentable {
             context.coordinator.loadedHTML = html
             context.coordinator.appliedNightMode = nil  // reset so injection fires after load
             context.coordinator.appliedFontSize = -1  // reset so font size reapplies after load
+            context.coordinator.appliedLineSpacing = -1  // reset so line spacing reapplies after load
             context.coordinator.didTrigger = false
             context.coordinator.wasNearBottom = false
             webView.loadHTMLString(html, baseURL: nil)
         } else {
             context.coordinator.applyFontSizeIfNeeded(on: webView)
+            context.coordinator.applyLineSpacingIfNeeded(on: webView)
             // When night mode toggles on a page that is already loaded, update
             // colours via a CSS override instead of reloading the whole article.
             let isNight = (theme == .night)
@@ -97,8 +101,10 @@ struct ReaderWebView: UIViewRepresentable {
         var didTrigger = false
         var wasNearBottom = false
         var requestedFontSize: CGFloat = CGFloat(ReaderTextSize.defaultValue)
+        var requestedLineSpacing: CGFloat = CGFloat(ReaderLineSpacing.defaultValue)
         var appliedNightMode: Bool? = nil
         var appliedFontSize: CGFloat = -1
+        var appliedLineSpacing: CGFloat = -1
 
         init(
             onScrollProgress: @escaping (Double) -> Void,
@@ -152,6 +158,16 @@ struct ReaderWebView: UIViewRepresentable {
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
+        func applyLineSpacingIfNeeded(on webView: WKWebView) {
+            guard abs(appliedLineSpacing - requestedLineSpacing) > 0.01 else { return }
+            let minLS = CGFloat(ReaderLineSpacing.minValue)
+            let maxLS = CGFloat(ReaderLineSpacing.maxValue)
+            let clamped = min(max(requestedLineSpacing, minLS), maxLS)
+            appliedLineSpacing = clamped
+            let js = "document.documentElement.style.setProperty('--reader-line-height', '\(clamped)');"
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let maxNatural = max(0, scrollView.contentSize.height - scrollView.bounds.height)
             let offset = scrollView.contentOffset.y
@@ -199,6 +215,7 @@ struct ReaderWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             applyFontSizeIfNeeded(on: webView)
+            applyLineSpacingIfNeeded(on: webView)
         }
     }
 }

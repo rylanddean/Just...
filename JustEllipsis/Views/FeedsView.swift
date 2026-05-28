@@ -6,10 +6,13 @@ struct FeedsView: View {
     @Environment(\.appTheme) private var appTheme
     @Environment(AppRouter.self) private var router
     @Environment(GradingProgressTracker.self) private var gradingTracker
-    @Query(filter: #Predicate<RSSFeed> { !$0.isArchived }, sort: \RSSFeed.title) private var feeds: [RSSFeed]
-    @Query(filter: #Predicate<RSSFeed> { $0.isArchived },  sort: \RSSFeed.title) private var archivedFeeds: [RSSFeed]
+    @Query(filter: #Predicate<RSSFeed> { !$0.isArchived && $0.isFavourite },  sort: \RSSFeed.title) private var favouriteFeeds: [RSSFeed]
+    @Query(filter: #Predicate<RSSFeed> { !$0.isArchived && !$0.isFavourite }, sort: \RSSFeed.title) private var regularFeeds: [RSSFeed]
+    @Query(filter: #Predicate<RSSFeed> { $0.isArchived },                     sort: \RSSFeed.title) private var archivedFeeds: [RSSFeed]
 
     @AppStorage("archivedFeedsSectionExpanded") private var archivedSectionExpanded: Bool = false
+    @AppStorage("hasSeenAutoQueueHint") private var hasSeenAutoQueueHint: Bool = false
+    @State private var showAutoQueueHint = false
 
     @State private var showAddByURL = false
     @State private var showAddNewsletter = false
@@ -44,7 +47,7 @@ struct FeedsView: View {
             ZStack {
                 appTheme.background.ignoresSafeArea()
 
-                if feeds.isEmpty && archivedFeeds.isEmpty {
+                if favouriteFeeds.isEmpty && regularFeeds.isEmpty && archivedFeeds.isEmpty {
                     emptyState
                 } else {
                     feedList
@@ -114,7 +117,7 @@ struct FeedsView: View {
             }
         }
         .sheet(isPresented: $showDirectory) {
-            FeedDirectoryView(subscribedURLs: Set(feeds.map { $0.url })) { item in
+            FeedDirectoryView(subscribedURLs: Set((favouriteFeeds + regularFeeds).map { $0.url })) { item in
                 subscribe(url: item.url, title: item.name, category: item.category)
             }
         }
@@ -136,80 +139,39 @@ struct FeedsView: View {
 
     private var feedList: some View {
         List {
-            ForEach(feeds) { feed in
-                NavigationLink(destination: FeedDetailView(feed: feed)) {
-                    FeedRow(feed: feed)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(
-                    top: 5,
-                    leading: AppTheme.pagePadding,
-                    bottom: 5,
-                    trailing: AppTheme.pagePadding
-                ))
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        unsubscribe(feed)
-                    } label: {
-                        Label("Unsubscribe", systemImage: "trash")
-                    }
-                    .tint(AppTheme.danger)
-
-                    Button {
-                        archive(feed)
-                    } label: {
-                        Label("Archive", systemImage: "archivebox")
-                    }
-                    .tint(appTheme.textFaint)
-                }
-                .contextMenu {
-                    Button {
-                        renameText = feed.title
-                        feedToRename = feed
-                        showRenameSheet = true
-                    } label: {
-                        Label("Rename", systemImage: "pencil")
-                    }
-
-                    if feed.feedType == .newsletter, let email = feed.newsletterEmail {
-                        Button {
-                            UIPasteboard.general.string = email
-                        } label: {
-                            Label("Copy reading address", systemImage: "envelope")
-                        }
-                    } else {
-                        Button {
-                            UIPasteboard.general.string = feed.url
-                        } label: {
-                            Label("Copy URL", systemImage: "doc.on.doc")
-                        }
-                    }
-
-                    if feed.isPaused {
-                        Button {
-                            feed.isPaused = false
-                            try? context.save()
-                        } label: {
-                            Label("Resume", systemImage: "play.circle")
-                        }
-                    } else {
-                        Button {
-                            feed.isPaused = true
-                            try? context.save()
-                        } label: {
-                            Label("Pause", systemImage: "pause.circle")
-                        }
-                    }
-
-                    Divider()
-
-                    Button(role: .destructive) {
-                        unsubscribe(feed)
-                    } label: {
-                        Label("Unsubscribe", systemImage: "trash")
-                    }
-                }
+            if showAutoQueueHint {
+                Text("New articles will arrive in your queue automatically.")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: 8,
+                        leading: AppTheme.pagePadding,
+                        bottom: 8,
+                        trailing: AppTheme.pagePadding
+                    ))
+            }
+            ForEach(favouriteFeeds) { feed in
+                feedListRow(for: feed)
+            }
+            if !favouriteFeeds.isEmpty && !regularFeeds.isEmpty {
+                Text("OTHERS")
+                    .font(AppTheme.sansSerif(11, weight: .medium))
+                    .foregroundStyle(appTheme.textFaint)
+                    .kerning(2)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: 12,
+                        leading: AppTheme.pagePadding,
+                        bottom: 4,
+                        trailing: AppTheme.pagePadding
+                    ))
+            }
+            ForEach(regularFeeds) { feed in
+                feedListRow(for: feed)
             }
             // Archived feeds section — collapsed by default, absent when nothing is archived
             if !archivedFeeds.isEmpty {
@@ -266,6 +228,101 @@ struct FeedsView: View {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .contentMargins(.bottom, 32, for: .scrollContent)
+    }
+
+    @ViewBuilder
+    private func feedListRow(for feed: RSSFeed) -> some View {
+        NavigationLink(destination: FeedDetailView(feed: feed)) {
+            FeedRow(feed: feed)
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(
+            top: 5,
+            leading: AppTheme.pagePadding,
+            bottom: 5,
+            trailing: AppTheme.pagePadding
+        ))
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                unsubscribe(feed)
+            } label: {
+                Label("Unsubscribe", systemImage: "trash")
+            }
+            .tint(AppTheme.danger)
+
+            Button {
+                archive(feed)
+            } label: {
+                Label("Archive", systemImage: "archivebox")
+            }
+            .tint(appTheme.textFaint)
+        }
+        .contextMenu {
+            Button {
+                renameText = feed.title
+                feedToRename = feed
+                showRenameSheet = true
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+
+            if feed.feedType == .newsletter, let email = feed.newsletterEmail {
+                Button {
+                    UIPasteboard.general.string = email
+                } label: {
+                    Label("Copy reading address", systemImage: "envelope")
+                }
+            } else {
+                Button {
+                    UIPasteboard.general.string = feed.url
+                } label: {
+                    Label("Copy URL", systemImage: "doc.on.doc")
+                }
+            }
+
+            if feed.isPaused {
+                Button {
+                    feed.isPaused = false
+                    try? context.save()
+                } label: {
+                    Label("Resume", systemImage: "play.circle")
+                }
+            } else {
+                Button {
+                    feed.isPaused = true
+                    try? context.save()
+                } label: {
+                    Label("Pause", systemImage: "pause.circle")
+                }
+            }
+
+            Button {
+                feed.isFavourite.toggle()
+                try? context.save()
+                if feed.isFavourite && !hasSeenAutoQueueHint {
+                    hasSeenAutoQueueHint = true
+                    showAutoQueueHint = true
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(3))
+                        withAnimation(.easeOut(duration: 0.4)) { showAutoQueueHint = false }
+                    }
+                }
+            } label: {
+                Label(
+                    feed.isFavourite ? "Stop auto-queuing" : "Auto-queue new articles",
+                    systemImage: feed.isFavourite ? "star.slash" : "star"
+                )
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                unsubscribe(feed)
+            } label: {
+                Label("Unsubscribe", systemImage: "trash")
+            }
+        }
     }
 
     // MARK: - Empty state
@@ -498,7 +555,8 @@ struct FeedsView: View {
     // MARK: - Actions
 
     private func subscribe(url: String, title: String, category: String) {
-        guard !feeds.contains(where: { $0.url == url }) else { return }
+        guard !favouriteFeeds.contains(where: { $0.url == url }),
+              !regularFeeds.contains(where: { $0.url == url }) else { return }
         let feed = RSSFeed(url: url, title: title, category: category)
         context.insert(feed)
         try? context.save()
@@ -506,7 +564,8 @@ struct FeedsView: View {
     }
 
     private func subscribeNewsletter(feedURL: String, email: String, title: String) {
-        guard !feeds.contains(where: { $0.url == feedURL }) else { return }
+        guard !favouriteFeeds.contains(where: { $0.url == feedURL }),
+              !regularFeeds.contains(where: { $0.url == feedURL }) else { return }
         let feed = RSSFeed(url: feedURL, title: title, category: "Newsletter")
         feed.feedType = .newsletter
         feed.newsletterEmail = email
@@ -731,7 +790,16 @@ private struct FeedRow: View {
 
             Spacer()
 
-            if articles.count > 0 {
+            if feed.isFavourite {
+                Text("AUTO")
+                    .font(AppTheme.sansSerif(10, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+                    .kerning(1.5)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(appTheme.accentFaint)
+                    .clipShape(Capsule())
+            } else if articles.count > 0 {
                 Text("\(articles.count)")
                     .font(AppTheme.sansSerif(12, weight: .medium))
                     .foregroundStyle(appTheme.background)

@@ -13,6 +13,7 @@ struct ReflectView: View {
     @State private var viewModel = ReflectViewModel()
     @State private var placeholder: String = ""
     @FocusState private var textFocused: Bool
+    @Query private var brainEntries: [BrainEntry]
 
     var body: some View {
         ZStack {
@@ -95,7 +96,9 @@ struct ReflectView: View {
 
         return HStack {
             Button {
+                let prevCount = brainEntries.count
                 if viewModel.save(entry: entry, context: context) {
+                    NotificationScheduler.checkAndFireRankUp(previousCount: prevCount, context: context)
                     dismiss()
                     onComplete()
                 }
@@ -113,7 +116,9 @@ struct ReflectView: View {
             Spacer().frame(width: 16)
 
             Button("Skip") {
+                let prevCount = brainEntries.count
                 if viewModel.skip(entry: entry, context: context) {
+                    NotificationScheduler.checkAndFireRankUp(previousCount: prevCount, context: context)
                     dismiss()
                     onComplete()
                 }

@@ -63,22 +63,16 @@ struct DigestView: View {
             .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
     }
 
-    // Returns nil when the Brain doesn't yet have enough signal (< 5 entries).
     private var brainURLs: Set<String> { Set(brainEntries.map { $0.url }) }
 
+    // Returns nil when the Brain doesn't yet have enough signal (< 5 entries).
     private var recommendations: [RSSArticle]? {
         guard brainEntries.count >= 5 else { return nil }
 
-        // Exclude anything already shown in the date sections so the
-        // same article never appears in two places at once.
-        let shownURLs = Set(todayArticles.map { $0.url })
-            .union(yesterdayArticles.map { $0.url })
-            .union(earlierArticles.map { $0.url })
         let candidates = articles.filter {
             feedLookup[$0.feedID] != nil &&
             !queuedURLs.contains($0.url) &&
             !brainURLs.contains($0.url) &&
-            !shownURLs.contains($0.url) &&
             !(gradingEnabled && hideNoise && $0.qualityGrade == .noise)
         }
         guard !candidates.isEmpty else { return nil }
@@ -141,6 +135,54 @@ struct DigestView: View {
         return picks
     }
 
+    private enum DigestItem: Identifiable {
+        case brainHeader
+        case dateHeader(String)
+        case article(RSSArticle)
+
+        var id: String {
+            switch self {
+            case .brainHeader: return "header-brain"
+            case .dateHeader(let label): return "header-\(label)"
+            case .article(let a): return a.id.uuidString
+            }
+        }
+    }
+
+    private var digestItems: [DigestItem] {
+        var items: [DigestItem] = []
+
+        // Compute recommendations once; exclude those URLs from the date sections
+        // so each article appears in exactly one place.
+        let recs = recommendations
+        let recURLs: Set<String> = recs.map { Set($0.map { $0.url }) } ?? []
+
+        if let recs {
+            items.append(.brainHeader)
+            items.append(contentsOf: recs.map { .article($0) })
+        }
+
+        let today = todayArticles.filter { !recURLs.contains($0.url) }
+        if !today.isEmpty {
+            items.append(.dateHeader("TODAY"))
+            items.append(contentsOf: today.map { .article($0) })
+        }
+
+        let yesterday = yesterdayArticles.filter { !recURLs.contains($0.url) }
+        if !yesterday.isEmpty {
+            items.append(.dateHeader("YESTERDAY"))
+            items.append(contentsOf: yesterday.map { .article($0) })
+        }
+
+        let earlier = earlierArticles.filter { !recURLs.contains($0.url) }
+        if !earlier.isEmpty {
+            items.append(.dateHeader("EARLIER"))
+            items.append(contentsOf: earlier.map { .article($0) })
+        }
+
+        return items
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -178,104 +220,45 @@ struct DigestView: View {
 
     private var digestList: some View {
         List {
-            if let recs = recommendations {
-                Section {
-                    ForEach(recs) { article in
-                        DigestArticleRow(
-                            article: article,
-                            feedName: feedLookup[article.feedID]?.title ?? "",
-                            isQueued: queuedURLs.contains(article.url)
-                        ) {
-                            addToQueue(article)
-                        }
+            ForEach(digestItems) { item in
+                switch item {
+                case .brainHeader:
+                    brainDivider
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(
-                            top: 5,
+                            top: 16,
                             leading: AppTheme.pagePadding,
-                            bottom: 5,
+                            bottom: 4,
                             trailing: AppTheme.pagePadding
                         ))
-                    }
-                } header: {
-                    brainSectionHeader
-                }
-                .listSectionSeparator(.hidden)
-            }
-
-            if !todayArticles.isEmpty {
-                Section {
-                    ForEach(todayArticles) { article in
-                        DigestArticleRow(
-                            article: article,
-                            feedName: feedLookup[article.feedID]?.title ?? "",
-                            isQueued: queuedURLs.contains(article.url)
-                        ) {
-                            addToQueue(article)
-                        }
+                case .dateHeader(let label):
+                    dateDivider(label)
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(
-                            top: 5,
+                            top: 16,
                             leading: AppTheme.pagePadding,
-                            bottom: 5,
+                            bottom: 4,
                             trailing: AppTheme.pagePadding
                         ))
+                case .article(let article):
+                    DigestArticleRow(
+                        article: article,
+                        feedName: feedLookup[article.feedID]?.title ?? "",
+                        isQueued: queuedURLs.contains(article.url)
+                    ) {
+                        addToQueue(article)
                     }
-                } header: {
-                    sectionHeader("TODAY")
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: 5,
+                        leading: AppTheme.pagePadding,
+                        bottom: 5,
+                        trailing: AppTheme.pagePadding
+                    ))
                 }
-                .listSectionSeparator(.hidden)
-            }
-
-            if !yesterdayArticles.isEmpty {
-                Section {
-                    ForEach(yesterdayArticles) { article in
-                        DigestArticleRow(
-                            article: article,
-                            feedName: feedLookup[article.feedID]?.title ?? "",
-                            isQueued: queuedURLs.contains(article.url)
-                        ) {
-                            addToQueue(article)
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(
-                            top: 5,
-                            leading: AppTheme.pagePadding,
-                            bottom: 5,
-                            trailing: AppTheme.pagePadding
-                        ))
-                    }
-                } header: {
-                    sectionHeader("YESTERDAY")
-                }
-                .listSectionSeparator(.hidden)
-            }
-
-            if !earlierArticles.isEmpty {
-                Section {
-                    ForEach(earlierArticles) { article in
-                        DigestArticleRow(
-                            article: article,
-                            feedName: feedLookup[article.feedID]?.title ?? "",
-                            isQueued: queuedURLs.contains(article.url)
-                        ) {
-                            addToQueue(article)
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(
-                            top: 5,
-                            leading: AppTheme.pagePadding,
-                            bottom: 5,
-                            trailing: AppTheme.pagePadding
-                        ))
-                    }
-                } header: {
-                    sectionHeader("EARLIER")
-                }
-                .listSectionSeparator(.hidden)
             }
         }
         .listStyle(.plain)
@@ -312,7 +295,7 @@ struct DigestView: View {
 
     // MARK: - Helpers
 
-    private var brainSectionHeader: some View {
+    private var brainDivider: some View {
         HStack(spacing: 5) {
             Image(systemName: "brain.head.profile")
                 .font(.system(size: 10, weight: .semibold))
@@ -322,24 +305,14 @@ struct DigestView: View {
         .font(AppTheme.sansSerif(11, weight: .medium))
         .foregroundStyle(appTheme.accent)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, AppTheme.pagePadding)
-        .padding(.top, 8)
-        .padding(.bottom, 2)
-        .listRowInsets(EdgeInsets())
-        .background(appTheme.background.padding(.top, -100))
     }
 
-    private func sectionHeader(_ label: String) -> some View {
+    private func dateDivider(_ label: String) -> some View {
         Text(label)
             .font(AppTheme.sansSerif(11, weight: .medium))
             .foregroundStyle(appTheme.textFaint)
             .kerning(2)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, AppTheme.pagePadding)
-            .padding(.top, 8)
-            .padding(.bottom, 2)
-            .listRowInsets(EdgeInsets())
-            .background(appTheme.background.padding(.top, -100))
     }
 
     private func addToQueue(_ article: RSSArticle) {

@@ -23,6 +23,13 @@ enum ReaderTextSize {
     static let maxValue = 28.0
 }
 
+enum ReaderLineSpacing {
+    static let defaultsKey = "reader.lineSpacing"
+    static let defaultValue = 1.85
+    static let minValue = 1.3
+    static let maxValue = 2.5
+}
+
 struct ContentFetcher: Sendable {
     private static let wrapperFallbackWordThreshold = 320
     private static let log = Logger(subsystem: "com.rylandean.justellipsis", category: "ContentFetcher")
@@ -38,30 +45,32 @@ struct ContentFetcher: Sendable {
           --text: \(theme.textHex);
           --accent: \(theme.accentHex);
           --reader-font-size: \(ReaderTextSize.defaultValue)px;
+          --reader-line-height: \(ReaderLineSpacing.defaultValue);
           color-scheme: \(colorScheme);
         }
-        * { box-sizing: border-box; }
-        html { background: var(--bg); }
+        /* !important wins over inline email styles (bgcolor attrs, style="color:...") */
+        * { box-sizing: border-box; color: inherit !important; background-color: transparent !important; background-image: none !important; }
+        html, body { background: var(--bg) !important; color: var(--text) !important; }
         body {
-          background: var(--bg);
-          color: var(--text);
           font-family: 'Georgia', serif;
           font-size: var(--reader-font-size);
-          line-height: 1.85;
+          line-height: var(--reader-line-height);
           max-width: 680px;
           margin: 0 auto;
           padding: 32px 24px 80px;
         }
-        h1, h2, h3, h4 { color: \(theme.headingHex); font-weight: 600; }
-        a { color: var(--accent); text-decoration: var(--link-decoration, none); }
+        h1, h2, h3, h4 { color: \(theme.headingHex) !important; font-weight: 600; }
+        a { color: var(--accent) !important; text-decoration: var(--link-decoration, none); }
         blockquote {
           border-left: 2px solid var(--accent);
           padding-left: 20px;
           margin-left: 0;
           opacity: 0.8;
         }
-        pre, code { background: \(codeBg); border-radius: 4px; padding: 2px 6px; }
+        pre, code { background: \(codeBg) !important; border-radius: 4px; padding: 2px 6px; }
         img, video, figure, picture { display: none; }
+        table { max-width: 100%; border-collapse: collapse; }
+        p, li { line-height: var(--reader-line-height) !important; margin-bottom: 1em !important; }
         """
     }
 
@@ -162,7 +171,7 @@ struct ContentFetcher: Sendable {
             "[class*=advert]", "[class*=adsense]", "[class*=adsbygoogle]",
             "[class*=social]",
             "[class*=comment]", "[class*=related]",
-            "[class*=subscribe]", "[class*=newsletter]",
+            "[class*=subscribe]",
             "[id*=advertisement]", "[id*=adsense]", "[id*=sidebar]", "[id*=comments]"
         ]
         var pCountBefore = (try? doc.select("p").array().count) ?? 0
@@ -278,7 +287,7 @@ struct ContentFetcher: Sendable {
             guard let text = try? para.text(), text.count > 40 else { continue }
             var parent = para.parent()
             var depth = 0
-            while let p = parent, depth < 4 {
+            while let p = parent, depth < 12 {
                 let existing = scoredElements.first(where: { $0.element == p })
                 let score = text.count / 10
                 if existing == nil {
@@ -291,7 +300,14 @@ struct ContentFetcher: Sendable {
             }
         }
 
-        return scoredElements.max(by: { $0.score < $1.score })?.element ?? root
+        // Exclude table-structural tags — they tie with their content children on score
+        // but make poor content containers. Prefer div/td/article/section/main.
+        let structuralTags: Set<String> = ["tr", "tbody", "thead", "tfoot", "html"]
+        let candidates = scoredElements.filter {
+            let tag = (try? $0.element.tagName()) ?? ""
+            return !structuralTags.contains(tag)
+        }
+        return candidates.max(by: { $0.score < $1.score })?.element ?? root
     }
 
     private static func findPreferredContentElement(in root: Element) -> Element? {

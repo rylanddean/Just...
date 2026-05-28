@@ -138,6 +138,16 @@ struct FeedDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    feed.isFavourite.toggle()
+                    try? context.save()
+                } label: {
+                    Image(systemName: feed.isFavourite ? "star.fill" : "star")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(appTheme.accent)
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     refetch()
                 } label: {
                     if isFetching {

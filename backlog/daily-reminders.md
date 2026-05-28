@@ -2,7 +2,7 @@
 
 **Tier:** Free  
 **Effort:** S  
-**Status:** Backlog
+**Status:** Done
 
 A smart, calm notification system that reminds users to read before they lose their streak. Two proactive types (morning queue nudge, evening at-risk alert) plus two reactive types (streak lost, Brain rank-up). Permission is requested contextually — never on cold launch.
 
@@ -52,13 +52,13 @@ Permission is **not** requested on cold launch.
 
 ## Acceptance Criteria
 
-- [ ] No permission request on cold launch
-- [ ] Permission request banner shown when streak first reaches 3 days
-- [ ] Morning Nudge fires at configured time only if queue is non-empty and no reading today
-- [ ] Streak at Risk fires at configured time only if streak ≥ 1 and no reading today
-- [ ] Streak Lost fires next morning if applicable
-- [ ] Rank-up notification fires immediately after reading
-- [ ] All 4 types individually toggleable in Settings
-- [ ] Morning and evening times are user-adjustable
-- [ ] "Open Settings" deep-link shown when permission is denied
-- [ ] Rescheduling on app foreground prevents stale notifications
+- [x] No permission request on cold launch
+- [x] Permission request banner shown when streak first reaches 3 days
+- [x] Morning Nudge fires at configured time only if queue is non-empty and no reading today
+- [x] Streak at Risk fires at configured time only if streak ≥ 1 and no reading today
+- [x] Streak Lost fires next morning if applicable
+- [x] Rank-up notification fires immediately after reading
+- [x] Morning nudge and streak reminder individually toggleable in Settings
+- [x] Morning and evening times are user-adjustable
+- [x] "Open Settings" deep-link shown when permission is denied
+- [x] Rescheduling on app foreground prevents stale notifications

@@ -18,6 +18,17 @@ struct RootView: View {
     @AppStorage(NightModeService.startMinuteKey) private var nightStartMinute: Int    = NightModeService.defaultStartMinute
     @AppStorage(NightModeService.overrideKey)    private var nightOverride:    String = "auto"
 
+    @AppStorage("streak.minReadsPerDay")                   private var minReadsPerDay:   Int  = 1
+    @AppStorage(NotificationScheduler.morningEnabledKey)   private var morningEnabled:   Bool = false
+    @AppStorage(NotificationScheduler.morningHourKey)      private var morningHour:      Int  = NotificationScheduler.defaultMorningHour
+    @AppStorage(NotificationScheduler.morningMinuteKey)    private var morningMinute:    Int  = NotificationScheduler.defaultMorningMinute
+    @AppStorage(NotificationScheduler.eveningEnabledKey)   private var eveningEnabled:   Bool = false
+    @AppStorage(NotificationScheduler.eveningHourKey)      private var eveningHour:      Int  = NotificationScheduler.defaultEveningHour
+    @AppStorage(NotificationScheduler.eveningMinuteKey)    private var eveningMinute:    Int  = NotificationScheduler.defaultEveningMinute
+
+    @Query(sort: \QueuedLink.sortOrder) private var queue: [QueuedLink]
+    @Query private var readingDays: [ReadingDay]
+
     private var activeTheme: AppTheme {
         let base    = ReaderTheme(rawValue: themeRaw) ?? .ember
         let isNight = NightModeService.isActive(hour: nightStartHour, minute: nightStartMinute, override: nightOverride)
@@ -107,5 +118,16 @@ struct RootView: View {
         if activityRingsEnabled {
             Task { await healthKit.fetchTodaySummary() }
         }
+        NotificationScheduler.reschedule(
+            queueCount: queue.count,
+            readingDays: readingDays,
+            minReads: minReadsPerDay,
+            morningEnabled: morningEnabled,
+            morningHour: morningHour,
+            morningMinute: morningMinute,
+            eveningEnabled: eveningEnabled,
+            eveningHour: eveningHour,
+            eveningMinute: eveningMinute
+        )
     }
 }
