@@ -41,6 +41,7 @@
 		78CA24460077DABBF1C0A10A /* BrainOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */; };
 		7C28C1742A5A65634AE19449 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4958A7DF6F86097742050CA /* SettingsView.swift */; };
 		7ED49FF7C07BFE3CB2929B46 /* ReadingDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB7BE8457A65678C63AA04B /* ReadingDay.swift */; };
+		821C353335D750223B46E2EB /* AddNewsletterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009692EBB88923F7C0949123 /* AddNewsletterSheet.swift */; };
 		854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711256DA53620D4C746AC36F /* HomeView.swift */; };
 		85E502CAF98B8EBE370D5E7B /* CloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84722707AA336D1073651EEF /* CloudSyncService.swift */; };
 		864F3C0E8B0F3F5097EC15B4 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D03466EC4C3263BF1837381 /* ShareViewController.swift */; };
@@ -108,6 +109,7 @@
 
 /* Begin PBXFileReference section */
 		00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSFetchService.swift; sourceTree = "<group>"; };
+		009692EBB88923F7C0949123 /* AddNewsletterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddNewsletterSheet.swift; sourceTree = "<group>"; };
 		0BF00220CD317D19590E03E1 /* JustEllipsisShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsisShareExtension.entitlements; sourceTree = "<group>"; };
 		0C9667F64E5204B686724BC6 /* FeedDirectoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDirectoryView.swift; sourceTree = "<group>"; };
 		11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakEngineTests.swift; sourceTree = "<group>"; };
@@ -119,7 +121,7 @@
 		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
-		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		369CC02046EDB9D512264A8B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		3B9D7E057E235E52465D0592 /* JSRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSRenderer.swift; sourceTree = "<group>"; };
 		3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
@@ -137,7 +139,7 @@
 		6C0B2EC65BB2A2B2D76A9BFC /* ActivityRingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRingsCard.swift; sourceTree = "<group>"; };
 		6DD402C01934293F01520002 /* PendingLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingLinkStore.swift; sourceTree = "<group>"; };
 		711256DA53620D4C746AC36F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		79111AB1E05BBF6590D197DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		80160876D84DBAF018BB717D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		84722707AA336D1073651EEF /* CloudSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncService.swift; sourceTree = "<group>"; };
@@ -291,6 +293,7 @@
 			isa = PBXGroup;
 			children = (
 				BDA108705DC55D44129CFA2E /* AddLinkView.swift */,
+				009692EBB88923F7C0949123 /* AddNewsletterSheet.swift */,
 				D92347D5631A1D698929B76D /* BrainView.swift */,
 				E5125754A6D578D4450448D7 /* DigestView.swift */,
 				5DAE9F4B42AFCFBD95276C19 /* FeedDetailView.swift */,
@@ -451,6 +454,12 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0B22B2BD222A2112071A54FE = {
+						DevelopmentTeam = "";
+					};
+					16DBE1A265CA7C974E3E08D0 = {
+						DevelopmentTeam = "";
+					};
 					36799AF5621258DD12197858 = {
 						DevelopmentTeam = "";
 					};
@@ -512,6 +521,7 @@
 				6BE477B9B2D7D5CA9D0D6EFB /* ActivityChart.swift in Sources */,
 				2CF7EF3D506F406957F66652 /* ActivityRingsCard.swift in Sources */,
 				949A68996476CD7276C0382C /* AddLinkView.swift in Sources */,
+				821C353335D750223B46E2EB /* AddNewsletterSheet.swift in Sources */,
 				AB60A86711520B76E110A37A /* AppRouter.swift in Sources */,
 				B2F38D292704272C04A106AC /* AppTheme.swift in Sources */,
 				F167F9B4C6EB23363E004A1A /* ArticleQualityGrade.swift in Sources */,
@@ -599,7 +609,6 @@
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -700,7 +709,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -723,7 +731,6 @@
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -742,7 +749,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -21,7 +21,7 @@ struct FeedDetailView: View {
             cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
         } else {
             let startOfToday = Calendar.current.startOfDay(for: Date())
-            cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
+            cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
         }
         _articles = Query(
             filter: #Predicate<RSSArticle> { $0.feedID == feedID && $0.publishedAt >= cutoff },

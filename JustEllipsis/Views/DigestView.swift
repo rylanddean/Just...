@@ -19,7 +19,7 @@ struct DigestView: View {
 
     init() {
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
+        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
         _articles = Query(
             filter: #Predicate<RSSArticle> { $0.publishedAt >= cutoff },
             sort: \RSSArticle.publishedAt,
@@ -51,16 +51,29 @@ struct DigestView: View {
             .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
     }
 
+    private var earlierArticles: [RSSArticle] {
+        var seen = Set<String>()
+        return articles
+            .filter { feedLookup[$0.feedID] != nil }
+            .filter {
+                !Calendar.current.isDateInToday($0.publishedAt) &&
+                !Calendar.current.isDateInYesterday($0.publishedAt)
+            }
+            .filter { seen.insert($0.url).inserted }
+            .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
+    }
+
     // Returns nil when the Brain doesn't yet have enough signal (< 5 entries).
     private var brainURLs: Set<String> { Set(brainEntries.map { $0.url }) }
 
     private var recommendations: [RSSArticle]? {
         guard brainEntries.count >= 5 else { return nil }
 
-        // Exclude anything already shown in the Today or Yesterday sections so the
+        // Exclude anything already shown in the date sections so the
         // same article never appears in two places at once.
         let shownURLs = Set(todayArticles.map { $0.url })
             .union(yesterdayArticles.map { $0.url })
+            .union(earlierArticles.map { $0.url })
         let candidates = articles.filter {
             feedLookup[$0.feedID] != nil &&
             !queuedURLs.contains($0.url) &&
@@ -239,6 +252,31 @@ struct DigestView: View {
                 }
                 .listSectionSeparator(.hidden)
             }
+
+            if !earlierArticles.isEmpty {
+                Section {
+                    ForEach(earlierArticles) { article in
+                        DigestArticleRow(
+                            article: article,
+                            feedName: feedLookup[article.feedID]?.title ?? "",
+                            isQueued: queuedURLs.contains(article.url)
+                        ) {
+                            addToQueue(article)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: 5,
+                            leading: AppTheme.pagePadding,
+                            bottom: 5,
+                            trailing: AppTheme.pagePadding
+                        ))
+                    }
+                } header: {
+                    sectionHeader("EARLIER")
+                }
+                .listSectionSeparator(.hidden)
+            }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -260,7 +298,7 @@ struct DigestView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Text("Nothing from the past two days.")
+            Text("Nothing from the past week.")
                 .font(AppTheme.sansSerif(16, weight: .medium))
                 .foregroundStyle(appTheme.heading)
 
@@ -288,7 +326,7 @@ struct DigestView: View {
         .padding(.top, 8)
         .padding(.bottom, 2)
         .listRowInsets(EdgeInsets())
-        .background(appTheme.background)
+        .background(appTheme.background.padding(.top, -100))
     }
 
     private func sectionHeader(_ label: String) -> some View {
@@ -301,7 +339,7 @@ struct DigestView: View {
             .padding(.top, 8)
             .padding(.bottom, 2)
             .listRowInsets(EdgeInsets())
-            .background(appTheme.background)
+            .background(appTheme.background.padding(.top, -100))
     }
 
     private func addToQueue(_ article: RSSArticle) {

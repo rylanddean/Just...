@@ -173,11 +173,11 @@ actor RSSFetchActor {
         }
     }
 
-    // Prune articles published before the start of yesterday.
+    // Prune articles published more than 7 days ago.
     // Scraped feeds are excluded — their articles accumulate until manually removed.
     func pruneOldArticles() async {
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        let cutoff = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) ?? startOfToday
+        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
 
         let allFeeds = (try? modelContext.fetch(FetchDescriptor<RSSFeed>())) ?? []
         let scrapedIDs = Set(allFeeds.filter { $0.feedType == .scraped }.map { $0.id })

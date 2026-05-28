@@ -1,6 +1,17 @@
 import SwiftUI
 import WebKit
 
+private let tapLinkJS = """
+(function(){
+  document.addEventListener('click',function(e){
+    var el=e.target;
+    while(el&&el.tagName!=='A'){el=el.parentElement;}
+    if(!el||!el.href||!el.href.startsWith('http'))return;
+    window.webkit.messageHandlers.tapLink.postMessage(el.href);
+  },true);
+})();
+"""
+
 struct ReaderWebView: UIViewRepresentable {
     let html: String
     var theme: ReaderTheme = .ember
@@ -9,19 +20,24 @@ struct ReaderWebView: UIViewRepresentable {
     var onNearBottom: (Bool) -> Void = { _ in }
     var onOverScrollDelta: (CGFloat) -> Void = { _ in }
     var onReflectTrigger: () -> Void = {}
+    var onLinkTapped: (String) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             onScrollProgress: onScrollProgress,
             onNearBottom: onNearBottom,
             onOverScrollDelta: onOverScrollDelta,
-            onReflectTrigger: onReflectTrigger
+            onReflectTrigger: onReflectTrigger,
+            onLinkTapped: onLinkTapped
         )
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
+        let script = WKUserScript(source: tapLinkJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        config.userContentController.addUserScript(script)
+        config.userContentController.add(ScriptMessageProxy(context.coordinator), name: "tapLink")
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.scrollView.delegate = context.coordinator
         webView.backgroundColor = UIColor(theme.bg)
@@ -37,6 +53,7 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onNearBottom = onNearBottom
         context.coordinator.onOverScrollDelta = onOverScrollDelta
         context.coordinator.onReflectTrigger = onReflectTrigger
+        context.coordinator.onLinkTapped = onLinkTapped
         context.coordinator.requestedFontSize = fontSize
         let bgColor = UIColor(theme.bg)
         webView.backgroundColor = bgColor
@@ -60,11 +77,22 @@ struct ReaderWebView: UIViewRepresentable {
         }
     }
 
-    final class Coordinator: NSObject, UIScrollViewDelegate, WKNavigationDelegate {
+    // Breaks the retain cycle: WKUserContentController strongly retains its
+    // message handlers, so we give it a proxy that holds a weak coordinator ref.
+    private class ScriptMessageProxy: NSObject, WKScriptMessageHandler {
+        weak var coordinator: Coordinator?
+        init(_ coordinator: Coordinator) { self.coordinator = coordinator }
+        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            coordinator?.userContentController(controller, didReceive: message)
+        }
+    }
+
+    final class Coordinator: NSObject, UIScrollViewDelegate, WKNavigationDelegate, WKScriptMessageHandler {
         var onScrollProgress: (Double) -> Void
         var onNearBottom: (Bool) -> Void
         var onOverScrollDelta: (CGFloat) -> Void
         var onReflectTrigger: () -> Void
+        var onLinkTapped: (String) -> Void
         var loadedHTML: String = ""
         var didTrigger = false
         var wasNearBottom = false
@@ -76,12 +104,19 @@ struct ReaderWebView: UIViewRepresentable {
             onScrollProgress: @escaping (Double) -> Void,
             onNearBottom: @escaping (Bool) -> Void,
             onOverScrollDelta: @escaping (CGFloat) -> Void,
-            onReflectTrigger: @escaping () -> Void
+            onReflectTrigger: @escaping () -> Void,
+            onLinkTapped: @escaping (String) -> Void
         ) {
             self.onScrollProgress = onScrollProgress
             self.onNearBottom = onNearBottom
             self.onOverScrollDelta = onOverScrollDelta
             self.onReflectTrigger = onReflectTrigger
+            self.onLinkTapped = onLinkTapped
+        }
+
+        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard message.name == "tapLink", let urlString = message.body as? String else { return }
+            DispatchQueue.main.async { self.onLinkTapped(urlString) }
         }
 
         func applyNightModeCSS(_ isNight: Bool, theme: ReaderTheme, on webView: WKWebView) {
@@ -95,7 +130,7 @@ struct ReaderWebView: UIViewRepresentable {
                 (function(){
                     var s=document.getElementById('jst-nm');
                     if(!s){s=document.createElement('style');s.id='jst-nm';document.head&&document.head.appendChild(s);}
-                    s.textContent='html,body{background:\(bg)!important;color:\(text)!important;}h1,h2,h3,h4{color:\(heading)!important;}a{color:\(accent)!important;}';
+                    s.textContent=':root{--link-decoration:underline;}html,body{background:\(bg)!important;color:\(text)!important;}h1,h2,h3,h4{color:\(heading)!important;}a{color:\(accent)!important;}';
                 })();
                 """
             } else {
