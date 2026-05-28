@@ -67,11 +67,17 @@ struct RSSFetchService {
     static func fetchInProcess(container: ModelContainer, tracker: GradingProgressTracker) -> Task<Void, Never> {
         Task.detached(priority: .background) {
             let actor = RSSFetchActor(modelContainer: container)
+            print("[Fetch] starting fetchAll")
             await actor.fetchAll()
+            print("[Fetch] fetchAll done — starting pruneOldArticles")
             await actor.pruneOldArticles()
+            print("[Fetch] pruneOldArticles done — starting summarizePendingArticles")
             await actor.summarizePendingArticles()
+            print("[Fetch] summarizePendingArticles done — starting tagPendingArticles")
             await actor.tagPendingArticles()
+            print("[Fetch] tagPendingArticles done — starting gradeNewArticles")
             await actor.gradeNewArticles(tracker: tracker)
+            print("[Fetch] gradeNewArticles done")
             scheduleGradingBackgroundTaskIfNeeded()
         }
     }
