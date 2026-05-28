@@ -83,6 +83,8 @@
 	<false/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Activity ring progress appears once you've met your daily reading goal — a quiet reminder to also move.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Just… does not write any health data.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Voice reflections are transcribed on-device. Audio never leaves your phone.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
