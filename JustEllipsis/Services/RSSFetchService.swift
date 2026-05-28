@@ -529,12 +529,21 @@ actor RSSFetchActor {
             return
         }
 
-        struct Stub: Sendable { let id: PersistentIdentifier; let title: String; let desc: String }
+        struct Stub: Sendable {
+            let id: PersistentIdentifier
+            let title: String
+            let feedFallback: String  // feed category if set, otherwise feed title
+        }
+
+        let allFeeds = (try? modelContext.fetch(FetchDescriptor<RSSFeed>())) ?? []
+        let feedMap = Dictionary(uniqueKeysWithValues: allFeeds.map { ($0.id, $0) })
+
         let all = (try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? []
         let stubs: [Stub] = all.compactMap { article in
             guard article.topics.isEmpty else { return nil }
-            let desc = article.summary ?? article.feedDescription ?? ""
-            return Stub(id: article.persistentModelID, title: article.title, desc: desc)
+            let feed = feedMap[article.feedID]
+            let fallback = feed.map { $0.category.isEmpty ? $0.title : $0.category } ?? ""
+            return Stub(id: article.persistentModelID, title: article.title, feedFallback: fallback)
         }
 
         let alreadyTagged = all.count - stubs.count
@@ -543,26 +552,34 @@ actor RSSFetchActor {
         guard !stubs.isEmpty else { return }
 
         var tagged = 0
+        var fallbacks = 0
         var failed = 0
         for stub in stubs {
+            guard let article = try? modelContext.model(for: stub.id) as? RSSArticle else {
+                topicsLog.warning("tagPendingArticles: failed to resolve model for '\(stub.title.prefix(60))'")
+                failed += 1
+                continue
+            }
             do {
-                let topics = try await IntelligenceService.extractTopics(title: stub.title, description: stub.desc)
+                let topics = try await IntelligenceService.extractTopics(title: stub.title)
                 topicsLog.debug("tagPendingArticles: '\(stub.title.prefix(60))' → \(topics.joined(separator: ", "))")
-                if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
-                    article.topics = topics
-                    tagged += 1
+                article.topics = topics
+                tagged += 1
+            } catch {
+                topicsLog.error("tagPendingArticles: guardrail/error for '\(stub.title.prefix(60))' — \(error)")
+                // Assign feed fallback so this article is tagged and won't be retried.
+                if !stub.feedFallback.isEmpty {
+                    article.topics = [stub.feedFallback]
+                    topicsLog.debug("tagPendingArticles: assigned fallback '\(stub.feedFallback)' to '\(stub.title.prefix(60))'")
+                    fallbacks += 1
                 } else {
-                    topicsLog.warning("tagPendingArticles: failed to resolve model for '\(stub.title.prefix(60))'")
                     failed += 1
                 }
-            } catch {
-                topicsLog.error("tagPendingArticles: extractTopics threw for '\(stub.title.prefix(60))' — \(error)")
-                failed += 1
             }
         }
 
-        topicsLog.info("tagPendingArticles: done — \(tagged) tagged, \(failed) failed")
-        if tagged > 0 { try? modelContext.save() }
+        topicsLog.info("tagPendingArticles: done — \(tagged) AI-tagged, \(fallbacks) fallback, \(failed) failed")
+        if tagged + fallbacks > 0 { try? modelContext.save() }
     }
 
     // Generates AI two-sentence summaries for articles that have a description but no summary yet.

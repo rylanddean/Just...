@@ -171,11 +171,10 @@ extension IntelligenceService {
 
     // MARK: Article Topics
 
-    static func extractTopics(title: String, description: String) async throws -> [String] {
-        let input = description.isEmpty ? title : "\(title)\n\n\(String(description.prefix(1000)))"
+    static func extractTopics(title: String) async throws -> [String] {
         let session = LanguageModelSession()
         let response = try await session.respond(
-            to: "Extract specific topic labels for this article:\n\n\(input)",
+            to: "Categorise this article title into topic labels:\n\n\(title)",
             generating: ArticleTopics.self
         )
         return response.content.labels
