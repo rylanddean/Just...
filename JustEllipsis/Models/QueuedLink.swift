@@ -53,6 +53,7 @@ final class QueuedLink {
     @Attribute(.externalStorage) var cachedHTML: String?
     var prefetchStateRaw: String = PrefetchState.pending.rawValue
     var sourceRaw: String = "manual"
+    var threadSourceURL: String?
 
     var prefetchState: PrefetchState {
         get { PrefetchState(rawValue: prefetchStateRaw) ?? .pending }
@@ -64,11 +65,12 @@ final class QueuedLink {
         set { sourceRaw = newValue.rawValue }
     }
 
-    init(url: String, sortOrder: Int, title: String? = nil, domain: String? = nil, source: LinkSource = .manual) {
+    init(url: String, sortOrder: Int, title: String? = nil, domain: String? = nil, source: LinkSource = .manual, threadSourceURL: String? = nil) {
         self.url = url
         self.sortOrder = sortOrder
         self.title = title
         self.domain = domain
         self.sourceRaw = source.rawValue
+        self.threadSourceURL = threadSourceURL
     }
 }

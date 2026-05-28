@@ -23,6 +23,7 @@ struct ReaderView: View {
     @State private var viewModel = ReaderViewModel()
     @State private var pendingEntry: BrainEntry?
     @State private var safariURL: URL?
+    @State private var pendingThreadLink: PendingThreadLink?
     @State private var isNearBottom = false
     @State private var overScrollDelta: CGFloat = 0
     @State private var isTextSizeControlVisible = false
@@ -78,6 +79,12 @@ struct ReaderView: View {
             .sheet(item: $safariURL) { url in
                 SafariView(url: url)
                     .ignoresSafeArea()
+            }
+            .sheet(item: $pendingThreadLink) { pending in
+                quickAddSheet(for: pending)
+                    .presentationDetents([.height(180)])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(appTheme.background)
             }
         }
     }
@@ -361,6 +368,10 @@ struct ReaderView: View {
                     },
                     onReflectTrigger: {
                         openReflect(content: content)
+                    },
+                    onLinkTapped: { urlString in
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        pendingThreadLink = PendingThreadLink(urlString: urlString)
                     }
                 )
 
@@ -439,6 +450,65 @@ struct ReaderView: View {
 
     // MARK: - Actions
 
+    private func quickAddSheet(for pending: PendingThreadLink) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(pending.domain)
+                .font(AppTheme.sansSerif(18, weight: .medium))
+                .foregroundStyle(appTheme.heading)
+
+            Text(pending.urlString)
+                .font(AppTheme.sansSerif(12))
+                .foregroundStyle(appTheme.text.opacity(0.4))
+                .lineLimit(2)
+
+            Spacer()
+
+            Button {
+                addThreadLink(pending)
+            } label: {
+                Text("Add to queue")
+                    .font(AppTheme.sansSerif(15, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(AppTheme.pagePadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func addThreadLink(_ pending: PendingThreadLink) {
+        pendingThreadLink = nil
+        Task {
+            let urlToAdd = pending.urlString
+            let dupeCheck = FetchDescriptor<QueuedLink>(
+                predicate: #Predicate { $0.url == urlToAdd }
+            )
+            let dupes = (try? context.fetch(dupeCheck)) ?? []
+            guard dupes.isEmpty else { return }
+
+            var orderFetch = FetchDescriptor<QueuedLink>(
+                sortBy: [SortDescriptor(\.sortOrder, order: .reverse)]
+            )
+            orderFetch.fetchLimit = 1
+            let top = (try? context.fetch(orderFetch))?.first
+            let nextOrder = (top?.sortOrder ?? -1) + 1
+
+            let sourceURL = link.url
+            let newLink = QueuedLink(url: urlToAdd, sortOrder: nextOrder, threadSourceURL: sourceURL)
+            context.insert(newLink)
+            try? context.save()
+
+            if let result = try? await ContentFetcher.fetch(urlString: urlToAdd) {
+                newLink.title = result.content.title
+                newLink.domain = result.content.domain
+                newLink.cachedHTML = result.rawHTML
+                newLink.prefetchState = .ready
+                try? context.save()
+            }
+        }
+    }
+
     private func openReflect(content: StrippedContent) {
         let entry = BrainEntry(url: link.url, title: content.title, domain: content.domain)
         entry.wordCount = content.estimatedWordCount
@@ -460,6 +530,17 @@ struct ReaderView: View {
             context.insert(day)
         }
         try? context.save()
+    }
+}
+
+// MARK: - Thread link quick-add
+
+private struct PendingThreadLink: Identifiable {
+    let id = UUID()
+    let urlString: String
+    var domain: String {
+        guard let url = URL(string: urlString) else { return urlString }
+        return ContentFetcher.extractDomain(from: url)
     }
 }
 

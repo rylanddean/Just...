@@ -53,7 +53,7 @@ struct ContentFetcher: Sendable {
           padding: 32px 24px 80px;
         }
         h1, h2, h3, h4 { color: \(theme.headingHex); font-weight: 600; }
-        a { color: var(--accent); text-decoration: none; }
+        a { color: var(--accent); text-decoration: var(--link-decoration, none); }
         blockquote {
           border-left: 2px solid var(--accent);
           padding-left: 20px;

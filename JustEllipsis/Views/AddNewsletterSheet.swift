@@ -9,26 +9,44 @@ struct AddNewsletterSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var appTheme
 
+    /// Captured on the URL-entry screen; passed to the in-app subscribe browser.
+    @State private var newsletterWebsiteURL = ""
     @State private var path: [Step] = []
-    // Shared state updated by the WKWebView coordinator
-    @State private var webState = WebViewState()
-    // Incrementing this forces SwiftUI to recreate the WKWebView on retry
-    @State private var webViewID = UUID()
 
     enum Step: Hashable {
+        case ktn
         case address(email: String, feedURL: String, title: String)
+        case subscribe(email: String, feedURL: String, title: String)
     }
 
     var body: some View {
         NavigationStack(path: $path) {
-            webScreen
+            urlEntryScreen
                 .navigationDestination(for: Step.self) { step in
-                    if case .address(let email, let feedURL, let title) = step {
+                    switch step {
+                    case .ktn:
+                        KtNScreen(
+                            onFeedCreated: { email, feedURL, title in
+                                if !newsletterWebsiteURL.isEmpty {
+                                    path.append(.subscribe(email: email, feedURL: feedURL, title: title))
+                                } else {
+                                    path.append(.address(email: email, feedURL: feedURL, title: title))
+                                }
+                            },
+                            onCancel: { dismiss() }
+                        )
+                    case .address(let email, let feedURL, let title):
                         AddressScreen(
                             newsletterName: title,
                             email: email,
-                            feedURL: feedURL,
-                            onDone: { onSubscribe(feedURL, email, title) },
+                            onDone: { onSubscribe(feedURL, email, title); dismiss() },
+                            onCancel: { dismiss() }
+                        )
+                    case .subscribe(let email, let feedURL, let title):
+                        SubscribeScreen(
+                            email: email,
+                            websiteURL: newsletterWebsiteURL,
+                            onDone: { onSubscribe(feedURL, email, title); dismiss() },
                             onCancel: { dismiss() }
                         )
                     }
@@ -37,35 +55,110 @@ struct AddNewsletterSheet: View {
         .presentationDetents([.large])
     }
 
-    // MARK: - Web screen
+    // MARK: - URL entry screen (step 1)
+    // Inline so it can bind directly to $newsletterWebsiteURL.
 
-    private var webScreen: some View {
+    private var urlEntryScreen: some View {
         ZStack {
-            // App background fills the frame before the page renders,
-            // preventing the default white WKWebView flash.
             appTheme.background.ignoresSafeArea()
 
-            // Web view — invisible until the page finishes loading
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("NEWSLETTER WEBSITE")
+                        .font(AppTheme.sansSerif(11, weight: .medium))
+                        .foregroundStyle(appTheme.textFaint)
+                        .kerning(2)
+
+                    TextField("https://...", text: $newsletterWebsiteURL)
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(appTheme.heading)
+                        .autocapitalization(.none)
+                        .keyboardType(.URL)
+                        .autocorrectionDisabled()
+                        .padding(AppTheme.cardPadding)
+                        .background(appTheme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                }
+
+                Text("The page where you sign up. We'll open it for you after generating your address.")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+                    .lineSpacing(3)
+
+                Spacer()
+
+                Button {
+                    path.append(.ktn)
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text("Continue")
+                            .font(AppTheme.sansSerif(15, weight: .semibold))
+                            .foregroundStyle(appTheme.background)
+                        Spacer()
+                    }
+                    .frame(height: 48)
+                    .background(appTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(AppTheme.pagePadding)
+        }
+        .navigationTitle("Newsletter")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+                    .foregroundStyle(appTheme.accent)
+            }
+        }
+        .toolbarBackground(appTheme.background, for: .navigationBar)
+        .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+    }
+}
+
+// MARK: - Shared web view state
+
+/// Observable state updated by a WKWebView coordinator and read by its host view.
+@Observable
+final class WebViewState {
+    var isLoading = true
+    var loadError: String? = nil
+}
+
+// MARK: - Step 2: KtN screen
+
+/// Hosts the Kill the Newsletter webview. Self-contained so its WebViewState
+/// is fresh every time the step is pushed onto the navigation stack.
+private struct KtNScreen: View {
+    let onFeedCreated: (_ email: String, _ feedURL: String, _ title: String) -> Void
+    let onCancel: () -> Void
+
+    @Environment(\.appTheme) private var appTheme
+    @State private var webState = WebViewState()
+    @State private var webViewID = UUID()
+
+    var body: some View {
+        ZStack {
+            appTheme.background.ignoresSafeArea()
+
             if webState.loadError == nil {
                 KillTheNewsletterWebView(
                     state: webState,
-                    onFeedCreated: { email, feedURL, title in
-                        path.append(.address(email: email, feedURL: feedURL, title: title))
-                    }
+                    onFeedCreated: onFeedCreated
                 )
                 .id(webViewID)
                 .ignoresSafeArea(edges: .bottom)
                 .opacity(webState.isLoading ? 0 : 1)
             }
 
-            // Loading indicator — shown while the page is fetching / rendering
             if webState.isLoading && webState.loadError == nil {
                 ProgressView()
                     .tint(appTheme.accent)
                     .scaleEffect(1.2)
             }
 
-            // Error state with retry
             if let error = webState.loadError {
                 VStack(spacing: 20) {
                     Text(error)
@@ -89,7 +182,7 @@ struct AddNewsletterSheet: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button("Cancel") { onCancel() }
                     .foregroundStyle(appTheme.accent)
             }
         }
@@ -98,16 +191,7 @@ struct AddNewsletterSheet: View {
     }
 }
 
-// MARK: - Shared web view state
-
-/// Observable state updated by the WKWebView coordinator and read by AddNewsletterSheet.
-@Observable
-final class WebViewState {
-    var isLoading = true
-    var loadError: String? = nil
-}
-
-// MARK: - WKWebView wrapper
+// MARK: - WKWebView wrapper for Kill the Newsletter
 
 /// Loads kill-the-newsletter.com and automatically detects a successful feed creation.
 /// When KtN's form is submitted, it redirects to `/feeds/<id>`. A JS observer picks up
@@ -237,16 +321,14 @@ struct KillTheNewsletterWebView: UIViewRepresentable {
     }
 }
 
-// MARK: - Address screen
+// MARK: - Step 3a: Address screen (fallback — no website URL entered)
 
 private struct AddressScreen: View {
     let newsletterName: String
     let email: String
-    let feedURL: String
     let onDone: () -> Void
     let onCancel: () -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var appTheme
     @State private var justCopied = false
 
@@ -273,7 +355,7 @@ private struct AddressScreen: View {
                                 .minimumScaleFactor(0.8)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                            Image(systemName: "doc.on.doc")
+                            Image(systemName: justCopied ? "checkmark" : "doc.on.doc")
                                 .font(.system(size: 14))
                                 .foregroundStyle(justCopied ? appTheme.accent : appTheme.textFaint)
                                 .animation(.easeInOut(duration: 0.15), value: justCopied)
@@ -294,7 +376,6 @@ private struct AddressScreen: View {
 
                 Button {
                     onDone()
-                    dismiss()
                 } label: {
                     HStack {
                         Spacer()
@@ -329,6 +410,191 @@ private struct AddressScreen: View {
         Task {
             try? await Task.sleep(for: .seconds(2))
             justCopied = false
+        }
+    }
+}
+
+// MARK: - Step 3b: Subscribe screen (in-app browser with email pinned)
+
+private struct SubscribeScreen: View {
+    let email: String
+    let websiteURL: String
+    let onDone: () -> Void
+    let onCancel: () -> Void
+
+    @Environment(\.appTheme) private var appTheme
+    @State private var webState = WebViewState()
+    @State private var webViewID = UUID()
+    @State private var justCopied = false
+
+    var body: some View {
+        ZStack {
+            appTheme.background.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Sticky email banner
+                emailBanner
+
+                Rectangle()
+                    .fill(appTheme.separator)
+                    .frame(height: 1)
+
+                // In-app browser
+                ZStack {
+                    if webState.loadError == nil {
+                        SimpleWebView(url: normalisedURL, state: webState)
+                            .id(webViewID)
+                            .opacity(webState.isLoading ? 0 : 1)
+                    }
+
+                    if webState.isLoading && webState.loadError == nil {
+                        ProgressView()
+                            .tint(appTheme.accent)
+                            .scaleEffect(1.2)
+                    }
+
+                    if let error = webState.loadError {
+                        VStack(spacing: 20) {
+                            Text(error)
+                                .font(AppTheme.sansSerif(14))
+                                .foregroundStyle(appTheme.textFaint)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, AppTheme.pagePadding)
+
+                            Button {
+                                webState = WebViewState()
+                                webViewID = UUID()
+                            } label: {
+                                Text("Try again")
+                                    .font(AppTheme.sansSerif(14, weight: .medium))
+                                    .foregroundStyle(appTheme.accent)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .ignoresSafeArea(edges: .bottom)
+        }
+        .navigationTitle("Subscribe")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { onCancel() }
+                    .foregroundStyle(appTheme.accent)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button("Done") { onDone() }
+                    .font(AppTheme.sansSerif(15, weight: .semibold))
+                    .foregroundStyle(appTheme.accent)
+            }
+        }
+        .toolbarBackground(appTheme.background, for: .navigationBar)
+        .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+        .onAppear {
+            // Pre-copy the email so the user can paste it immediately into the subscribe form.
+            UIPasteboard.general.string = email
+        }
+    }
+
+    // MARK: - Email banner
+
+    private var emailBanner: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("SUBSCRIPTION ADDRESS")
+                    .font(AppTheme.sansSerif(10, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+                    .kerning(2)
+
+                Text(email)
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.heading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                copyEmail()
+            } label: {
+                Image(systemName: justCopied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 14))
+                    .foregroundStyle(justCopied ? appTheme.accent : appTheme.textFaint)
+                    .animation(.easeInOut(duration: 0.15), value: justCopied)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 10)
+        .background(appTheme.surface)
+    }
+
+    private func copyEmail() {
+        UIPasteboard.general.string = email
+        justCopied = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            justCopied = false
+        }
+    }
+
+    private var normalisedURL: String {
+        let t = websiteURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (t.hasPrefix("http://") || t.hasPrefix("https://")) ? t : "https://\(t)"
+    }
+}
+
+// MARK: - Simple WKWebView (plain browser, no JS injection)
+
+private struct SimpleWebView: UIViewRepresentable {
+    let url: String
+    let state: WebViewState
+
+    func makeCoordinator() -> Coordinator { Coordinator(state: state) }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView(frame: .zero)
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.backgroundColor = .clear
+        webView.navigationDelegate = context.coordinator
+        if let u = URL(string: url) {
+            webView.load(URLRequest(url: u))
+        }
+        return webView
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.state = state
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        var state: WebViewState
+
+        init(state: WebViewState) { self.state = state }
+
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            DispatchQueue.main.async { self.state.isLoading = true }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            DispatchQueue.main.async { self.state.isLoading = false }
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError _: Error) {
+            DispatchQueue.main.async {
+                self.state.isLoading = false
+                self.state.loadError = "Couldn't load the page. Check your connection and try again."
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFail _: WKNavigation!, withError _: Error) {
+            DispatchQueue.main.async {
+                self.state.isLoading = false
+                self.state.loadError = "Couldn't load the page. Check your connection and try again."
+            }
         }
     }
 }
