@@ -4,6 +4,7 @@ import Foundation
 enum FeedType: String, Codable {
     case rss
     case scraped
+    case newsletter
 }
 
 @Model
@@ -15,6 +16,8 @@ final class RSSFeed {
     var lastFetchedAt: Date?
     var isPaused: Bool = false
     var feedTypeRaw: String = FeedType.rss.rawValue
+    // Non-nil for .newsletter feeds — the Kill the Newsletter reading address
+    var newsletterEmail: String? = nil
 
     var feedType: FeedType {
         get { FeedType(rawValue: feedTypeRaw) ?? .rss }

@@ -9,6 +9,7 @@ struct FeedsView: View {
     @Query(sort: \RSSFeed.title) private var feeds: [RSSFeed]
 
     @State private var showAddByURL = false
+    @State private var showAddNewsletter = false
     @State private var showDirectory = false
     @State private var pasteURL = ""
     @State private var customFeedName = ""
@@ -58,12 +59,21 @@ struct FeedsView: View {
                 }
 
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        pasteURL = ""
-                        customFeedName = ""
-                        detectedCategoryPreview = nil
-                        addError = nil
-                        showAddByURL = true
+                    Menu {
+                        Button {
+                            pasteURL = ""
+                            customFeedName = ""
+                            detectedCategoryPreview = nil
+                            addError = nil
+                            showAddByURL = true
+                        } label: {
+                            Label("RSS Feed", systemImage: "dot.radiowaves.left.and.right")
+                        }
+                        Button {
+                            showAddNewsletter = true
+                        } label: {
+                            Label("Newsletter", systemImage: "envelope")
+                        }
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
@@ -76,6 +86,11 @@ struct FeedsView: View {
         }
         .sheet(isPresented: $showAddByURL) {
             addByURLSheet
+        }
+        .sheet(isPresented: $showAddNewsletter) {
+            AddNewsletterSheet { feedURL, email, title in
+                subscribeNewsletter(feedURL: feedURL, email: email, title: title)
+            }
         }
         .sheet(isPresented: $showDirectory) {
             FeedDirectoryView(subscribedURLs: Set(feeds.map { $0.url })) { item in
@@ -129,10 +144,18 @@ struct FeedsView: View {
                         Label("Rename", systemImage: "pencil")
                     }
 
-                    Button {
-                        UIPasteboard.general.string = feed.url
-                    } label: {
-                        Label("Copy URL", systemImage: "doc.on.doc")
+                    if feed.feedType == .newsletter, let email = feed.newsletterEmail {
+                        Button {
+                            UIPasteboard.general.string = email
+                        } label: {
+                            Label("Copy reading address", systemImage: "envelope")
+                        }
+                    } else {
+                        Button {
+                            UIPasteboard.general.string = feed.url
+                        } label: {
+                            Label("Copy URL", systemImage: "doc.on.doc")
+                        }
                     }
 
                     if feed.isPaused {
@@ -404,6 +427,16 @@ struct FeedsView: View {
         RSSFetchService.fetchSingle(feedID: feed.id, url: url, container: context.container, tracker: gradingTracker)
     }
 
+    private func subscribeNewsletter(feedURL: String, email: String, title: String) {
+        guard !feeds.contains(where: { $0.url == feedURL }) else { return }
+        let feed = RSSFeed(url: feedURL, title: title, category: "Newsletter")
+        feed.feedType = .newsletter
+        feed.newsletterEmail = email
+        context.insert(feed)
+        try? context.save()
+        RSSFetchService.fetchSingle(feedID: feed.id, url: feedURL, container: context.container, tracker: gradingTracker)
+    }
+
     private func unsubscribe(_ feed: RSSFeed) {
         let feedID = feed.id
         let descriptor = FetchDescriptor<RSSArticle>(
@@ -574,6 +607,15 @@ private struct FeedRow: View {
                             .padding(.vertical, 2)
                             .background(appTheme.separator)
                             .clipShape(Capsule())
+                    } else if feed.feedType == .newsletter {
+                        Text("NEWSLETTER")
+                            .font(AppTheme.sansSerif(10, weight: .medium))
+                            .foregroundStyle(appTheme.textFaint)
+                            .kerning(1.5)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(appTheme.separator)
+                            .clipShape(Capsule())
                     }
                 }
 
@@ -590,7 +632,7 @@ private struct FeedRow: View {
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.textFaint)
                     } else {
-                        Text("Never fetched.")
+                        Text(feed.feedType == .newsletter ? "Waiting for first edition." : "Never fetched.")
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.textFaint)
                     }
