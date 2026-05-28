@@ -85,9 +85,11 @@
           <summary class="faq-q">Can I read articles without an internet connection?</summary>
           <div class="faq-a">
             <p>
-              Articles are fetched when you tap to read them, so an active connection is
-              required at that point. Once fetched, the content is available offline for
-              the current session. Background pre-fetching is planned for a future version.
+              Just… pre-fetches articles from your feeds in the background so they are
+              ready to read when you open the app. Once fetched, content is available
+              offline. Links you add manually are fetched on demand when you tap to read them,
+              so an active connection is needed at that moment if the article hasn't been
+              pre-fetched yet.
             </p>
           </div>
         </details>
@@ -243,6 +245,127 @@
             </p>
           </div>
         </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">How do I favourite a feed?</summary>
+          <div class="faq-a">
+            <p>
+              Long-press any feed in the Feeds tab and tap <strong>Auto-queue new articles</strong>
+              (shown as a star icon). Favourited feeds are pinned to the top of your Feeds
+              tab and new articles from them are added to your reading queue automatically
+              as they arrive.
+            </p>
+            <p>
+              To stop auto-queuing, long-press the feed again and tap
+              <strong>Stop auto-queuing</strong>.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">What is the Digest?</summary>
+          <div class="faq-a">
+            <p>
+              The Digest is a tab that shows everything your feeds have published in the
+              last seven days — grouped by today, yesterday, and earlier. It lets you browse
+              recent articles across all your feeds at once without opening each feed individually.
+            </p>
+            <p>
+              Tap any article to add it to your reading queue. The Digest is for browsing;
+              the queue is where you read.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">What is article grading?</summary>
+          <div class="faq-a">
+            <p>
+              Article grading uses Apple Intelligence to score feed articles as Signal
+              or Noise before they reach the Digest. Noise articles — aggregated takes,
+              press releases, listicles, promotional content — are hidden from the Digest
+              when you enable "Hide noise" in Settings.
+            </p>
+            <p>
+              Grading is opt-in. Enable it in <strong>Settings → Feeds → Article grading</strong>.
+              It requires a device that supports Apple Intelligence (iPhone 16 series or
+              iPhone 15 Pro / Pro Max on iOS 18.1 or later). Grading runs in the background
+              after each feed fetch.
+            </p>
+            <p>
+              Noise articles are never deleted — only hidden from the Digest. Disable
+              "Hide noise" at any time to see everything.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">What are "Picked for you" articles?</summary>
+          <div class="faq-a">
+            <p>
+              Once your Brain contains five or more entries, Just… begins surfacing
+              articles from your feeds that match your reading history. These appear in
+              a "Picked for you" section at the top of your reading queue.
+            </p>
+            <p>
+              Picks are ranked by relevance to your Brain — based on what you have read
+              and what you wrote in your reflections — not by recency or popularity.
+              The more you read and reflect, the more accurate your picks become.
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- The Reader -->
+  <section>
+    <div class="container">
+      <span class="label">The Reader</span>
+      <h2>Themes, Night Mode, and text size.</h2>
+
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary class="faq-q">Can I change the reader theme?</summary>
+          <div class="faq-a">
+            <p>
+              Yes. Just… includes six reading themes: Ember, Slate, Dusk, Sage, Sepia,
+              and Paper. Ember is the default — warm amber on near-black. Sepia and Paper
+              are light themes suited for reading in bright conditions. The others are dark
+              themes with different colour temperatures.
+            </p>
+            <p>
+              Change the theme in <strong>Settings → Reader → Theme</strong>. The selected
+              theme applies immediately and persists across all reading sessions.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">What is Night Mode?</summary>
+          <div class="faq-a">
+            <p>
+              Night Mode automatically switches the reader to a warm, very dark Night theme
+              from 9PM until 6AM — regardless of which theme you have selected. It deactivates
+              at 6AM and your chosen theme returns.
+            </p>
+            <p>
+              You can adjust the start time, or override Night Mode to always on or always
+              off, in <strong>Settings → Reader → Night Mode</strong>.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can I adjust the text size or line spacing?</summary>
+          <div class="faq-a">
+            <p>
+              Yes — from inside the reader. Tap the text size icon in the top bar while
+              reading. A control appears that lets you increase or decrease font size and
+              line spacing independently. The settings persist across all articles.
+            </p>
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -281,15 +404,13 @@
         </details>
 
         <details class="faq-item">
-          <summary class="faq-q">My Brain says it's full. What does that mean?</summary>
+          <summary class="faq-q">Can I search my Brain?</summary>
           <div class="faq-a">
             <p>
-              Free accounts can store up to 50 Brain entries. When you reach the cap,
-              new entries are paused until you unlock Premium. All existing entries
-              remain — nothing is deleted.
-            </p>
-            <p>
-              Premium is a one-time purchase that unlocks an unlimited Brain.
+              Yes. A search bar appears at the top of the Brain tab. It searches across
+              article titles, domains, and the text of your own reflections. You can also
+              filter by topic — Just… extracts concept keywords from your Brain entries
+              and displays them as tappable filters in the Insights panel.
             </p>
           </div>
         </details>
@@ -298,9 +419,9 @@
           <summary class="faq-q">Can I export my Brain?</summary>
           <div class="faq-a">
             <p>
-              Yes, with Premium. You can export your entire Brain as a Markdown file —
-              one entry per article, with title, date, and your reflection. The file
-              opens in any text editor or note-taking app.
+              Brain export isn't available in the current version. It's on the roadmap.
+              In the meantime, your Brain is backed up automatically via iCloud if you
+              have iCloud Drive enabled, so your entries are safe if you switch devices.
             </p>
           </div>
         </details>
@@ -373,31 +494,19 @@
     </div>
   </section>
 
-  <!-- Purchases -->
+  <!-- Getting the app -->
   <section>
     <div class="container">
-      <span class="label">Premium &amp; purchases</span>
-      <h2>Pricing and purchases.</h2>
+      <span class="label">Getting the app</span>
+      <h2>Download and devices.</h2>
 
       <div class="faq-list">
         <details class="faq-item">
-          <summary class="faq-q">What is Premium and how much does it cost?</summary>
+          <summary class="faq-q">Is Just… free?</summary>
           <div class="faq-a">
             <p>
-              Premium is a one-time in-app purchase — not a subscription. It unlocks
-              an unlimited Brain, full-text Brain search, Markdown export, and a
-              home screen widget. Pricing is displayed in the App Store for your region.
-            </p>
-          </div>
-        </details>
-
-        <details class="faq-item">
-          <summary class="faq-q">I bought Premium but it's not showing up.</summary>
-          <div class="faq-a">
-            <p>
-              Open Just…, go to Settings, and tap "Restore Purchases." This re-links
-              your App Store account to your purchase. If the problem persists after
-              restoring, write to us with your Apple ID email.
+              Yes. Just… is free to download and free to use. There is no subscription,
+              no in-app purchase, and no locked features. Everything is included.
             </p>
           </div>
         </details>
@@ -406,20 +515,63 @@
           <summary class="faq-q">Can I use Just… on a new iPhone and keep my Brain?</summary>
           <div class="faq-a">
             <p>
-              Yes, provided iCloud Drive is enabled on both devices. Your Brain and
-              streak history restore from iCloud on first launch. Premium also restores
-              automatically — just tap "Restore Purchases."
+              Yes, provided iCloud Drive is enabled on both devices. Your Brain, streak
+              history, and feeds restore from iCloud on first launch. Re-download Just…
+              from the App Store on your new device — it's free, so there's nothing to restore.
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Daily reminders -->
+  <section>
+    <div class="container">
+      <span class="label">Daily reminders</span>
+      <h2>Reading reminders.</h2>
+
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary class="faq-q">How do I set up daily reading reminders?</summary>
+          <div class="faq-a">
+            <p>
+              Go to <strong>Settings → Notifications → Daily reminders</strong>. You can
+              enable a morning reminder, an evening reminder, or both. Each has its own
+              configurable time — the defaults are 8AM and 8PM.
+            </p>
+            <p>
+              Just… will request notification permission when you enable your first
+              reminder. If you previously denied permission, go to
+              <strong>iOS Settings → Notifications → Just…</strong> to enable it there first.
             </p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-q">Can I get a refund?</summary>
+          <summary class="faq-q">What is the difference between daily reminders and streak notifications?</summary>
           <div class="faq-a">
             <p>
-              All purchases are handled by Apple and subject to
-              <a href="https://support.apple.com/en-us/118223" target="_blank" rel="noopener">Apple's refund policy</a>.
-              You can request a refund through Apple at reportaproblem.apple.com.
+              Daily reminders are scheduled by you — a morning nudge, an evening nudge,
+              or both, at times you choose. They fire every day regardless of whether
+              you have already read.
+            </p>
+            <p>
+              Streak notifications are automatic. Just… sends one at 9PM if you
+              haven't read yet that day and your streak is active — a single reminder
+              that your streak is at risk. These are separate from daily reminders and
+              can be silenced independently via iOS notification settings.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can I turn off all notifications?</summary>
+          <div class="faq-a">
+            <p>
+              Yes. Go to <strong>iOS Settings → Notifications → Just…</strong> and
+              disable notifications entirely. Alternatively, disable individual
+              reminder toggles in <strong>Just… Settings → Notifications</strong>.
             </p>
           </div>
         </details>
@@ -494,7 +646,7 @@
       <li><a href="support.html">Support</a></li>
       <li><a href="privacy.html">Privacy</a></li>
     </ul>
-    <p class="footer-copy">© 2025 Ryland Dean. Part of the Just family of apps.</p>
+    <p class="footer-copy">© 2026 Ryland Dean. Part of the Just family of apps.</p>
   </div>
 </footer>
 
