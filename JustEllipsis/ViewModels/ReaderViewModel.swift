@@ -135,6 +135,11 @@ final class ReaderViewModel {
         )
         if let article = try? context.fetch(descriptor).first {
             article.isQueued = false
+            let feedID = article.feedID
+            let feedDescriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
+            if let feed = try? context.fetch(feedDescriptor).first {
+                feed.lastReadAt = Date()
+            }
         }
         context.delete(link)
         try? context.save()

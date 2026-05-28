@@ -176,33 +176,48 @@ actor RSSFetchActor {
         store(result: result, feedID: feedID)
     }
 
-    // Fetch all non-paused feeds, parse, store new RSSArticle records.
+    // Fetch all non-paused, non-archived feeds, parse, store new RSSArticle records.
     func fetchAll() async {
         let descriptor = FetchDescriptor<RSSFeed>(
-            predicate: #Predicate { !$0.isPaused }
+            predicate: #Predicate { !$0.isPaused && !$0.isArchived }
         )
         guard let feeds = try? modelContext.fetch(descriptor) else { return }
 
-        await withTaskGroup(of: Void.self) { group in
+        // Parse concurrently (network-bound), collect results
+        let results: [(result: FeedParseResult, feedID: UUID)] = await withTaskGroup(
+            of: (FeedParseResult, UUID).self
+        ) { group in
             for feed in feeds {
                 let feedID = feed.id
                 let urlString = feed.url
                 let isScraped = feed.feedType == .scraped
                 group.addTask {
                     let result = await Self.parseFeed(urlString: urlString, treatAsScraped: isScraped)
-                    await self.store(result: result, feedID: feedID)
+                    return (result, feedID)
                 }
             }
+            var collected: [(FeedParseResult, UUID)] = []
+            for await pair in group { collected.append(pair) }
+            return collected
+        }
+
+        // Fetch existing URLs once, then store sequentially — avoids one full table
+        // scan per feed when processing a batch.
+        var existingURLs = Set(
+            (try? modelContext.fetch(FetchDescriptor<RSSArticle>()))?.map { $0.url } ?? []
+        )
+        for (result, feedID) in results {
+            store(result: result, feedID: feedID, existingURLs: &existingURLs)
         }
     }
 
     // Prune articles published before their feed type's retention window.
     // Scraped feeds: never pruned (accumulate until unsubscribed).
     // Newsletter feeds: 30-day window (editions are infrequent; readers need time).
-    // RSS feeds: 1-day window (standard behaviour).
+    // RSS feeds: 7-day window (matches the Digest query window).
     func pruneOldArticles() async {
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        let rssCutoff        = Calendar.current.date(byAdding: .day, value: -1,  to: startOfToday) ?? startOfToday
+        let rssCutoff        = Calendar.current.date(byAdding: .day, value: -7,  to: startOfToday) ?? startOfToday
         let newsletterCutoff = Calendar.current.date(byAdding: .day, value: -30, to: startOfToday) ?? startOfToday
 
         let allFeeds = (try? modelContext.fetch(FetchDescriptor<RSSFeed>())) ?? []
@@ -262,6 +277,63 @@ actor RSSFetchActor {
         return score
     }
 
+    // Auto-archive feeds that match the user's configured unread or dead-feed thresholds.
+    // Runs silently — no notification. Either condition is sufficient to archive.
+    func runAutoArchive() {
+        let defaults = UserDefaults.standard
+        let unreadEnabled = defaults.bool(forKey: "autoArchiveUnreadEnabled")
+        let deadEnabled   = defaults.bool(forKey: "autoArchiveDeadEnabled")
+        guard unreadEnabled || deadEnabled else { return }
+
+        let rawUnread = defaults.integer(forKey: "autoArchiveUnreadDays")
+        let rawDead   = defaults.integer(forKey: "autoArchiveDeadDays")
+        let unreadDays = rawUnread > 0 ? rawUnread : 7
+        let deadDays   = rawDead   > 0 ? rawDead   : 14
+
+        let now = Date()
+        let unreadCutoff = Calendar.current.date(byAdding: .day, value: -unreadDays, to: now) ?? now
+        let deadCutoff   = Calendar.current.date(byAdding: .day, value: -deadDays,   to: now) ?? now
+
+        let descriptor = FetchDescriptor<RSSFeed>(
+            predicate: #Predicate { !$0.isArchived && !$0.isPaused }
+        )
+        guard let feeds = try? modelContext.fetch(descriptor) else { return }
+
+        // The unread check measures whether the user ignored a feed while actively using
+        // the app. If the user hasn't opened the app since before the cutoff, the gap is
+        // absence — not disinterest — so skip the unread check entirely.
+        let lastOpenAt = UserDefaults.standard.object(forKey: "lastAppOpenAt") as? Date
+        let userWasActiveForUnread = lastOpenAt.map { $0 >= unreadCutoff } ?? false
+
+        var changed = false
+        for feed in feeds {
+            if unreadEnabled && userWasActiveForUnread {
+                let neverRead = feed.lastReadAt == nil
+                let staleRead = feed.lastReadAt.map { $0 < unreadCutoff } ?? false
+                let oldEnough = feed.lastFetchedAt.map { $0 < unreadCutoff } ?? false
+                if staleRead || (neverRead && oldEnough) {
+                    feed.isArchived = true
+                    feed.archiveReason = "unread:\(unreadDays)"
+                    changed = true
+                    continue
+                }
+            }
+            if deadEnabled {
+                // Dead-feed check is about feed behaviour, not user presence —
+                // a feed that stopped publishing is dead regardless of app opens.
+                let noArticles    = feed.lastArticleAt == nil
+                let staleFeed     = feed.lastArticleAt.map { $0 < deadCutoff } ?? false
+                let polledLongAgo = feed.lastFetchedAt.map { $0 < deadCutoff } ?? false
+                if staleFeed || (noArticles && polledLongAgo) {
+                    feed.isArchived = true
+                    feed.archiveReason = "dead:\(deadDays)"
+                    changed = true
+                }
+            }
+        }
+        if changed { try? modelContext.save() }
+    }
+
     // Full daily job: fetch all feeds, prune stale articles, grade, make picks, promote to queue.
     func performDailyJob() async {
         await fetchAll()
@@ -285,6 +357,7 @@ actor RSSFetchActor {
         )
 
         promotePicksToQueue(picks: picks)
+        runAutoArchive()
     }
 
     // Insert AI picks into the queue; re-fetches originals by persistentModelID to mark isQueued.
@@ -311,22 +384,38 @@ actor RSSFetchActor {
         if inserted > 0 { try? modelContext.save() }
     }
 
-    // Mark a feed's lastFetchedAt timestamp (called after a successful fetch).
-    func markFetched(feedID: UUID) {
+    // Mark a feed's lastFetchedAt timestamp. Optionally advances lastArticleAt to the
+    // most recent article date seen in this fetch batch — only moves forward, never back.
+    func markFetched(feedID: UUID, latestArticleAt: Date? = nil) {
         let descriptor = FetchDescriptor<RSSFeed>(
             predicate: #Predicate { $0.id == feedID }
         )
         guard let feed = try? modelContext.fetch(descriptor).first else { return }
         feed.lastFetchedAt = Date()
+        if let date = latestArticleAt {
+            feed.lastArticleAt = max(feed.lastArticleAt ?? .distantPast, date)
+        }
         try? modelContext.save()
     }
 
     // MARK: - Private
 
     // Stores articles and updates feedType / resolvedURL on the parent RSSFeed if they changed.
+    // Used by fetchOne — builds its own existingURLs set for a single-feed store.
     private func store(result: FeedParseResult, feedID: UUID) {
+        var existingURLs = Set(
+            (try? modelContext.fetch(FetchDescriptor<RSSArticle>()))?.map { $0.url } ?? []
+        )
+        store(result: result, feedID: feedID, existingURLs: &existingURLs)
+    }
+
+    // Batch variant used by fetchAll — caller pre-fetches existingURLs once and passes it
+    // in so each feed doesn't trigger a redundant full table scan.
+    private func store(result: FeedParseResult, feedID: UUID, existingURLs: inout Set<String>) {
+        var isNewsletter = false
         let descriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
         if let feed = try? modelContext.fetch(descriptor).first {
+            isNewsletter = feed.feedType == .newsletter
             var changed = false
             // Newsletter feeds always fetch as a standard Atom feed via FeedKit.
             // The parse result carries .rss, but we must not overwrite the stored .newsletter type.
@@ -343,23 +432,27 @@ actor RSSFetchActor {
             }
             if changed { try? modelContext.save() }
         }
-        store(articles: result.articles, feedID: feedID)
+        store(articles: result.articles, feedID: feedID, existingURLs: &existingURLs, backfillDescriptions: isNewsletter)
     }
 
-    private func store(articles: [ParsedArticle], feedID: UUID) {
-        // Check existing URLs globally — not just for this feed — so the same URL
-        // syndicated by two subscribed feeds never creates duplicate RSSArticle rows.
-        let existingURLs = Set(
-            (try? modelContext.fetch(FetchDescriptor<RSSArticle>()))?.map { $0.url } ?? []
-        )
-
+    private func store(articles: [ParsedArticle], feedID: UUID, existingURLs: inout Set<String>, backfillDescriptions: Bool = false) {
         // Also deduplicate within the incoming batch itself.
         var seenInBatch = Set<String>()
 
         var inserted = 0
+        var descriptionBackfills: [(url: String, desc: String)] = []
+        var latestNewArticleDate: Date? = nil
         for article in articles {
-            guard !existingURLs.contains(article.url),
-                  seenInBatch.insert(article.url).inserted else { continue }
+            guard seenInBatch.insert(article.url).inserted else { continue }
+
+            if existingURLs.contains(article.url) {
+                // For newsletter feeds, backfill feedDescription if it's missing or was
+                // polluted with raw CSS (style blocks that stripHTML previously left intact).
+                if backfillDescriptions, let newDesc = article.feedDescription {
+                    descriptionBackfills.append((article.url, newDesc))
+                }
+                continue
+            }
             let record = RSSArticle(
                 feedID: feedID,
                 url: article.url,
@@ -368,10 +461,24 @@ actor RSSFetchActor {
                 feedDescription: article.feedDescription
             )
             modelContext.insert(record)
+            existingURLs.insert(article.url)  // keep set in sync for subsequent feeds
             inserted += 1
+            latestNewArticleDate = max(latestNewArticleDate ?? .distantPast, article.publishedAt)
         }
-        if inserted > 0 {
-            markFetched(feedID: feedID)
+
+        // Apply description backfills — only when the stored value is absent or CSS-polluted.
+        for backfill in descriptionBackfills {
+            let url = backfill.url
+            if let existing = try? modelContext.fetch(FetchDescriptor<RSSArticle>(predicate: #Predicate { $0.url == url })).first {
+                let current = existing.feedDescription ?? ""
+                if current.isEmpty || current.contains("{") {
+                    existing.feedDescription = backfill.desc
+                }
+            }
+        }
+
+        if inserted > 0 || !descriptionBackfills.isEmpty {
+            markFetched(feedID: feedID, latestArticleAt: latestNewArticleDate)
             try? modelContext.save()
         }
     }
@@ -502,15 +609,17 @@ actor RSSFetchActor {
         )
     }
 
-    private static func parseFeedKit(urlString: String) async -> [ParsedArticle] {
-        guard let url = URL(string: urlString) else { return [] }
-
+    private static let feedKitSession: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
         config.waitsForConnectivity = false
-        let session = URLSession(configuration: config)
+        return URLSession(configuration: config)
+    }()
 
-        guard let (data, _) = try? await session.data(from: url) else { return [] }
+    private static func parseFeedKit(urlString: String) async -> [ParsedArticle] {
+        guard let url = URL(string: urlString) else { return [] }
+
+        guard let (data, _) = try? await feedKitSession.data(from: url) else { return [] }
 
         return await withCheckedContinuation { continuation in
             Task.detached(priority: .background) {
@@ -568,6 +677,8 @@ actor RSSFetchActor {
 
     private static func stripHTML(_ html: String) -> String {
         let stripped = html
+            .replacingOccurrences(of: #"<style[^>]*>[\s\S]*?</style>"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"<script[^>]*>[\s\S]*?</script>"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
             .replacingOccurrences(of: "&amp;", with: "&")
             .replacingOccurrences(of: "&lt;",  with: "<")

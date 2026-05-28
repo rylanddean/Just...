@@ -10,8 +10,12 @@ struct SettingsView: View {
     @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:         String = "ember"
     @AppStorage("streak.minReadsPerDay")         private var minReadsPerDay:   Int    = 1
     @AppStorage(JustEllipsisApp.iCloudSyncKey)   private var iCloudSyncEnabled: Bool  = false
-    @AppStorage("rss.fetchHour")                 private var fetchHour:        Int    = RSSFetchService.defaultFetchHour
-    @AppStorage("rss.fetchMinute")               private var fetchMinute:      Int    = RSSFetchService.defaultFetchMinute
+    @AppStorage("rss.fetchHour")                   private var fetchHour:                  Int    = RSSFetchService.defaultFetchHour
+    @AppStorage("rss.fetchMinute")                 private var fetchMinute:                Int    = RSSFetchService.defaultFetchMinute
+    @AppStorage("autoArchiveUnreadEnabled")        private var autoArchiveUnreadEnabled:   Bool   = false
+    @AppStorage("autoArchiveUnreadDays")           private var autoArchiveUnreadDays:      Int    = 7
+    @AppStorage("autoArchiveDeadEnabled")          private var autoArchiveDeadEnabled:     Bool   = false
+    @AppStorage("autoArchiveDeadDays")             private var autoArchiveDeadDays:        Int    = 14
     @AppStorage("grading.enabled")               private var gradingEnabled:   Bool   = false
     @AppStorage("digest.hideNoise")              private var hideNoise:        Bool   = false
     @AppStorage(NightModeService.startHourKey)   private var nightStartHour:       Int    = NightModeService.defaultStartHour
@@ -384,6 +388,68 @@ struct SettingsView: View {
                 DatePicker("", selection: fetchTimeBinding, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                     .tint(appTheme.accent)
+            }
+
+            Divider().background(appTheme.separator)
+
+            // Auto-archive unread feeds
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Auto-archive unread feeds")
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(appTheme.heading)
+                        Text(autoArchiveUnreadEnabled
+                             ? "Archive feeds you haven't read in:"
+                             : "Off")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $autoArchiveUnreadEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                }
+
+                if autoArchiveUnreadEnabled {
+                    Picker("", selection: $autoArchiveUnreadDays) {
+                        Text("7 days").tag(7)
+                        Text("14 days").tag(14)
+                        Text("30 days").tag(30)
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+
+            Divider().background(appTheme.separator)
+
+            // Auto-archive dead feeds
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Auto-archive dead feeds")
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(appTheme.heading)
+                        Text(autoArchiveDeadEnabled
+                             ? "Archive feeds with no new articles in:"
+                             : "Off")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $autoArchiveDeadEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                }
+
+                if autoArchiveDeadEnabled {
+                    Picker("", selection: $autoArchiveDeadDays) {
+                        Text("7 days").tag(7)
+                        Text("14 days").tag(14)
+                        Text("30 days").tag(30)
+                    }
+                    .pickerStyle(.segmented)
+                }
             }
         }
     }

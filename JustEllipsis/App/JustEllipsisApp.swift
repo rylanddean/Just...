@@ -9,6 +9,9 @@ struct JustEllipsisApp: App {
     @State private var router = AppRouter()
     @State private var gradingTracker = GradingProgressTracker()
     @State private var healthKit = HealthKitService()
+    @Environment(\.scenePhase) private var scenePhase
+
+    static let lastAppOpenKey = "lastAppOpenAt"
 
     init() {
         registerRSSBackgroundTask()
@@ -25,6 +28,11 @@ struct JustEllipsisApp: App {
                 .onOpenURL { url in
                     handleOpenURL(url)
                 }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                UserDefaults.standard.set(Date(), forKey: Self.lastAppOpenKey)
+            }
         }
         // Prefetch cached HTML for queued links
         .backgroundTask(.appRefresh(PrefetchService.backgroundTaskID)) {

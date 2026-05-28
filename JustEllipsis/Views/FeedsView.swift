@@ -6,7 +6,10 @@ struct FeedsView: View {
     @Environment(\.appTheme) private var appTheme
     @Environment(AppRouter.self) private var router
     @Environment(GradingProgressTracker.self) private var gradingTracker
-    @Query(sort: \RSSFeed.title) private var feeds: [RSSFeed]
+    @Query(filter: #Predicate<RSSFeed> { !$0.isArchived }, sort: \RSSFeed.title) private var feeds: [RSSFeed]
+    @Query(filter: #Predicate<RSSFeed> { $0.isArchived },  sort: \RSSFeed.title) private var archivedFeeds: [RSSFeed]
+
+    @AppStorage("archivedFeedsSectionExpanded") private var archivedSectionExpanded: Bool = false
 
     @State private var showAddByURL = false
     @State private var showAddNewsletter = false
@@ -22,7 +25,7 @@ struct FeedsView: View {
     @State private var showRenameSheet = false
     @State private var detectedCategoryPreview: String?
 
-    private var feedCategoryOptions: [String] {
+    private static let feedCategoryOptions: [String] = {
         var seen = Set<String>()
         var ordered: [String] = []
         for item in FeedDirectoryItem.loadAll() {
@@ -34,14 +37,14 @@ struct FeedsView: View {
             ordered.append("General")
         }
         return ordered
-    }
+    }()
 
     var body: some View {
         NavigationStack {
             ZStack {
                 appTheme.background.ignoresSafeArea()
 
-                if feeds.isEmpty {
+                if feeds.isEmpty && archivedFeeds.isEmpty {
                     emptyState
                 } else {
                     feedList
@@ -145,13 +148,20 @@ struct FeedsView: View {
                     bottom: 5,
                     trailing: AppTheme.pagePadding
                 ))
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         unsubscribe(feed)
                     } label: {
                         Label("Unsubscribe", systemImage: "trash")
                     }
                     .tint(AppTheme.danger)
+
+                    Button {
+                        archive(feed)
+                    } label: {
+                        Label("Archive", systemImage: "archivebox")
+                    }
+                    .tint(appTheme.textFaint)
                 }
                 .contextMenu {
                     Button {
@@ -200,6 +210,56 @@ struct FeedsView: View {
                         Label("Unsubscribe", systemImage: "trash")
                     }
                 }
+            }
+            // Archived feeds section — collapsed by default, absent when nothing is archived
+            if !archivedFeeds.isEmpty {
+                Section {
+                    DisclosureGroup(
+                        isExpanded: $archivedSectionExpanded,
+                        content: {
+                            ForEach(archivedFeeds) { feed in
+                                ArchivedFeedRow(feed: feed, onRestore: { restore(feed) })
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(
+                                        top: 4,
+                                        leading: AppTheme.pagePadding,
+                                        bottom: 4,
+                                        trailing: AppTheme.pagePadding
+                                    ))
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            unsubscribe(feed)
+                                        } label: {
+                                            Label("Unsubscribe", systemImage: "trash")
+                                        }
+                                        .tint(AppTheme.danger)
+                                    }
+                            }
+                        },
+                        label: {
+                            HStack(spacing: 6) {
+                                Text("ARCHIVED FEEDS")
+                                    .font(AppTheme.sansSerif(11, weight: .medium))
+                                    .foregroundStyle(appTheme.textFaint)
+                                    .kerning(2)
+                                Text("(\(archivedFeeds.count))")
+                                    .font(AppTheme.sansSerif(11, weight: .medium))
+                                    .foregroundStyle(appTheme.textFaint.opacity(0.6))
+                                    .kerning(2)
+                            }
+                        }
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: 12,
+                        leading: AppTheme.pagePadding,
+                        bottom: 4,
+                        trailing: AppTheme.pagePadding
+                    ))
+                }
+                .listSectionSeparator(.hidden)
             }
         }
         .listStyle(.plain)
@@ -455,6 +515,18 @@ struct FeedsView: View {
         RSSFetchService.fetchSingle(feedID: feed.id, url: feedURL, container: context.container, tracker: gradingTracker)
     }
 
+    private func archive(_ feed: RSSFeed) {
+        feed.isArchived = true
+        feed.archiveReason = "manual"
+        try? context.save()
+    }
+
+    private func restore(_ feed: RSSFeed) {
+        feed.isArchived = false
+        feed.archiveReason = nil
+        try? context.save()
+    }
+
     private func unsubscribe(_ feed: RSSFeed) {
         let feedID = feed.id
         let descriptor = FetchDescriptor<RSSArticle>(
@@ -529,7 +601,7 @@ struct FeedsView: View {
     }
 
     private func autoCategory(for url: URL, title: String, preview: String) async -> String {
-        let allowed = feedCategoryOptions
+        let allowed = Self.feedCategoryOptions
         if #available(iOS 26, *), IntelligenceService.isAvailable {
             if let category = await IntelligenceService.classifyFeedCategory(
                 feedURL: url.absoluteString,
@@ -676,5 +748,51 @@ private struct FeedRow: View {
     private var domain: String {
         guard let url = URL(string: feed.url) else { return feed.url }
         return ContentFetcher.extractDomain(from: url)
+    }
+}
+
+// MARK: - Archived feed row
+
+private struct ArchivedFeedRow: View {
+    let feed: RSSFeed
+    let onRestore: () -> Void
+
+    @Environment(\.appTheme) private var appTheme
+
+    private var reasonLabel: String {
+        guard let reason = feed.archiveReason else { return "archived" }
+        if reason == "manual" { return "manually archived" }
+        let parts = reason.split(separator: ":").map(String.init)
+        guard parts.count == 2, let days = Int(parts[1]) else { return reason }
+        switch parts[0] {
+        case "unread": return "not read · \(days)d"
+        case "dead":   return "no new articles · \(days)d"
+        default:       return reason
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(feed.title)
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(appTheme.textFaint)
+                    .lineLimit(1)
+                Text(reasonLabel)
+                    .font(AppTheme.sansSerif(12))
+                    .foregroundStyle(appTheme.textFaint.opacity(0.6))
+            }
+
+            Spacer()
+
+            Button("Restore", action: onRestore)
+                .font(AppTheme.sansSerif(13, weight: .medium))
+                .foregroundStyle(appTheme.accent)
+                .buttonStyle(.plain)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, AppTheme.cardPadding)
+        .background(appTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
     }
 }

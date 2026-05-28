@@ -18,6 +18,14 @@ final class RSSFeed {
     var feedTypeRaw: String = FeedType.rss.rawValue
     // Non-nil for .newsletter feeds — the Kill the Newsletter reading address
     var newsletterEmail: String? = nil
+    // Set when the user completes reading an article from this feed
+    var lastReadAt: Date? = nil
+    // Set to the most recent publishedAt when new articles are stored for this feed
+    var lastArticleAt: Date? = nil
+    // Archive state — archived feeds are hidden from the active list and skipped during fetch
+    var isArchived: Bool = false
+    // "unread:7", "dead:14", or "manual" — parsed in views for display
+    var archiveReason: String? = nil
 
     var feedType: FeedType {
         get { FeedType(rawValue: feedTypeRaw) ?? .rss }

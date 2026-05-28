@@ -47,7 +47,6 @@
 		854D7EA7959D1FE45A36171E /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711256DA53620D4C746AC36F /* HomeView.swift */; };
 		85E502CAF98B8EBE370D5E7B /* CloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84722707AA336D1073651EEF /* CloudSyncService.swift */; };
 		864F3C0E8B0F3F5097EC15B4 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D03466EC4C3263BF1837381 /* ShareViewController.swift */; };
-		8CD69707D1E444859EC92F4C /* newsletters.json in Resources */ = {isa = PBXBuildFile; fileRef = 5479DEF4C8CE400880FDC86C /* newsletters.json */; };
 		8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */; };
 		942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD402C01934293F01520002 /* PendingLinkStore.swift */; };
 		949A68996476CD7276C0382C /* AddLinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA108705DC55D44129CFA2E /* AddLinkView.swift */; };
@@ -134,7 +133,6 @@
 		46A719D305320A1D2B22BA50 /* LinkCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkCard.swift; sourceTree = "<group>"; };
 		47BE1C9EB59A42E35267C8A4 /* ActivityChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityChart.swift; sourceTree = "<group>"; };
 		53C8EBE71DB26F97014284EE /* ReaderTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTheme.swift; sourceTree = "<group>"; };
-		5479DEF4C8CE400880FDC86C /* newsletters.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = newsletters.json; sourceTree = "<group>"; };
 		5DAE9F4B42AFCFBD95276C19 /* FeedDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDetailView.swift; sourceTree = "<group>"; };
 		5FB525487287C343A913E2DB /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		646F64DBC62E5B05B45AC067 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
@@ -379,7 +377,6 @@
 			isa = PBXGroup;
 			children = (
 				DEB0F696771B8EDE0D4FC2B2 /* feeds.json */,
-				5479DEF4C8CE400880FDC86C /* newsletters.json */,
 				EFA606DC043A9F40ABDA855B /* newsletters.json */,
 			);
 			path = Resources;
@@ -500,7 +497,6 @@
 			files = (
 				5200F218FCDCDE23A0BFB0A5 /* Assets.xcassets in Resources */,
 				D8DF3954E0CB01D122E87439 /* feeds.json in Resources */,
-				8CD69707D1E444859EC92F4C /* newsletters.json in Resources */,
 				29F8953C9E0FD4BFF3F6CD16 /* newsletters.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

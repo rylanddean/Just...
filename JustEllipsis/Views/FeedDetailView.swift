@@ -11,6 +11,8 @@ struct FeedDetailView: View {
     @Query private var queue: [QueuedLink]
 
     @State private var isFetching = false
+    @State private var confirmSafariURL: URL? = nil
+    @State private var pendingConfirmArticle: RSSArticle? = nil
 
     init(feed: RSSFeed) {
         self.feed = feed
@@ -23,10 +25,14 @@ struct FeedDetailView: View {
         case .newsletter:
             cutoff = Calendar.current.date(byAdding: .day, value: -30, to: startOfToday) ?? startOfToday
         case .rss:
-            cutoff = Calendar.current.date(byAdding: .day, value: -1,  to: startOfToday) ?? startOfToday
+            cutoff = Calendar.current.date(byAdding: .day, value: -7,  to: startOfToday) ?? startOfToday
         }
         _articles = Query(
-            filter: #Predicate<RSSArticle> { $0.feedID == feedID && $0.publishedAt >= cutoff },
+            filter: #Predicate<RSSArticle> {
+                $0.feedID == feedID &&
+                $0.publishedAt >= cutoff &&
+                $0.isConfirmationDismissed == false
+            },
             sort: \RSSArticle.publishedAt,
             order: .reverse
         )
@@ -42,6 +48,20 @@ struct FeedDetailView: View {
                 emptyState
             } else {
                 List {
+                    // Last read card — always shown above articles
+                    Section {
+                        LastReadCard(lastReadAt: feed.lastReadAt)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(
+                                top: 8,
+                                leading: AppTheme.pagePadding,
+                                bottom: 4,
+                                trailing: AppTheme.pagePadding
+                            ))
+                    }
+                    .listSectionSeparator(.hidden)
+
                     // Reading address — shown at the top of newsletter feeds
                     if feed.feedType == .newsletter, let email = feed.newsletterEmail {
                         Section {
@@ -69,17 +89,31 @@ struct FeedDetailView: View {
 
                     Section {
                         ForEach(articles) { article in
-                            ArticleRow(article: article, isQueued: queuedURLs.contains(article.url)) {
-                                addToQueue(article)
+                            if isConfirmationEmail(article) {
+                                ConfirmationArticleRow(article: article, onOpen: {
+                                    openConfirmation(article)
+                                })
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: 5,
+                                    leading: AppTheme.pagePadding,
+                                    bottom: 5,
+                                    trailing: AppTheme.pagePadding
+                                ))
+                            } else {
+                                ArticleRow(article: article, isQueued: queuedURLs.contains(article.url)) {
+                                    addToQueue(article)
+                                }
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(
+                                    top: 5,
+                                    leading: AppTheme.pagePadding,
+                                    bottom: 5,
+                                    trailing: AppTheme.pagePadding
+                                ))
                             }
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(
-                                top: 5,
-                                leading: AppTheme.pagePadding,
-                                bottom: 5,
-                                trailing: AppTheme.pagePadding
-                            ))
                         }
                     } header: {
                         if feed.feedType == .scraped {
@@ -120,6 +154,16 @@ struct FeedDetailView: View {
         }
         .toolbarBackground(appTheme.background, for: .navigationBar)
         .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+        .sheet(item: $confirmSafariURL, onDismiss: {
+            if let article = pendingConfirmArticle {
+                article.isConfirmationDismissed = true
+                try? context.save()
+                pendingConfirmArticle = nil
+            }
+        }) { url in
+            SafariView(url: url)
+                .ignoresSafeArea()
+        }
     }
 
     // MARK: - Empty state
@@ -154,6 +198,35 @@ struct FeedDetailView: View {
 
     // MARK: - Actions
 
+    private func isConfirmationEmail(_ article: RSSArticle) -> Bool {
+        guard feed.feedType == .newsletter else { return false }
+        let title = article.title.lowercased()
+        let body  = (article.feedDescription ?? "").lowercased()
+
+        // Subject lines that directly name the action
+        let titleKeywords = ["confirm", "verify", "activate your", "double opt"]
+        if titleKeywords.contains(where: { title.contains($0) }) { return true }
+
+        // Body phrases — specific enough to avoid false positives on regular content.
+        // "confirm email" catches button labels like "CONFIRM EMAIL" (lowercased).
+        // "confirm your opt" catches "confirm your opt-in" used by many ESPs.
+        let bodyPhrases = [
+            "confirm your subscription", "confirm your email", "confirm your address",
+            "confirm your opt", "confirm opt-in", "confirm email",
+            "verify your email", "verify your subscription",
+            "click to confirm", "click to verify",
+            "complete your subscription", "activate your subscription",
+            "double opt-in"
+        ]
+        return bodyPhrases.contains(where: { body.contains($0) })
+    }
+
+    private func openConfirmation(_ article: RSSArticle) {
+        guard let url = URL(string: article.url) else { return }
+        pendingConfirmArticle = article
+        confirmSafariURL = url
+    }
+
     private func refetch() {
         guard !isFetching else { return }
         isFetching = true
@@ -176,6 +249,41 @@ struct FeedDetailView: View {
         context.insert(link)
         article.isQueued = true
         try? context.save()
+    }
+}
+
+// MARK: - Last read card
+
+private struct LastReadCard: View {
+    let lastReadAt: Date?
+    @Environment(\.appTheme) private var appTheme
+
+    private var dateLabel: String {
+        guard let date = lastReadAt else { return "Never" }
+        return date.formatted(date: .long, time: .omitted)
+    }
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("LAST READ")
+                    .font(AppTheme.sansSerif(11, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+                    .kerning(2)
+
+                Text(dateLabel)
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(lastReadAt != nil ? appTheme.heading : appTheme.textFaint)
+            }
+            Spacer()
+        }
+        .padding(AppTheme.cardPadding)
+        .background(appTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius)
+                .stroke(appTheme.separator, lineWidth: 1)
+        )
     }
 }
 
@@ -322,5 +430,55 @@ private struct ArticleRow: View {
         .onChange(of: isQueued) { _, queued in
             if !queued { justAdded = false }
         }
+    }
+}
+
+// MARK: - Confirmation article row
+
+private struct ConfirmationArticleRow: View {
+    let article: RSSArticle
+    let onOpen: () -> Void
+
+    @Environment(\.appTheme) private var appTheme
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(article.title)
+                    .font(AppTheme.sansSerif(14, weight: .medium))
+                    .foregroundStyle(appTheme.heading)
+                    .lineLimit(3)
+
+                Text("Open to confirm your subscription.")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+                    .lineSpacing(2)
+
+                Text(article.publishedAt.relativeShort)
+                    .font(AppTheme.sansSerif(12))
+                    .foregroundStyle(appTheme.textFaint)
+            }
+
+            Spacer()
+
+            Button {
+                onOpen()
+            } label: {
+                Text("Open")
+                    .font(AppTheme.sansSerif(12, weight: .semibold))
+                    .foregroundStyle(appTheme.background)
+                    .frame(width: 60, height: 30)
+                    .background(appTheme.accent)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(AppTheme.cardPadding)
+        .background(appTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius)
+                .stroke(appTheme.accent.opacity(0.35), lineWidth: 1)
+        )
     }
 }

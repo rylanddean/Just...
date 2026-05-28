@@ -7,7 +7,7 @@ struct DigestView: View {
     @Environment(GradingProgressTracker.self) private var gradingTracker
 
     @Query private var articles: [RSSArticle]
-    @Query private var feeds: [RSSFeed]
+    @Query(filter: #Predicate<RSSFeed> { !$0.isArchived }) private var feeds: [RSSFeed]
     @Query private var queue: [QueuedLink]
     @Query(sort: \BrainEntry.readAt, order: .reverse) private var brainEntries: [BrainEntry]
 

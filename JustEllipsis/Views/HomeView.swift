@@ -175,8 +175,9 @@ struct HomeView: View {
         }
         .sheet(item: $safariURL, onDismiss: {
             guard let link = substackLink else { return }
-            let title = link.title ?? ContentFetcher.extractDomain(from: URL(string: link.url)!)
-            let domain = link.domain ?? ContentFetcher.extractDomain(from: URL(string: link.url)!)
+            let parsedURL = URL(string: link.url)
+            let title = link.title ?? parsedURL.map { ContentFetcher.extractDomain(from: $0) } ?? link.url
+            let domain = link.domain ?? parsedURL.map { ContentFetcher.extractDomain(from: $0) } ?? link.url
             let entry = BrainEntry(url: link.url, title: title, domain: domain)
             pendingSubstackEntry = entry
         }) { url in
@@ -184,12 +185,12 @@ struct HomeView: View {
                 .ignoresSafeArea()
         }
         .sheet(item: $pendingSubstackEntry) { entry in
-            ReflectView(entry: entry, link: substackLink!, onComplete: {
-                if let link = substackLink {
+            if let link = substackLink {
+                ReflectView(entry: entry, link: link, onComplete: {
                     markSubstackRead(link)
-                }
-                substackLink = nil
-            })
+                    substackLink = nil
+                })
+            }
         }
     }
 
@@ -212,6 +213,11 @@ struct HomeView: View {
         )
         if let article = try? context.fetch(articleDescriptor).first {
             article.isQueued = false
+            let feedID = article.feedID
+            let feedDescriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
+            if let feed = try? context.fetch(feedDescriptor).first {
+                feed.lastReadAt = Date()
+            }
         }
         context.delete(link)
 
