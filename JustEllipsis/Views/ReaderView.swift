@@ -296,6 +296,15 @@ struct ReaderView: View {
                     .buttonStyle(.plain)
 
                     Button {
+                        safariURL = URL(string: link.url)
+                    } label: {
+                        Image(systemName: "globe")
+                            .font(.system(size: 13))
+                            .foregroundStyle(appTheme.text.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
                         UIPasteboard.general.string = link.url
                     } label: {
                         Image(systemName: "doc.on.doc")
@@ -461,11 +470,13 @@ extension URL: @retroactive Identifiable {
     public var id: String { absoluteString }
 }
 
-private struct SafariView: UIViewControllerRepresentable {
+struct SafariView: UIViewControllerRepresentable {
     let url: URL
 
     func makeUIViewController(context: Context) -> SFSafariViewController {
-        let vc = SFSafariViewController(url: url)
+        let config = SFSafariViewController.Configuration()
+        config.entersReaderIfAvailable = true
+        let vc = SFSafariViewController(url: url, configuration: config)
         vc.preferredControlTintColor = UIColor(named: "AccentColor")
         return vc
     }
