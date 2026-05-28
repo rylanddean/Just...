@@ -22,6 +22,7 @@
 		286F5A0E2A4A563D35F90F73 /* CountdownRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42F62308F8EC6615789E6A4 /* CountdownRing.swift */; };
 		29F8953C9E0FD4BFF3F6CD16 /* newsletters.json in Resources */ = {isa = PBXBuildFile; fileRef = EFA606DC043A9F40ABDA855B /* newsletters.json */; };
 		2CF7EF3D506F406957F66652 /* ActivityRingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C0B2EC65BB2A2B2D76A9BFC /* ActivityRingsCard.swift */; };
+		3ACEAFFF075978728EE7EB65 /* ActivityHeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03967B1DE7F120DA0E80009 /* ActivityHeatmapView.swift */; };
 		3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */; };
 		4B13C26BA23068BA674FDD03 /* RSSArticle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6EA6D6C5E383E851F31F032 /* RSSArticle.swift */; };
 		4F23D3C312836C8F05217A06 /* NewsletterDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90154528A49086081972846 /* NewsletterDirectoryView.swift */; };
@@ -68,6 +69,7 @@
 		CB82B521C89B60A2D64CF6E5 /* FaviconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A73E845D1BE786825396BF8C /* FaviconView.swift */; };
 		CC99FBCD2E1EA422F4EC7E0D /* StreakEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */; };
 		D4CB0E2F1FCAE03A82BA00AE /* RSSRecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */; };
+		D5F69207DA6F30C45588E618 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F29BA69FF127357A44A4D22D /* NotificationScheduler.swift */; };
 		D89468FBE0FFDD4EB0D92C67 /* ReaderWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */; };
 		D8DF3954E0CB01D122E87439 /* feeds.json in Resources */ = {isa = PBXBuildFile; fileRef = DEB0F696771B8EDE0D4FC2B2 /* feeds.json */; };
 		DF47C19BEF474C1C7B732E11 /* Date+RelativeShort.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F2C68064C12A47B02C21E2 /* Date+RelativeShort.swift */; };
@@ -178,8 +180,10 @@
 		ED7FFE6597C651A7C460DFB1 /* JustEllipsis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsis.entitlements; sourceTree = "<group>"; };
 		EE22AF6BA2593A1F3AE13771 /* RSSFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSFeed.swift; sourceTree = "<group>"; };
 		EFA606DC043A9F40ABDA855B /* newsletters.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = newsletters.json; sourceTree = "<group>"; };
+		F03967B1DE7F120DA0E80009 /* ActivityHeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityHeatmapView.swift; sourceTree = "<group>"; };
 		F138A6A626CF6CF070B7A67E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F232598215B53DB59A71324A /* ReflectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectView.swift; sourceTree = "<group>"; };
+		F29BA69FF127357A44A4D22D /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
 		F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainViewModel.swift; sourceTree = "<group>"; };
 		F8881FBE57095A67C1C24497 /* BrainEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEntry.swift; sourceTree = "<group>"; };
 		F971C6F6E981C20C719708AC /* WebFeedScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFeedScraper.swift; sourceTree = "<group>"; };
@@ -232,6 +236,7 @@
 				BD6345AF40A371C990B21023 /* IntelligenceService.swift */,
 				3B9D7E057E235E52465D0592 /* JSRenderer.swift */,
 				B483A2F8D19AD3FE8FC7382B /* NightModeService.swift */,
+				F29BA69FF127357A44A4D22D /* NotificationScheduler.swift */,
 				2E682902D7E4F05A13644A84 /* PrefetchService.swift */,
 				00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */,
 				94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */,
@@ -319,6 +324,7 @@
 			isa = PBXGroup;
 			children = (
 				47BE1C9EB59A42E35267C8A4 /* ActivityChart.swift */,
+				F03967B1DE7F120DA0E80009 /* ActivityHeatmapView.swift */,
 				6C0B2EC65BB2A2B2D76A9BFC /* ActivityRingsCard.swift */,
 				8E01C072C66A485762BAC5A3 /* BrainDietPanel.swift */,
 				E4B0F8A38AFAB9049D081222 /* BrainOrb.swift */,
@@ -520,6 +526,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6BE477B9B2D7D5CA9D0D6EFB /* ActivityChart.swift in Sources */,
+				3ACEAFFF075978728EE7EB65 /* ActivityHeatmapView.swift in Sources */,
 				2CF7EF3D506F406957F66652 /* ActivityRingsCard.swift in Sources */,
 				949A68996476CD7276C0382C /* AddLinkView.swift in Sources */,
 				821C353335D750223B46E2EB /* AddNewsletterSheet.swift in Sources */,
@@ -552,6 +559,7 @@
 				2344727D36DCEF1C39989C66 /* LinkCard.swift in Sources */,
 				4F23D3C312836C8F05217A06 /* NewsletterDirectoryView.swift in Sources */,
 				6DAD153E9CF0CBA528E1C44D /* NightModeService.swift in Sources */,
+				D5F69207DA6F30C45588E618 /* NotificationScheduler.swift in Sources */,
 				9849593C087887E7D973C4C3 /* OnboardingView.swift in Sources */,
 				942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */,
 				A2B143A00787D4144D1E41B7 /* PrefetchService.swift in Sources */,

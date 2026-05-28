@@ -51,6 +51,17 @@ struct BrainView: View {
                         }
                         .listSectionSeparator(.hidden)
 
+                        // ACTIVITY
+                        Section {
+                            ActivityHeatmapView(entries: entries)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(rowInsets)
+                        } header: {
+                            sectionHeader("ACTIVITY")
+                        }
+                        .listSectionSeparator(.hidden)
+
                         // INSIGHTS (always visible)
                         Section {
                             BrainDietPanel(
