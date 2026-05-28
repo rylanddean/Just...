@@ -1,27 +1,23 @@
 import SwiftUI
 
 struct BrainDietPanel: View {
-    let entries: [BrainEntry]
     let viewModel: BrainViewModel
     let selectedTopic: String?
     let onTopicSelected: (String) -> Void
 
     @Environment(\.appTheme) private var appTheme
 
-    private var weeklyWords: [String] { viewModel.weeklyDNA(entries: entries) }
-    private var paragraph: String { viewModel.insightParagraph(entries: entries) }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(paragraph)
+            Text(viewModel.cachedInsightParagraph)
                 .font(AppTheme.serif(15))
                 .foregroundStyle(appTheme.text)
                 .lineSpacing(5)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !weeklyWords.isEmpty {
+            if !viewModel.cachedWeeklyWords.isEmpty {
                 FlowLayout(spacing: 6) {
-                    ForEach(weeklyWords, id: \.self) { word in
+                    ForEach(viewModel.cachedWeeklyWords, id: \.self) { word in
                         let isSelected = selectedTopic == word
                         Button {
                             onTopicSelected(word)

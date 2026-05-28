@@ -4,6 +4,8 @@ struct ActivityHeatmapView: View {
     let entries: [BrainEntry]
     @Environment(\.appTheme) private var appTheme
     @State private var cardWidth: CGFloat = 300
+    @State private var cachedWeeks: [[DayData?]] = []
+    @State private var cachedEntryCount: Int = -1
 
     // MARK: - Layout
 
@@ -34,11 +36,28 @@ struct ActivityHeatmapView: View {
         let isFuture: Bool
     }
 
-    private var weeks: [[DayData?]] {
+    private var maxReflections: Int {
+        max(3, cachedWeeks.flatMap { $0 }.compactMap { $0?.reflections }.max() ?? 3)
+    }
+
+    // MARK: - Colors
+
+    private func cellColor(for day: DayData?) -> Color {
+        guard let day else { return .clear }
+        guard !day.isFuture else { return .clear }
+        guard day.reflections > 0 else {
+            return day.reads > 0 ? appTheme.accent.opacity(0.1) : appTheme.separator.opacity(0.3)
+        }
+        let ratio = Double(day.reflections) / Double(maxReflections)
+        return appTheme.accent.opacity(0.3 + min(ratio, 1.0) * 0.7)
+    }
+
+    // MARK: - Body
+
+    private func buildWeeks() -> [[DayData?]] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
 
-        // Monday of this week
         let weekdayToday = cal.component(.weekday, from: today)
         let daysFromMon = weekdayToday == 1 ? 6 : weekdayToday - 2
         guard let thisMonday = cal.date(byAdding: .day, value: -daysFromMon, to: today),
@@ -65,28 +84,10 @@ struct ActivityHeatmapView: View {
         }
     }
 
-    private var maxReflections: Int {
-        max(3, weeks.flatMap { $0 }.compactMap { $0?.reflections }.max() ?? 3)
-    }
-
-    // MARK: - Colors
-
-    private func cellColor(for day: DayData?) -> Color {
-        guard let day else { return .clear }
-        guard !day.isFuture else { return .clear }
-        guard day.reflections > 0 else {
-            return day.reads > 0 ? appTheme.accent.opacity(0.1) : appTheme.separator.opacity(0.3)
-        }
-        let ratio = Double(day.reflections) / Double(maxReflections)
-        return appTheme.accent.opacity(0.3 + min(ratio, 1.0) * 0.7)
-    }
-
-    // MARK: - Body
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             let cs = cellSize
-            let computedWeeks = weeks
+            let computedWeeks = cachedWeeks
 
             HStack(alignment: .top, spacing: labelGap) {
                 // Day-of-week labels (alternate rows)
@@ -138,6 +139,16 @@ struct ActivityHeatmapView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .onAppear {
+            if cachedEntryCount != entries.count {
+                cachedEntryCount = entries.count
+                cachedWeeks = buildWeeks()
+            }
+        }
+        .onChange(of: entries.count) { _, newCount in
+            cachedEntryCount = newCount
+            cachedWeeks = buildWeeks()
+        }
     }
 
     private func legendColor(level: Int) -> Color {

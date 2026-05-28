@@ -65,7 +65,6 @@ struct BrainView: View {
                         // INSIGHTS (always visible)
                         Section {
                             BrainDietPanel(
-                                entries: entries,
                                 viewModel: viewModel,
                                 selectedTopic: viewModel.selectedTopic,
                                 onTopicSelected: { viewModel.toggleTopic($0) }
@@ -156,6 +155,10 @@ struct BrainView: View {
         }
         .onAppear {
             viewModel.setRememberedEntry(from: entries)
+            viewModel.refreshCacheIfNeeded(entries: entries)
+        }
+        .onChange(of: entries.count) { _, _ in
+            viewModel.refreshCacheIfNeeded(entries: entries)
         }
         .sheet(item: $selectedEntry) { entry in
             BrainEntryDetail(entry: entry)

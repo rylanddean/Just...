@@ -8,7 +8,13 @@ struct HomeView: View {
     @Query(sort: \QueuedLink.sortOrder) private var queue: [QueuedLink]
     @Query private var readingDays: [ReadingDay]
     @Query private var feeds: [RSSFeed]
-    @Query private var brainEntries: [BrainEntry]
+    // Only used to check count < 5 — cap at 5 to avoid loading the full Brain.
+    @Query(HomeView.brainEntriesDescriptor) private var brainEntries: [BrainEntry]
+    private static let brainEntriesDescriptor: FetchDescriptor<BrainEntry> = {
+        var d = FetchDescriptor<BrainEntry>()
+        d.fetchLimit = 5
+        return d
+    }()
 
     @AppStorage("streak.minReadsPerDay")                  private var minReadsPerDay:       Int  = 1
     @AppStorage("activityRings.enabled")                 private var activityRingsEnabled: Bool = false

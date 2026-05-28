@@ -10,6 +10,19 @@ final class BrainViewModel {
     var selectedTopic: String? = nil
     var rememberedEntry: BrainEntry? = nil
 
+    // MARK: - Cached analytics (recomputed only when entry count changes)
+
+    private(set) var cachedInsightParagraph: String = ""
+    private(set) var cachedWeeklyWords: [String] = []
+    private var cacheEntryCount: Int = -1
+
+    func refreshCacheIfNeeded(entries: [BrainEntry]) {
+        guard entries.count != cacheEntryCount else { return }
+        cacheEntryCount = entries.count
+        cachedWeeklyWords = weeklyDNA(entries: entries)
+        cachedInsightParagraph = insightParagraph(entries: entries)
+    }
+
     // MARK: - Rank
 
     func rank(for entries: [BrainEntry]) -> BrainRank {

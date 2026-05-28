@@ -9,6 +9,11 @@ struct FeedsView: View {
     @Query(filter: #Predicate<RSSFeed> { !$0.isArchived && $0.isFavourite },  sort: \RSSFeed.title) private var favouriteFeeds: [RSSFeed]
     @Query(filter: #Predicate<RSSFeed> { !$0.isArchived && !$0.isFavourite }, sort: \RSSFeed.title) private var regularFeeds: [RSSFeed]
     @Query(filter: #Predicate<RSSFeed> { $0.isArchived },                     sort: \RSSFeed.title) private var archivedFeeds: [RSSFeed]
+    @Query(filter: #Predicate<RSSArticle> { !$0.isQueued }) private var unqueuedArticles: [RSSArticle]
+
+    private var articleCountByFeed: [UUID: Int] {
+        Dictionary(grouping: unqueuedArticles, by: \.feedID).mapValues(\.count)
+    }
 
     @AppStorage("archivedFeedsSectionExpanded") private var archivedSectionExpanded: Bool = false
     @AppStorage("hasSeenAutoQueueHint") private var hasSeenAutoQueueHint: Bool = false
@@ -233,7 +238,7 @@ struct FeedsView: View {
     @ViewBuilder
     private func feedListRow(for feed: RSSFeed) -> some View {
         NavigationLink(destination: FeedDetailView(feed: feed)) {
-            FeedRow(feed: feed)
+            FeedRow(feed: feed, unqueuedArticleCount: articleCountByFeed[feed.id] ?? 0)
         }
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -716,16 +721,8 @@ struct FeedsView: View {
 
 private struct FeedRow: View {
     let feed: RSSFeed
-    @Query private var articles: [RSSArticle]
+    let unqueuedArticleCount: Int
     @Environment(\.appTheme) private var appTheme
-
-    init(feed: RSSFeed) {
-        self.feed = feed
-        let feedID = feed.id
-        _articles = Query(filter: #Predicate<RSSArticle> {
-            $0.feedID == feedID && !$0.isQueued
-        })
-    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -799,8 +796,8 @@ private struct FeedRow: View {
                     .padding(.vertical, 2)
                     .background(appTheme.accentFaint)
                     .clipShape(Capsule())
-            } else if articles.count > 0 {
-                Text("\(articles.count)")
+            } else if unqueuedArticleCount > 0 {
+                Text("\(unqueuedArticleCount)")
                     .font(AppTheme.sansSerif(12, weight: .medium))
                     .foregroundStyle(appTheme.background)
                     .frame(minWidth: 22, minHeight: 22)
