@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage(JustEllipsisApp.iCloudSyncKey)   private var iCloudSyncEnabled: Bool  = false
     @AppStorage("rss.fetchHour")                   private var fetchHour:                  Int    = RSSFetchService.defaultFetchHour
     @AppStorage("rss.fetchMinute")                 private var fetchMinute:                Int    = RSSFetchService.defaultFetchMinute
+    @AppStorage(RSSFetchService.retentionDaysKey)  private var articleRetentionDays:       Int    = RSSFetchService.defaultRetentionDays
     @AppStorage("autoArchiveUnreadEnabled")        private var autoArchiveUnreadEnabled:   Bool   = false
     @AppStorage("autoArchiveUnreadDays")           private var autoArchiveUnreadDays:      Int    = 7
     @AppStorage("autoArchiveDeadEnabled")          private var autoArchiveDeadEnabled:     Bool   = false
@@ -535,6 +536,34 @@ struct SettingsView: View {
                 DatePicker("", selection: fetchTimeBinding, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                     .tint(appTheme.accent)
+            }
+
+            Divider().background(appTheme.separator)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Article retention")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(appTheme.heading)
+                    Text("How many days of feed articles to keep.")
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+                Spacer()
+                Picker("", selection: $articleRetentionDays) {
+                    Text("1 day").tag(1)
+                    Text("2 days").tag(2)
+                    Text("3 days").tag(3)
+                    Text("5 days").tag(5)
+                    Text("7 days").tag(7)
+                }
+                .pickerStyle(.menu)
+                .font(AppTheme.sansSerif(14))
+                .tint(appTheme.accent)
+            }
+            .onChange(of: articleRetentionDays) { _, _ in
+                clearAllArticles()
+                RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
             }
 
             Divider().background(appTheme.separator)

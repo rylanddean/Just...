@@ -29,6 +29,9 @@ struct RSSFetchService {
     static let defaultFetchHour   = 7
     static let defaultFetchMinute = 0
 
+    static let retentionDaysKey     = "article.retentionDays"
+    static let defaultRetentionDays = 2
+
     static func scheduleNextBackgroundTask() {
         let hour   = UserDefaults.standard.object(forKey: fetchHourKey)   as? Int ?? defaultFetchHour
         let minute = UserDefaults.standard.object(forKey: fetchMinuteKey) as? Int ?? defaultFetchMinute
@@ -214,10 +217,12 @@ actor RSSFetchActor {
     // Prune articles published before their feed type's retention window.
     // Scraped feeds: never pruned (accumulate until unsubscribed).
     // Newsletter feeds: 30-day window (editions are infrequent; readers need time).
-    // RSS feeds: 7-day window (matches the Digest query window).
+    // RSS feeds: user-configured window (1–7 days, default 2).
     func pruneOldArticles() async {
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        let rssCutoff        = Calendar.current.date(byAdding: .day, value: -7,  to: startOfToday) ?? startOfToday
+        let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
+        let rssDays = stored ?? RSSFetchService.defaultRetentionDays
+        let rssCutoff        = Calendar.current.date(byAdding: .day, value: -rssDays, to: startOfToday) ?? startOfToday
         let newsletterCutoff = Calendar.current.date(byAdding: .day, value: -30, to: startOfToday) ?? startOfToday
 
         let allFeeds = (try? modelContext.fetch(FetchDescriptor<RSSFeed>())) ?? []

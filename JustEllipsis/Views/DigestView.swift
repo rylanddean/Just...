@@ -18,8 +18,10 @@ struct DigestView: View {
     @State private var isFetching = false
 
     init() {
+        let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
+        let days = stored ?? RSSFetchService.defaultRetentionDays
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: startOfToday) ?? startOfToday
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: startOfToday) ?? startOfToday
         _articles = Query(
             filter: #Predicate<RSSArticle> { $0.publishedAt >= cutoff },
             sort: \RSSArticle.publishedAt,

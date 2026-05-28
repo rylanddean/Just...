@@ -17,15 +17,17 @@ struct FeedDetailView: View {
     init(feed: RSSFeed) {
         self.feed = feed
         let feedID = feed.id
+        let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
+        let retentionDays = stored ?? RSSFetchService.defaultRetentionDays
         let startOfToday = Calendar.current.startOfDay(for: Date())
         let cutoff: Date
         switch feed.feedType {
         case .scraped:
-            cutoff = Calendar.current.date(byAdding: .day, value: -7,  to: startOfToday) ?? startOfToday
+            cutoff = Calendar.current.date(byAdding: .day, value: -retentionDays, to: startOfToday) ?? startOfToday
         case .newsletter:
             cutoff = Calendar.current.date(byAdding: .day, value: -30, to: startOfToday) ?? startOfToday
         case .rss:
-            cutoff = Calendar.current.date(byAdding: .day, value: -7,  to: startOfToday) ?? startOfToday
+            cutoff = Calendar.current.date(byAdding: .day, value: -retentionDays, to: startOfToday) ?? startOfToday
         }
         _articles = Query(
             filter: #Predicate<RSSArticle> {
