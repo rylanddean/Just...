@@ -521,7 +521,7 @@ actor RSSFetchActor {
     // No-ops on iOS < 26 or when Apple Intelligence is unavailable.
     func tagPendingArticles() async {
         guard #available(iOS 26, *) else {
-            topicsLog.debug("tagPendingArticles: skipped — iOS 26 unavailable")
+            topicsLog.warning("tagPendingArticles: skipped — iOS 26 unavailable")
             return
         }
         guard IntelligenceService.isAvailable else {
@@ -547,7 +547,7 @@ actor RSSFetchActor {
         }
 
         let alreadyTagged = all.count - stubs.count
-        topicsLog.info("tagPendingArticles: \(stubs.count) untagged, \(alreadyTagged) already tagged")
+        topicsLog.warning("tagPendingArticles: \(stubs.count) untagged, \(alreadyTagged) already tagged")
 
         guard !stubs.isEmpty else { return }
 
@@ -578,7 +578,7 @@ actor RSSFetchActor {
             }
         }
 
-        topicsLog.info("tagPendingArticles: done — \(tagged) AI-tagged, \(fallbacks) fallback, \(failed) failed")
+        topicsLog.warning("tagPendingArticles: done — \(tagged) AI-tagged, \(fallbacks) fallback, \(failed) failed")
         if tagged + fallbacks > 0 { try? modelContext.save() }
     }
 
