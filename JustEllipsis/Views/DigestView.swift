@@ -4,7 +4,8 @@ import SwiftData
 struct DigestView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
-    @Environment(GradingProgressTracker.self) private var gradingTracker
+    @Environment(GradingProgressTracker.self)  private var gradingTracker
+    @Environment(PipelineProgressTracker.self) private var pipelineTracker
 
     @Query private var articles: [RSSArticle]
     @Query(filter: #Predicate<RSSFeed> { !$0.isArchived }) private var feeds: [RSSFeed]
@@ -310,7 +311,7 @@ struct DigestView: View {
         guard !isFetching else { return }
         isFetching = true
         selectedTopic = "All"
-        let task = RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
+        let task = RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker, pipelineTracker: pipelineTracker)
         Task {
             await task.value
             await MainActor.run { isFetching = false }

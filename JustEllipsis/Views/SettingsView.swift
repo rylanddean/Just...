@@ -7,7 +7,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
-    @Environment(GradingProgressTracker.self) private var gradingTracker
+    @Environment(GradingProgressTracker.self)  private var gradingTracker
+    @Environment(PipelineProgressTracker.self) private var pipelineTracker
     @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:         String = "ember"
     @AppStorage("streak.minReadsPerDay")         private var minReadsPerDay:   Int    = 1
     @AppStorage(JustEllipsisApp.iCloudSyncKey)   private var iCloudSyncEnabled: Bool  = false
@@ -604,7 +605,7 @@ struct SettingsView: View {
             }
             .onChange(of: articleRetentionDays) { _, _ in
                 clearAllArticles()
-                RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
+                RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker, pipelineTracker: pipelineTracker)
             }
 
             Divider().background(appTheme.separator)
@@ -716,6 +717,11 @@ struct SettingsView: View {
                     gradeBreakdown
                 }
 
+                if IntelligenceService.isAvailable {
+                    Divider().background(appTheme.separator)
+                    pipelineStatusSection
+                }
+
                 HStack {
                     Text("Hide noise from digest")
                         .font(AppTheme.sansSerif(15))
@@ -806,6 +812,61 @@ struct SettingsView: View {
             }
         }
         return (strong, worthIt, noise, ungraded)
+    }
+
+    @ViewBuilder
+    private var pipelineStatusSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if pipelineTracker.isRunning {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.75)
+                        .tint(appTheme.accent)
+                    Text("\(pipelineTracker.phase) \(pipelineTracker.current) of \(pipelineTracker.total)…")
+                        .font(AppTheme.sansSerif(13))
+                        .foregroundStyle(appTheme.textFaint)
+                    Spacer()
+                }
+                .padding(.leading, 16)
+            } else {
+                let unprocessed = allArticles.filter { $0.topics.isEmpty || $0.summary == nil }.count
+                if unprocessed > 0 {
+                    HStack {
+                        Spacer()
+                        Button("Process now") {
+                            RSSFetchService.pipelineInProcess(container: context.container, pipelineTracker: pipelineTracker)
+                        }
+                        .font(AppTheme.sansSerif(13, weight: .medium))
+                        .foregroundStyle(appTheme.accent)
+                    }
+                    .padding(.leading, 16)
+                }
+            }
+            if let tagSummary = pipelineTracker.lastTagSummary {
+                HStack {
+                    Text("Tags")
+                        .font(AppTheme.sansSerif(13))
+                        .foregroundStyle(appTheme.textFaint)
+                        .padding(.leading, 16)
+                    Spacer()
+                    Text(tagSummary)
+                        .font(AppTheme.sansSerif(12).monospacedDigit())
+                        .foregroundStyle(appTheme.textFaint)
+                }
+            }
+            if let summarySummary = pipelineTracker.lastSummarizeSummary {
+                HStack {
+                    Text("Summaries")
+                        .font(AppTheme.sansSerif(13))
+                        .foregroundStyle(appTheme.textFaint)
+                        .padding(.leading, 16)
+                    Spacer()
+                    Text(summarySummary)
+                        .font(AppTheme.sansSerif(12).monospacedDigit())
+                        .foregroundStyle(appTheme.textFaint)
+                }
+            }
+        }
     }
 
     @ViewBuilder

@@ -68,6 +68,7 @@
 		C5E3510BA0839FE572FE05A4 /* ShareFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC763198DE4280198397A77F /* ShareFeedbackView.swift */; };
 		CB82B521C89B60A2D64CF6E5 /* FaviconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A73E845D1BE786825396BF8C /* FaviconView.swift */; };
 		CC99FBCD2E1EA422F4EC7E0D /* StreakEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */; };
+		CD21E42FF24671E4C93487BC /* PipelineProgressTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 351C38A4FECDC4002E1EF444 /* PipelineProgressTracker.swift */; };
 		D4CB0E2F1FCAE03A82BA00AE /* RSSRecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */; };
 		D5F69207DA6F30C45588E618 /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F29BA69FF127357A44A4D22D /* NotificationScheduler.swift */; };
 		D89468FBE0FFDD4EB0D92C67 /* ReaderWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */; };
@@ -125,6 +126,7 @@
 		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
+		351C38A4FECDC4002E1EF444 /* PipelineProgressTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineProgressTracker.swift; sourceTree = "<group>"; };
 		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		369CC02046EDB9D512264A8B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		3B9D7E057E235E52465D0592 /* JSRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSRenderer.swift; sourceTree = "<group>"; };
@@ -355,6 +357,7 @@
 				369CC02046EDB9D512264A8B /* AppTheme.swift */,
 				420304C73D3C2F1BA89FB9AE /* GradingProgressTracker.swift */,
 				9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */,
+				351C38A4FECDC4002E1EF444 /* PipelineProgressTracker.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -562,6 +565,7 @@
 				D5F69207DA6F30C45588E618 /* NotificationScheduler.swift in Sources */,
 				9849593C087887E7D973C4C3 /* OnboardingView.swift in Sources */,
 				942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */,
+				CD21E42FF24671E4C93487BC /* PipelineProgressTracker.swift in Sources */,
 				A2B143A00787D4144D1E41B7 /* PrefetchService.swift in Sources */,
 				963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */,
 				4B13C26BA23068BA674FDD03 /* RSSArticle.swift in Sources */,

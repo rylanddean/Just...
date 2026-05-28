@@ -8,6 +8,7 @@ struct JustEllipsisApp: App {
     let container: ModelContainer = makeContainer()
     @State private var router = AppRouter()
     @State private var gradingTracker = GradingProgressTracker()
+    @State private var pipelineTracker = PipelineProgressTracker()
     @State private var healthKit = HealthKitService()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -24,6 +25,7 @@ struct JustEllipsisApp: App {
                 .modelContainer(container)
                 .environment(router)
                 .environment(gradingTracker)
+                .environment(pipelineTracker)
                 .environment(healthKit)
                 .onOpenURL { url in
                     handleOpenURL(url)
@@ -54,7 +56,7 @@ struct JustEllipsisApp: App {
             }
             let taskHandle = Task {
                 let actor = RSSFetchActor(modelContainer: container)
-                await actor.performDailyJob()
+                await actor.performDailyJob(pipelineTracker: pipelineTracker)
                 RSSFetchService.scheduleNextBackgroundTask()
                 processingTask.setTaskCompleted(success: true)
             }
