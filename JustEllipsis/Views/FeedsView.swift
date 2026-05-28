@@ -11,6 +11,8 @@ struct FeedsView: View {
     @State private var showAddByURL = false
     @State private var showAddNewsletter = false
     @State private var showDirectory = false
+    @State private var showNewsletterDirectory = false
+    @State private var prefilledNewsletterURL = ""
     @State private var pasteURL = ""
     @State private var customFeedName = ""
     @State private var addError: String?
@@ -49,8 +51,17 @@ struct FeedsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showDirectory = true
+                    Menu {
+                        Button {
+                            showDirectory = true
+                        } label: {
+                            Label("RSS Feeds", systemImage: "dot.radiowaves.left.and.right")
+                        }
+                        Button {
+                            showNewsletterDirectory = true
+                        } label: {
+                            Label("Newsletters", systemImage: "newspaper")
+                        }
                     } label: {
                         Text("Browse")
                             .font(AppTheme.sansSerif(15))
@@ -70,6 +81,7 @@ struct FeedsView: View {
                             Label("RSS Feed", systemImage: "dot.radiowaves.left.and.right")
                         }
                         Button {
+                            prefilledNewsletterURL = ""
                             showAddNewsletter = true
                         } label: {
                             Label("Newsletter", systemImage: "envelope")
@@ -88,8 +100,14 @@ struct FeedsView: View {
             addByURLSheet
         }
         .sheet(isPresented: $showAddNewsletter) {
-            AddNewsletterSheet { feedURL, email, title in
+            AddNewsletterSheet(prefilledURL: prefilledNewsletterURL) { feedURL, email, title in
                 subscribeNewsletter(feedURL: feedURL, email: email, title: title)
+            }
+        }
+        .sheet(isPresented: $showNewsletterDirectory) {
+            NewsletterDirectoryView { item in
+                prefilledNewsletterURL = item.url
+                showAddNewsletter = true
             }
         }
         .sheet(isPresented: $showDirectory) {

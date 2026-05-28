@@ -123,6 +123,29 @@ extension FeedDirectoryItem {
     }
 }
 
+// MARK: - Newsletter directory item (decoded from newsletters.json)
+
+/// A pre-defined newsletter entry from the curated awesome-newsletters list.
+/// `url` is the newsletter's subscribe/website page — fed directly into the
+/// KtN flow as the pre-filled website URL.
+struct NewsletterDirectoryItem: Codable, Identifiable, Sendable {
+    var id: String { url }
+    let name: String
+    let url: String
+    let category: String
+    let description: String
+}
+
+extension NewsletterDirectoryItem {
+    static func loadAll() -> [NewsletterDirectoryItem] {
+        guard let fileURL = Bundle.main.url(forResource: "newsletters", withExtension: "json"),
+              let data = try? Data(contentsOf: fileURL),
+              let items = try? JSONDecoder().decode([NewsletterDirectoryItem].self, from: data)
+        else { return [] }
+        return items
+    }
+}
+
 // MARK: - Parsed article (intermediate, Sendable for actor crossing)
 
 struct ParsedArticle: Sendable {
