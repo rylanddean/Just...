@@ -5,7 +5,9 @@ struct ActivityHeatmapView: View {
     @Environment(\.appTheme) private var appTheme
     @State private var cardWidth: CGFloat = 300
     @State private var cachedWeeks: [[DayData?]] = []
+    @State private var cachedMaxReflections: Int = 3
     @State private var cachedEntryCount: Int = -1
+    @State private var cachedDate: Int = -1      // day-of-year sentinel for midnight invalidation
 
     // MARK: - Layout
 
@@ -36,10 +38,6 @@ struct ActivityHeatmapView: View {
         let isFuture: Bool
     }
 
-    private var maxReflections: Int {
-        max(3, cachedWeeks.flatMap { $0 }.compactMap { $0?.reflections }.max() ?? 3)
-    }
-
     // MARK: - Colors
 
     private func cellColor(for day: DayData?) -> Color {
@@ -48,13 +46,13 @@ struct ActivityHeatmapView: View {
         guard day.reflections > 0 else {
             return day.reads > 0 ? appTheme.accent.opacity(0.1) : appTheme.separator.opacity(0.3)
         }
-        let ratio = Double(day.reflections) / Double(maxReflections)
+        let ratio = Double(day.reflections) / Double(cachedMaxReflections)
         return appTheme.accent.opacity(0.3 + min(ratio, 1.0) * 0.7)
     }
 
-    // MARK: - Body
+    // MARK: - Build
 
-    private func buildWeeks() -> [[DayData?]] {
+    private func buildWeeks() -> (weeks: [[DayData?]], maxReflections: Int) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
 
@@ -62,8 +60,9 @@ struct ActivityHeatmapView: View {
         let daysFromMon = weekdayToday == 1 ? 6 : weekdayToday - 2
         guard let thisMonday = cal.date(byAdding: .day, value: -daysFromMon, to: today),
               let weekStart = cal.date(byAdding: .weekOfYear, value: -(numWeeks - 1), to: thisMonday)
-        else { return [] }
+        else { return ([], 3) }
 
+        // Build lookup in a single pass over entries.
         var lookup: [Date: (reflections: Int, reads: Int)] = [:]
         for entry in entries {
             let day = cal.startOfDay(for: entry.readAt)
@@ -74,15 +73,31 @@ struct ActivityHeatmapView: View {
             lookup[day] = (r, rd)
         }
 
-        return (0..<numWeeks).map { w in
+        var maxR = 3
+        let weeks: [[DayData?]] = (0..<numWeeks).map { w in
             (0..<7).map { d -> DayData? in
                 guard let date = cal.date(byAdding: .day, value: w * 7 + d, to: weekStart) else { return nil }
                 let isFuture = date > today
                 let (r, rd) = lookup[date] ?? (0, 0)
+                if r > maxR { maxR = r }
                 return DayData(date: date, reflections: r, reads: rd, isFuture: isFuture)
             }
         }
+
+        return (weeks, maxR)
     }
+
+    private func refreshCacheIfNeeded() {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 0
+        guard cachedEntryCount != entries.count || cachedDate != dayOfYear else { return }
+        cachedEntryCount = entries.count
+        cachedDate = dayOfYear
+        let result = buildWeeks()
+        cachedWeeks = result.weeks
+        cachedMaxReflections = result.maxReflections
+    }
+
+    // MARK: - Body
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -90,7 +105,6 @@ struct ActivityHeatmapView: View {
             let computedWeeks = cachedWeeks
 
             HStack(alignment: .top, spacing: labelGap) {
-                // Day-of-week labels (alternate rows)
                 VStack(spacing: gap) {
                     ForEach(0..<7, id: \.self) { i in
                         Text(i % 2 == 0 ? dayAbbrevs[i] : "")
@@ -100,7 +114,6 @@ struct ActivityHeatmapView: View {
                     }
                 }
 
-                // Week columns
                 HStack(alignment: .top, spacing: gap) {
                     ForEach(0..<computedWeeks.count, id: \.self) { col in
                         VStack(spacing: gap) {
@@ -118,9 +131,15 @@ struct ActivityHeatmapView: View {
                     Color.clear.preference(key: HeatmapWidthKey.self, value: geo.size.width)
                 }
             )
-            .onPreferenceChange(HeatmapWidthKey.self) { cardWidth = $0 }
+            .onPreferenceChange(HeatmapWidthKey.self) { newWidth in
+                if abs(newWidth - cardWidth) > 1 {
+                    cardWidth = newWidth
+                    let result = buildWeeks()
+                    cachedWeeks = result.weeks
+                    cachedMaxReflections = result.maxReflections
+                }
+            }
 
-            // Legend
             HStack(spacing: 4) {
                 Text("Less")
                     .font(.system(size: 9))
@@ -139,16 +158,8 @@ struct ActivityHeatmapView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-        .onAppear {
-            if cachedEntryCount != entries.count {
-                cachedEntryCount = entries.count
-                cachedWeeks = buildWeeks()
-            }
-        }
-        .onChange(of: entries.count) { _, newCount in
-            cachedEntryCount = newCount
-            cachedWeeks = buildWeeks()
-        }
+        .onAppear { refreshCacheIfNeeded() }
+        .onChange(of: entries.count) { _, _ in refreshCacheIfNeeded() }
     }
 
     private func legendColor(level: Int) -> Color {

@@ -9,10 +9,21 @@ struct FeedsView: View {
     @Query(filter: #Predicate<RSSFeed> { !$0.isArchived && $0.isFavourite },  sort: \RSSFeed.title) private var favouriteFeeds: [RSSFeed]
     @Query(filter: #Predicate<RSSFeed> { !$0.isArchived && !$0.isFavourite }, sort: \RSSFeed.title) private var regularFeeds: [RSSFeed]
     @Query(filter: #Predicate<RSSFeed> { $0.isArchived },                     sort: \RSSFeed.title) private var archivedFeeds: [RSSFeed]
-    @Query(filter: #Predicate<RSSArticle> { !$0.isQueued }) private var unqueuedArticles: [RSSArticle]
+    // Scoped to the retention window so we don't load the full article corpus for badge counts.
+    @Query private var unqueuedArticles: [RSSArticle]
 
     private var articleCountByFeed: [UUID: Int] {
         Dictionary(grouping: unqueuedArticles, by: \.feedID).mapValues(\.count)
+    }
+
+    init() {
+        let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
+        let days = stored ?? RSSFetchService.defaultRetentionDays
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: startOfToday) ?? startOfToday
+        _unqueuedArticles = Query(
+            filter: #Predicate<RSSArticle> { !$0.isQueued && $0.publishedAt >= cutoff }
+        )
     }
 
     @AppStorage("archivedFeedsSectionExpanded") private var archivedSectionExpanded: Bool = false

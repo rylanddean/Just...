@@ -40,9 +40,11 @@ final class BrainViewModel {
     // MARK: - Filtering
 
     func filtered(_ entries: [BrainEntry]) -> [BrainEntry] {
+        let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty || selectedTopic != nil else { return entries }
+
         var result = entries
 
-        let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         if !q.isEmpty {
             result = result.filter { entry in
                 entry.title.lowercased().contains(q)

@@ -33,77 +33,86 @@ struct DigestView: View {
         )
     }
 
-    private var queuedURLs: Set<String> { Set(queue.map { $0.url }) }
+    // MARK: - Pre-computed lookup (cheap, rebuilt only when feeds change)
 
     private var feedLookup: [UUID: RSSFeed] {
         Dictionary(uniqueKeysWithValues: feeds.map { ($0.id, $0) })
     }
 
-    // Priority: AI topics → feed category → feed title (always non-empty for valid feeds).
-    private func topicLabels(for article: RSSArticle) -> [String] {
-        article.topics
+    private var queuedURLs: Set<String> { Set(queue.map { $0.url }) }
+
+    // MARK: - Single-pass bucketing
+
+    private struct ArticleBuckets {
+        let today: [RSSArticle]
+        let yesterday: [RSSArticle]
+        let earlier: [RSSArticle]
+        let topics: [String]
+        let hasUntagged: Bool
     }
 
-    private var hasUntaggedArticles: Bool {
-        let all = todayArticles + yesterdayArticles + earlierArticles
-        return !all.isEmpty && all.contains { $0.topics.isEmpty }
-    }
+    /// Scans `articles` exactly once, producing date buckets, topic counts, and untagged flag.
+    private func buildBuckets() -> ArticleBuckets {
+        let lookup = feedLookup
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        guard let startOfYesterday = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) else {
+            return ArticleBuckets(today: [], yesterday: [], earlier: [], topics: ["All"], hasUntagged: false)
+        }
 
-    private var availableTopics: [String] {
-        let all = todayArticles + yesterdayArticles + earlierArticles
-        var counts: [String: Int] = [:]
-        for article in all {
-            for label in topicLabels(for: article) {
-                counts[label, default: 0] += 1
+        var todayDedupe = Set<String>()
+        var yesterdayDedupe = Set<String>()
+        var earlierDedupe = Set<String>()
+        var todayList:     [RSSArticle] = []
+        var yesterdayList: [RSSArticle] = []
+        var earlierList:   [RSSArticle] = []
+        var topicCounts:   [String: Int] = [:]
+        var hasUntagged = false
+
+        for article in articles {
+            guard lookup[article.feedID] != nil else { continue }
+            if gradingEnabled && hideNoise && article.qualityGrade == .noise { continue }
+            if hiddenSeenIDs.contains(article.id) { continue }
+
+            if article.topics.isEmpty {
+                hasUntagged = true
+            } else {
+                for topic in article.topics { topicCounts[topic, default: 0] += 1 }
+            }
+
+            if article.publishedAt >= startOfToday {
+                if todayDedupe.insert(article.url).inserted { todayList.append(article) }
+            } else if article.publishedAt >= startOfYesterday {
+                if yesterdayDedupe.insert(article.url).inserted { yesterdayList.append(article) }
+            } else {
+                if earlierDedupe.insert(article.url).inserted { earlierList.append(article) }
             }
         }
-        let top = counts.sorted { $0.value > $1.value }.prefix(10).map(\.key)
-        return ["All"] + top
+
+        let topTopics = topicCounts.sorted { $0.value > $1.value }.prefix(10).map(\.key)
+        return ArticleBuckets(
+            today: todayList,
+            yesterday: yesterdayList,
+            earlier: earlierList,
+            topics: ["All"] + topTopics,
+            hasUntagged: hasUntagged
+        )
     }
 
-    private var todayArticles: [RSSArticle] {
-        var dedupe = Set<String>()
-        return articles
-            .filter { feedLookup[$0.feedID] != nil }
-            .filter { Calendar.current.isDateInToday($0.publishedAt) }
-            .filter { dedupe.insert($0.url).inserted }
-            .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
-            .filter { !hiddenSeenIDs.contains($0.id) }
-    }
-
-    private var yesterdayArticles: [RSSArticle] {
-        var dedupe = Set<String>()
-        return articles
-            .filter { feedLookup[$0.feedID] != nil }
-            .filter { Calendar.current.isDateInYesterday($0.publishedAt) }
-            .filter { dedupe.insert($0.url).inserted }
-            .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
-            .filter { !hiddenSeenIDs.contains($0.id) }
-    }
-
-    private var earlierArticles: [RSSArticle] {
-        var dedupe = Set<String>()
-        return articles
-            .filter { feedLookup[$0.feedID] != nil }
-            .filter {
-                !Calendar.current.isDateInToday($0.publishedAt) &&
-                !Calendar.current.isDateInYesterday($0.publishedAt)
-            }
-            .filter { dedupe.insert($0.url).inserted }
-            .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
-            .filter { !hiddenSeenIDs.contains($0.id) }
-    }
-
-    private var brainURLs: Set<String> { Set(brainEntries.map { $0.url }) }
+    // MARK: - Recommendations
 
     // Returns nil when the Brain doesn't yet have enough signal (< 5 entries).
     private var recommendations: [RSSArticle]? {
         guard brainEntries.count >= 5 else { return nil }
 
+        // Pre-compute lookup sets once — NOT inside the filter closure.
+        let lookup     = feedLookup
+        let queuedSet  = Set(queue.map { $0.url })
+        let brainSet   = Set(brainEntries.map { $0.url })
+
         let candidates = articles.filter {
-            feedLookup[$0.feedID] != nil &&
-            !queuedURLs.contains($0.url) &&
-            !brainURLs.contains($0.url) &&
+            lookup[$0.feedID] != nil &&
+            !queuedSet.contains($0.url) &&
+            !brainSet.contains($0.url) &&
             !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) &&
             !hiddenSeenIDs.contains($0.id)
         }
@@ -149,13 +158,11 @@ struct DigestView: View {
         var seen = Set<UUID>()
         var picks: [RSSArticle] = []
 
-        // First pass: one per feed.
         for article in articles {
             guard picks.count < count else { break }
             if seen.insert(article.feedID).inserted { picks.append(article) }
         }
 
-        // Second pass: fill remaining slots from any feed.
         if picks.count < count {
             let pickIDs = Set(picks.map { $0.id })
             for article in articles where !pickIDs.contains(article.id) {
@@ -166,6 +173,8 @@ struct DigestView: View {
 
         return picks
     }
+
+    // MARK: - Digest items (uses pre-built buckets — no additional article scan)
 
     private enum DigestItem: Identifiable {
         case brainHeader
@@ -181,37 +190,35 @@ struct DigestView: View {
         }
     }
 
-    private var digestItems: [DigestItem] {
+    private func buildDigestItems(from buckets: ArticleBuckets) -> [DigestItem] {
         var items: [DigestItem] = []
 
         let topicMatch: (RSSArticle) -> Bool = { [self] article in
             guard selectedTopic != "All" else { return true }
-            return topicLabels(for: article).contains(selectedTopic)
+            return article.topics.contains(selectedTopic)
         }
 
-        // Compute recommendations once; exclude those URLs from the date sections
-        // so each article appears in exactly one place.
         let recs = recommendations?.filter(topicMatch)
-        let recURLs: Set<String> = recs.map { Set($0.map { $0.url }) } ?? []
+        let recURLs: Set<String> = recs.map { Set($0.map(\.url)) } ?? []
 
         if let recs, !recs.isEmpty {
             items.append(.brainHeader)
             items.append(contentsOf: recs.map { .article($0) })
         }
 
-        let today = todayArticles.filter { !recURLs.contains($0.url) }.filter(topicMatch)
+        let today = buckets.today.filter { !recURLs.contains($0.url) && topicMatch($0) }
         if !today.isEmpty {
             items.append(.dateHeader("TODAY"))
             items.append(contentsOf: today.map { .article($0) })
         }
 
-        let yesterday = yesterdayArticles.filter { !recURLs.contains($0.url) }.filter(topicMatch)
+        let yesterday = buckets.yesterday.filter { !recURLs.contains($0.url) && topicMatch($0) }
         if !yesterday.isEmpty {
             items.append(.dateHeader("YESTERDAY"))
             items.append(contentsOf: yesterday.map { .article($0) })
         }
 
-        let earlier = earlierArticles.filter { !recURLs.contains($0.url) }.filter(topicMatch)
+        let earlier = buckets.earlier.filter { !recURLs.contains($0.url) && topicMatch($0) }
         if !earlier.isEmpty {
             items.append(.dateHeader("EARLIER"))
             items.append(contentsOf: earlier.map { .article($0) })
@@ -220,22 +227,28 @@ struct DigestView: View {
         return items
     }
 
+    // MARK: - Body
+
     var body: some View {
+        // Computed once per body evaluation — single pass through articles.
+        let buckets = buildBuckets()
+        let items   = buildDigestItems(from: buckets)
+
         NavigationStack {
             ZStack {
                 appTheme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    tagFilterArea
+                    tagFilterArea(topics: buckets.topics, hasUntagged: buckets.hasUntagged)
 
                     if articles.isEmpty {
                         emptyState
-                    } else if digestItems.isEmpty && hideSeen && selectedTopic == "All" {
+                    } else if items.isEmpty && hideSeen && selectedTopic == "All" {
                         seenCompleteState
-                    } else if digestItems.isEmpty {
+                    } else if items.isEmpty {
                         filteredEmptyState
                     } else {
-                        digestList
+                        digestList(items)
                     }
                 }
             }
@@ -269,7 +282,7 @@ struct DigestView: View {
             }
             .toolbarBackground(appTheme.background, for: .navigationBar)
             .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
-            .onChange(of: availableTopics) { _, newTopics in
+            .onChange(of: buckets.topics) { _, newTopics in
                 if !newTopics.contains(selectedTopic) { selectedTopic = "All" }
             }
             .task(id: hideSeen) {
@@ -280,9 +293,12 @@ struct DigestView: View {
         }
     }
 
-    private var digestList: some View {
-        List {
-            ForEach(digestItems) { item in
+    // MARK: - Digest list
+
+    private func digestList(_ items: [DigestItem]) -> some View {
+        let lookup = feedLookup
+        return List {
+            ForEach(items) { item in
                 switch item {
                 case .brainHeader:
                     brainDivider
@@ -307,7 +323,7 @@ struct DigestView: View {
                 case .article(let article):
                     DigestArticleRow(
                         article: article,
-                        feedName: feedLookup[article.feedID]?.title ?? "",
+                        feedName: lookup[article.feedID]?.title ?? "",
                         isQueued: queuedURLs.contains(article.url),
                         onAdd: { addToQueue(article) },
                         onSeen: {
@@ -374,12 +390,12 @@ struct DigestView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Helpers
+    // MARK: - Filter area
 
     @ViewBuilder
-    private var tagFilterArea: some View {
+    private func tagFilterArea(topics: [String], hasUntagged: Bool) -> some View {
         if IntelligenceService.isAvailable {
-            if hasUntaggedArticles {
+            if hasUntagged {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         Text("All")
@@ -407,16 +423,16 @@ struct DigestView: View {
                 }
                 .padding(.vertical, 10)
                 .background(appTheme.background)
-            } else if availableTopics.count > 1 {
-                topicFilterBar
+            } else if topics.count > 1 {
+                topicFilterBar(topics: topics)
             }
         }
     }
 
-    private var topicFilterBar: some View {
+    private func topicFilterBar(topics: [String]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(availableTopics, id: \.self) { topic in
+                ForEach(topics, id: \.self) { topic in
                     Button {
                         selectedTopic = topic
                     } label: {
