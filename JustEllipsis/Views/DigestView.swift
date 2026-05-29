@@ -15,9 +15,11 @@ struct DigestView: View {
     @AppStorage("streak.minReadsPerDay")  private var minReadsPerDay:       Int  = 1
     @AppStorage("grading.enabled")       private var gradingEnabled:        Bool = false
     @AppStorage("digest.hideNoise")      private var hideNoise:             Bool = false
+    @AppStorage("digest.hideSeen")       private var hideSeen:              Bool = false
 
     @State private var isFetching = false
     @State private var selectedTopic: String = "All"
+    @State private var hiddenSeenIDs: Set<UUID> = []
 
     init() {
         let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
@@ -60,33 +62,36 @@ struct DigestView: View {
     }
 
     private var todayArticles: [RSSArticle] {
-        var seen = Set<String>()
+        var dedupe = Set<String>()
         return articles
             .filter { feedLookup[$0.feedID] != nil }
             .filter { Calendar.current.isDateInToday($0.publishedAt) }
-            .filter { seen.insert($0.url).inserted }
+            .filter { dedupe.insert($0.url).inserted }
             .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
+            .filter { !hiddenSeenIDs.contains($0.id) }
     }
 
     private var yesterdayArticles: [RSSArticle] {
-        var seen = Set<String>()
+        var dedupe = Set<String>()
         return articles
             .filter { feedLookup[$0.feedID] != nil }
             .filter { Calendar.current.isDateInYesterday($0.publishedAt) }
-            .filter { seen.insert($0.url).inserted }
+            .filter { dedupe.insert($0.url).inserted }
             .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
+            .filter { !hiddenSeenIDs.contains($0.id) }
     }
 
     private var earlierArticles: [RSSArticle] {
-        var seen = Set<String>()
+        var dedupe = Set<String>()
         return articles
             .filter { feedLookup[$0.feedID] != nil }
             .filter {
                 !Calendar.current.isDateInToday($0.publishedAt) &&
                 !Calendar.current.isDateInYesterday($0.publishedAt)
             }
-            .filter { seen.insert($0.url).inserted }
+            .filter { dedupe.insert($0.url).inserted }
             .filter { !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) }
+            .filter { !hiddenSeenIDs.contains($0.id) }
     }
 
     private var brainURLs: Set<String> { Set(brainEntries.map { $0.url }) }
@@ -99,7 +104,8 @@ struct DigestView: View {
             feedLookup[$0.feedID] != nil &&
             !queuedURLs.contains($0.url) &&
             !brainURLs.contains($0.url) &&
-            !(gradingEnabled && hideNoise && $0.qualityGrade == .noise)
+            !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) &&
+            !hiddenSeenIDs.contains($0.id)
         }
         guard !candidates.isEmpty else { return nil }
 
@@ -224,6 +230,8 @@ struct DigestView: View {
 
                     if articles.isEmpty {
                         emptyState
+                    } else if digestItems.isEmpty && hideSeen && selectedTopic == "All" {
+                        seenCompleteState
                     } else if digestItems.isEmpty {
                         filteredEmptyState
                     } else {
@@ -234,6 +242,15 @@ struct DigestView: View {
             .navigationTitle("Digest")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        hideSeen.toggle()
+                    } label: {
+                        Image(systemName: hideSeen ? "eye.slash" : "eye")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(hideSeen ? appTheme.accent : appTheme.textFaint)
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         refetch()
@@ -254,6 +271,11 @@ struct DigestView: View {
             .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
             .onChange(of: availableTopics) { _, newTopics in
                 if !newTopics.contains(selectedTopic) { selectedTopic = "All" }
+            }
+            .task(id: hideSeen) {
+                hiddenSeenIDs = hideSeen
+                    ? Set(articles.filter { $0.isSeen }.map { $0.id })
+                    : []
             }
         }
     }
@@ -286,10 +308,13 @@ struct DigestView: View {
                     DigestArticleRow(
                         article: article,
                         feedName: feedLookup[article.feedID]?.title ?? "",
-                        isQueued: queuedURLs.contains(article.url)
-                    ) {
-                        addToQueue(article)
-                    }
+                        isQueued: queuedURLs.contains(article.url),
+                        onAdd: { addToQueue(article) },
+                        onSeen: {
+                            guard !article.isSeen else { return }
+                            article.isSeen = true
+                        }
+                    )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(
@@ -318,7 +343,7 @@ struct DigestView: View {
         }
     }
 
-    // MARK: - Empty state
+    // MARK: - Empty states
 
     private var emptyState: some View {
         VStack(spacing: 12) {
@@ -332,6 +357,21 @@ struct DigestView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
         }
+    }
+
+    private var seenCompleteState: some View {
+        VStack(spacing: 12) {
+            Text("All read.")
+                .font(AppTheme.sansSerif(16, weight: .medium))
+                .foregroundStyle(appTheme.heading)
+
+            Text("Nothing left to surface today.")
+                .font(AppTheme.sansSerif(14))
+                .foregroundStyle(appTheme.textFaint)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Helpers
@@ -449,6 +489,7 @@ private struct DigestArticleRow: View {
     let feedName: String
     let isQueued: Bool
     let onAdd: () -> Void
+    let onSeen: () -> Void
 
     @Environment(\.appTheme) private var appTheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -477,7 +518,7 @@ private struct DigestArticleRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(article.title)
                     .font(AppTheme.sansSerif(14, weight: .medium))
-                    .foregroundStyle(appTheme.heading)
+                    .foregroundStyle(article.isSeen ? appTheme.textFaint : appTheme.heading)
                     .lineLimit(titleLineLimit)
 
                 if let summary = article.summary ?? article.feedDescription, !summary.isEmpty {
@@ -540,6 +581,7 @@ private struct DigestArticleRow: View {
         .padding(AppTheme.cardPadding)
         .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .onDisappear { onSeen() }
         .onChange(of: isQueued) { _, queued in
             if !queued { justAdded = false }
         }

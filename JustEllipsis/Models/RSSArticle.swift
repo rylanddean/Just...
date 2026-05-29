@@ -10,6 +10,7 @@ final class RSSArticle {
     var publishedAt: Date = Date()
     var isQueued: Bool = false
     var isConfirmationDismissed: Bool = false
+    var isSeen: Bool = false
     var feedDescription: String?
     var summary: String?
     var estimatedReadingMinutes: Int?
