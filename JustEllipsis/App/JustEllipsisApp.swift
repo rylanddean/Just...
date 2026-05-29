@@ -36,10 +36,12 @@ struct JustEllipsisApp: App {
                 UserDefaults.standard.set(Date(), forKey: Self.lastAppOpenKey)
             }
         }
-        // Prefetch cached HTML for queued links
+        // Promote any share-extension links into SwiftData, then prefetch their HTML
         .backgroundTask(.appRefresh(PrefetchService.backgroundTaskID)) {
-            let actor = PrefetchActor(modelContainer: container)
-            await actor.prefetch(max: 3)
+            let promotionActor = LinkPromotionActor(modelContainer: container)
+            await promotionActor.promotePendingLinks()
+            let prefetchActor = PrefetchActor(modelContainer: container)
+            await prefetchActor.prefetch(max: 3)
             PrefetchService.scheduleNextBackgroundTask()
         }
     }

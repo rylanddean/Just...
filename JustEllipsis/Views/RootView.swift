@@ -98,22 +98,12 @@ struct RootView: View {
 
     // MARK: - Share Extension handoff
 
+    // Drains any UserDefaults fallback entries left by the share extension when
+    // the direct SwiftData write failed (e.g. fresh install). The common case
+    // (direct write succeeded) is a no-op here since PendingLinkStore is empty.
     private func processPendingLinks() {
-        let urls = PendingLinkStore.drain()
-        guard !urls.isEmpty else { return }
-
-        let existing = (try? context.fetch(FetchDescriptor<QueuedLink>())) ?? []
-        let existingURLs = Set(existing.map { $0.url })
-        let maxOrder = existing.map { $0.sortOrder }.max() ?? -1
-
-        var added = 0
-        for urlString in urls {
-            guard !existingURLs.contains(urlString) else { continue }
-            let link = QueuedLink(url: urlString, sortOrder: maxOrder + 1 + added)
-            context.insert(link)
-            added += 1
-        }
-        if added > 0 { try? context.save() }
+        let actor = LinkPromotionActor(modelContainer: context.container)
+        Task { await actor.promotePendingLinks() }
     }
 
     private func runStartupWorkIfNeeded(force: Bool) {

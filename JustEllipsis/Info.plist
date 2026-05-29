@@ -6,6 +6,7 @@
 	<array>
 		<string>com.rylandean.justellipsis.prefetch</string>
 		<string>com.rylandean.justellipsis.rssfetch</string>
+		<string>com.rylandean.justellipsis.grading</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
@@ -77,14 +78,10 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<false/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Activity ring progress appears once you've met your daily reading goal — a quiet reminder to also move.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Just… does not write any health data.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Voice reflections are transcribed on-device. Audio never leaves your phone.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

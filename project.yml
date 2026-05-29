@@ -90,6 +90,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers:
           - com.rylandean.justellipsis.prefetch
           - com.rylandean.justellipsis.rssfetch
+          - com.rylandean.justellipsis.grading
         UIBackgroundModes:
           - fetch
           - processing
@@ -142,6 +143,12 @@ targets:
     sources:
       - path: JustEllipsisShareExtension
       - path: Shared
+      # SwiftData models needed to write QueuedLink directly into the shared
+      # SQLite store so CloudKit can pick it up without requiring an app open.
+      - path: JustEllipsis/Models/QueuedLink.swift
+      - path: JustEllipsis/Models/BrainEntry.swift
+      - path: JustEllipsis/Models/ReadingDay.swift
+      - path: JustEllipsis/Models/RSSFeed.swift
     info:
       path: JustEllipsisShareExtension/Info.plist
       properties:
