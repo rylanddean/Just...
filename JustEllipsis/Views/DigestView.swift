@@ -21,6 +21,10 @@ struct DigestView: View {
     @State private var selectedTopic: String = "All"
     @State private var hiddenSeenIDs: Set<UUID> = []
 
+    // Non-@Observable helpers — mutations don't trigger SwiftUI re-renders.
+    @State private var seenBatcher     = SeenBatcher()
+    @State private var recCache        = RecommendationCache()
+
     init() {
         let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
         let days = stored ?? RSSFetchService.defaultRetentionDays
@@ -104,6 +108,17 @@ struct DigestView: View {
     private var recommendations: [RSSArticle]? {
         guard brainEntries.count >= 5 else { return nil }
 
+        // Cache check — skip the expensive computation if inputs haven't changed.
+        let cacheKey = RecommendationCache.Key(
+            articleCount:  articles.count,
+            brainCount:    brainEntries.count,
+            queueCount:    queue.count,
+            gradingEnabled: gradingEnabled,
+            hideNoise:     hideNoise,
+            minReadsPerDay: minReadsPerDay
+        )
+        if cacheKey == recCache.key { return recCache.result }
+
         // Pre-compute lookup sets once — NOT inside the filter closure.
         let lookup     = feedLookup
         let queuedSet  = Set(queue.map { $0.url })
@@ -113,8 +128,7 @@ struct DigestView: View {
             lookup[$0.feedID] != nil &&
             !queuedSet.contains($0.url) &&
             !brainSet.contains($0.url) &&
-            !(gradingEnabled && hideNoise && $0.qualityGrade == .noise) &&
-            !hiddenSeenIDs.contains($0.id)
+            !(gradingEnabled && hideNoise && $0.qualityGrade == .noise)
         }
         guard !candidates.isEmpty else { return nil }
 
@@ -133,7 +147,10 @@ struct DigestView: View {
         }
 
         let picks = diversifiedPicks(from: scored, max: minReadsPerDay)
-        return picks.isEmpty ? nil : picks
+        let result: [RSSArticle]? = picks.isEmpty ? nil : picks
+        recCache.key    = cacheKey
+        recCache.result = result
+        return result
     }
 
     private func brainKeywords() -> Set<String> {
@@ -326,10 +343,7 @@ struct DigestView: View {
                         feedName: lookup[article.feedID]?.title ?? "",
                         isQueued: queuedURLs.contains(article.url),
                         onAdd: { addToQueue(article) },
-                        onSeen: {
-                            guard !article.isSeen else { return }
-                            article.isSeen = true
-                        }
+                        onSeen: { seenBatcher.enqueue(article) }
                     )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -496,6 +510,45 @@ struct DigestView: View {
         article.isQueued = true
         try? context.save()
     }
+}
+
+// MARK: - Seen batcher
+
+/// Collects isSeen mutations and flushes them in one batch after scrolling settles.
+/// Not @Observable, so mutations never trigger SwiftUI re-renders.
+private final class SeenBatcher: @unchecked Sendable {
+    private var pending:   [RSSArticle] = []
+    private var flushTask: Task<Void, Never>?
+
+    func enqueue(_ article: RSSArticle) {
+        guard !article.isSeen, !pending.contains(where: { $0.id == article.id }) else { return }
+        pending.append(article)
+        flushTask?.cancel()
+        flushTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self, !Task.isCancelled else { return }
+            self.pending.forEach { $0.isSeen = true }
+            self.pending.removeAll()
+        }
+    }
+}
+
+// MARK: - Recommendation cache
+
+/// Caches the recommendations result so the expensive computation only reruns
+/// when article count, brain size, queue, or grading settings actually change.
+/// Not @Observable, so cache writes never trigger SwiftUI re-renders.
+private final class RecommendationCache: @unchecked Sendable {
+    struct Key: Equatable {
+        let articleCount:   Int
+        let brainCount:     Int
+        let queueCount:     Int
+        let gradingEnabled: Bool
+        let hideNoise:      Bool
+        let minReadsPerDay: Int
+    }
+    var key:    Key?             = nil
+    var result: [RSSArticle]?    = nil
 }
 
 // MARK: - Article row
