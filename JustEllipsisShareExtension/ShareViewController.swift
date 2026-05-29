@@ -95,14 +95,14 @@ final class ShareViewController: UIViewController {
 
     // MARK: - Helpers
 
-    private static func feedbackState(for result: SaveResult, url: URL) -> ShareFeedbackState {
+    private nonisolated static func feedbackState(for result: SaveResult, url: URL) -> ShareFeedbackState {
         switch result {
         case .saved:     return .success(domain: domain(from: url))
         case .duplicate: return .duplicate
         }
     }
 
-    private static func domain(from url: URL) -> String {
+    private nonisolated static func domain(from url: URL) -> String {
         var host = url.host ?? url.absoluteString
         if host.hasPrefix("www.") { host = String(host.dropFirst(4)) }
         return host

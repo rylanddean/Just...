@@ -343,12 +343,14 @@ struct KillTheNewsletterWebView: UIViewRepresentable {
         /// Observing `url` directly fires on every URL change including pushState.
         func startObserving(_ webView: WKWebView) {
             urlObservation = webView.observe(\.url, options: .new) { [weak self] wv, _ in
-                self?.handleURLChange(in: wv)
+                MainActor.assumeIsolated { self?.handleURLChange(in: wv) }
             }
             titleObservation = webView.observe(\.title, options: .new) { [weak self] wv, _ in
-                let t = wv.title ?? ""
-                ktnLog.debug("KVO title → \(t)")
-                self?.state.currentTitle = t
+                MainActor.assumeIsolated {
+                    let t = wv.title ?? ""
+                    ktnLog.debug("KVO title → \(t)")
+                    self?.state.currentTitle = t
+                }
             }
         }
 

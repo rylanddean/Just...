@@ -421,7 +421,7 @@ actor RSSFetchActor {
                 source: .aiPick
             )
             modelContext.insert(link)
-            if let original = try? modelContext.model(for: snap.persistentModelID) as? RSSArticle {
+            if let original = modelContext.model(for: snap.persistentModelID) as? RSSArticle {
                 original.isQueued = true
             }
             inserted += 1
@@ -610,7 +610,7 @@ actor RSSFetchActor {
                 topicsLog.warning("tagPendingArticles: cancelled at \(overallOffset + i)/\(overallTotal)")
                 break
             }
-            guard let article = try? modelContext.model(for: stub.id) as? RSSArticle else {
+            guard let article = modelContext.model(for: stub.id) as? RSSArticle else {
                 topicsLog.warning("tagPendingArticles: failed to resolve model for '\(stub.title.prefix(60))'")
                 failed += 1
                 continue
@@ -707,7 +707,7 @@ actor RSSFetchActor {
                 await MainActor.run { tracker?.update(current: overallOffset + i + 1) }
                 continue
             }
-            if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
+            if let article = modelContext.model(for: stub.id) as? RSSArticle {
                 article.summary = generated
                 summarized += 1
                 unsaved += 1
@@ -783,7 +783,7 @@ actor RSSFetchActor {
             if let tracker { await MainActor.run { tracker.markActive(stub.articleID) } }
             let grade = await IntelligenceService.gradeQuality(title: stub.title, description: stub.desc, source: stub.source)
             gradingLog.debug("gradeNewArticles: '\(stub.title.prefix(60))' → \(grade.map { "\($0)" } ?? "nil (→ worthIt fallback)")")
-            if let article = try? modelContext.model(for: stub.id) as? RSSArticle {
+            if let article = modelContext.model(for: stub.id) as? RSSArticle {
                 article.qualityGrade = grade ?? .worthIt
                 try? modelContext.save()
                 graded += 1

@@ -177,7 +177,7 @@ struct ContentFetcher: Sendable {
         var pCountBefore = (try? doc.select("p").array().count) ?? 0
         for sel in noiseSelectors {
             if let elements = try? doc.select(sel) {
-                try? elements.remove()
+                _ = try? elements.remove()
             }
             let pCountAfter = (try? doc.select("p").array().count) ?? 0
             if pCountAfter < pCountBefore {
@@ -187,9 +187,9 @@ struct ContentFetcher: Sendable {
         }
 
         // Find the content subtree with highest paragraph density
-        let body = try doc.body() ?? doc
+        let body = doc.body() ?? doc
         let candidate = findContentElement(in: body)
-        let candidateTag = (try? candidate.tagName()) ?? "?"
+        let candidateTag = candidate.tagName()
         let candidateClass = (try? candidate.className()) ?? ""
         log.debug("strip: selected element <\(candidateTag)> class=\"\(candidateClass.prefix(80))\"")
         let articleHTML = (try? candidate.html()) ?? (try? body.html()) ?? ""
@@ -304,7 +304,7 @@ struct ContentFetcher: Sendable {
         // but make poor content containers. Prefer div/td/article/section/main.
         let structuralTags: Set<String> = ["tr", "tbody", "thead", "tfoot", "html"]
         let candidates = scoredElements.filter {
-            let tag = (try? $0.element.tagName()) ?? ""
+            let tag = $0.element.tagName()
             return !structuralTags.contains(tag)
         }
         return candidates.max(by: { $0.score < $1.score })?.element ?? root
@@ -326,7 +326,7 @@ struct ContentFetcher: Sendable {
             guard let elements = try? root.select(selector), !elements.isEmpty() else { continue }
             for element in elements.array() {
                 let score = contentScore(for: element)
-                let tag = (try? element.tagName()) ?? "?"
+                let tag = element.tagName()
                 let cls = (try? element.className()) ?? ""
                 log.debug("strip: selector '\(selector)' → <\(tag)> class='\(cls.prefix(60))' score=\(score)")
                 guard score >= 120 else { continue }

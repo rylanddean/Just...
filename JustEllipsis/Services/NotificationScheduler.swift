@@ -59,11 +59,11 @@ struct NotificationScheduler {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [morningID, eveningID, streakLostID])
 
+        let hasReadToday = StreakEngine.hasReadToday(days: readingDays, minReads: minReads)
+        let streak = StreakEngine.calculateStreak(from: readingDays, minReads: minReads).current
+
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized else { return }
-
-            let hasReadToday = StreakEngine.hasReadToday(days: readingDays, minReads: minReads)
-            let streak = StreakEngine.calculateStreak(from: readingDays, minReads: minReads).current
 
             let cal = Calendar.current
             let nowHour   = cal.component(.hour,   from: Date())

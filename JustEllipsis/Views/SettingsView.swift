@@ -541,7 +541,7 @@ struct SettingsView: View {
                     .onChange(of: activityRingsEnabled) { _, enabled in
                         guard enabled else { return }
                         Task {
-                            await healthKit.requestAuthorization()
+                            _ = await healthKit.requestAuthorization()
                             await healthKit.fetchTodaySummary()
                         }
                     }

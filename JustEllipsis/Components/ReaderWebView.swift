@@ -204,12 +204,13 @@ struct ReaderWebView: UIViewRepresentable {
         func webView(
             _ webView: WKWebView,
             decidePolicyFor action: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+            preferences: WKWebpagePreferences,
+            decisionHandler: @escaping @MainActor (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
         ) {
             if action.navigationType == .linkActivated {
-                decisionHandler(.cancel)
+                decisionHandler(.cancel, preferences)
             } else {
-                decisionHandler(.allow)
+                decisionHandler(.allow, preferences)
             }
         }
 
