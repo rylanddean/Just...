@@ -12,7 +12,7 @@ private let serverLog = Logger(
     category: "localserver"
 )
 
-final class LocalLinkServer {
+final class LocalLinkServer: @unchecked Sendable {
 
     static let port: UInt16 = 21471
 
