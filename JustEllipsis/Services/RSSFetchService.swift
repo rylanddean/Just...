@@ -193,7 +193,7 @@ extension NewsletterDirectoryItem {
 struct ParsedArticle: Sendable {
     let url: String
     let title: String
-    let publishedAt: Date
+    let publishedAt: Date?   // nil means no date signal found; treated as "assume current" at store time
     let feedDescription: String?
 }
 
@@ -460,8 +460,10 @@ actor RSSFetchActor {
         var isNewsletter = false
         var autoQueue = false
         let descriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
+        var isScraped = false
         if let feed = try? modelContext.fetch(descriptor).first {
             isNewsletter = feed.feedType == .newsletter
+            isScraped    = feed.feedType == .scraped
             autoQueue = feed.isFavourite
             var changed = false
             // Newsletter feeds always fetch as a standard Atom feed via FeedKit.
@@ -479,10 +481,22 @@ actor RSSFetchActor {
             }
             if changed { try? modelContext.save() }
         }
-        store(articles: result.articles, feedID: feedID, existingURLs: &existingURLs, backfillDescriptions: isNewsletter, autoQueue: autoQueue)
+        store(articles: result.articles, feedID: feedID, existingURLs: &existingURLs,
+              backfillDescriptions: isNewsletter, autoQueue: autoQueue, isScraped: isScraped)
     }
 
-    private func store(articles: [ParsedArticle], feedID: UUID, existingURLs: inout Set<String>, backfillDescriptions: Bool = false, autoQueue: Bool = false) {
+    private func store(articles: [ParsedArticle], feedID: UUID, existingURLs: inout Set<String>,
+                       backfillDescriptions: Bool = false, autoQueue: Bool = false, isScraped: Bool = false) {
+        // For scraped feeds, skip articles whose extracted date is confirmed to be older than
+        // the retention window. Use max(retentionDays, 7) so a short retention setting doesn't
+        // aggressively filter weekly blogs. Articles with no date signal (nil) are treated as
+        // current — they're on today's page and we cannot tell their age.
+        let scrapedCutoff: Date? = isScraped ? {
+            let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
+            let days = max(stored ?? RSSFetchService.defaultRetentionDays, 7)
+            return Calendar.current.date(byAdding: .day, value: -days, to: Calendar.current.startOfDay(for: Date()))
+        }() : nil
+
         // Also deduplicate within the incoming batch itself.
         var seenInBatch = Set<String>()
 
@@ -501,11 +515,19 @@ actor RSSFetchActor {
                 }
                 continue
             }
+
+            // Skip scraped articles whose confirmed date falls outside the retention window.
+            // A nil date means unknown — we let those through and stamp them with today's date.
+            if let cutoff = scrapedCutoff, let pubDate = article.publishedAt, pubDate < cutoff {
+                continue
+            }
+
+            let resolvedDate = article.publishedAt ?? Date()
             let record = RSSArticle(
                 feedID: feedID,
                 url: article.url,
                 title: article.title,
-                publishedAt: article.publishedAt,
+                publishedAt: resolvedDate,
                 feedDescription: article.feedDescription
             )
             record.isQueued = autoQueue
@@ -515,7 +537,7 @@ actor RSSFetchActor {
             if autoQueue {
                 autoQueuePending.append((article.url, article.title))
             }
-            latestNewArticleDate = max(latestNewArticleDate ?? .distantPast, article.publishedAt)
+            latestNewArticleDate = max(latestNewArticleDate ?? .distantPast, resolvedDate)
         }
 
         // Apply description backfills — only when the stored value is absent or CSS-polluted.
