@@ -103,15 +103,18 @@ struct WebFeedScraper {
                 guard !ldTitle.isEmpty else { continue }
 
                 let desc = candidate["description"] as? String
-                let publishedAt: Date = {
-                    if let s = candidate["datePublished"] as? String {
-                        return ISO8601DateFormatter().date(from: s) ?? Date()
+                // Try datePublished first, then dateModified. Return nil when no parseable date found
+                // so the store layer can apply its own "assume current" logic.
+                let publishedAt: Date? = {
+                    for key in ["datePublished", "dateModified"] {
+                        if let s = candidate[key] as? String, let d = parseDateString(s) { return d }
                     }
-                    return Date()
+                    return nil
                 }()
 
                 results.append(ParsedArticle(url: normURL, title: ldTitle,
-                                             publishedAt: publishedAt, feedDescription: desc))
+                                             publishedAt: publishedAt ?? extractDateFromURL(URL(string: normURL) ?? baseURL),
+                                             feedDescription: desc))
             }
         }
         return results
@@ -139,7 +142,9 @@ struct WebFeedScraper {
                       isArticlePath(URL(string: normURL), baseURL: baseURL) else { continue }
                 let title = titleFor(link: link) ?? deSlug(normURL)
                 guard !title.isEmpty else { continue }
-                let date = nearbyDate(for: link) ?? Date()
+                // Try DOM date first, then fall back to a date encoded in the URL path.
+                // Returning nil means "unknown age" — the store layer treats it as current.
+                let date = nearbyDate(for: link) ?? extractDateFromURL(URL(string: normURL) ?? baseURL)
                 results.append(ParsedArticle(url: normURL, title: title,
                                              publishedAt: date, feedDescription: nil))
             }
@@ -161,8 +166,10 @@ struct WebFeedScraper {
                   isArticlePath(URL(string: normURL), baseURL: baseURL) else { continue }
             let title = titleFor(link: link) ?? deSlug(normURL)
             guard !title.isEmpty else { continue }
+            // Try DOM date signal before URL — then nil (unknown age, treated as current at store time).
+            let date = nearbyDate(for: link) ?? extractDateFromURL(URL(string: normURL) ?? baseURL)
             results.append(ParsedArticle(url: normURL, title: title,
-                                         publishedAt: Date(), feedDescription: nil))
+                                         publishedAt: date, feedDescription: nil))
         }
         return results
     }
@@ -200,17 +207,126 @@ struct WebFeedScraper {
     }
 
     private static func nearbyDate(for element: Element) -> Date? {
-        // Walk up two levels looking for a <time datetime="...">
+        // Walk up the DOM looking for any date signal associated with this link.
         var node: Element? = element.parent()
-        for _ in 0..<3 {
+        for _ in 0..<5 {
             guard let n = node else { break }
+
+            // <time datetime="...">
             if let time = try? n.select("time[datetime]").first(),
                let dateStr = try? time.attr("datetime"), !dateStr.isEmpty,
-               let date = ISO8601DateFormatter().date(from: dateStr) {
+               let date = parseDateString(dateStr) {
                 return date
             }
+
+            // Microformats: .dt-published with title or datetime attribute, or text content
+            if let el = try? n.select(".dt-published").first() {
+                let raw = (try? el.attr("title")) ?? (try? el.attr("datetime")) ?? (try? el.text()) ?? ""
+                if !raw.isEmpty, let date = parseDateString(raw) { return date }
+            }
+
+            // data-* timestamp / date attributes on any descendant
+            let dataAttrs = ["data-timestamp", "data-date", "data-published",
+                             "data-pubdate", "data-time", "data-created"]
+            for attr in dataAttrs {
+                if let el = try? n.select("[\(attr)]").first(),
+                   let val = try? el.attr(attr), !val.isEmpty,
+                   let date = parseDateString(val) { return date }
+            }
+
             node = n.parent()
         }
+        return nil
+    }
+
+    // Tries multiple date formats in priority order. Handles ISO8601, RFC 2822, common
+    // human-readable formats, and Unix timestamps encoded as strings.
+    private static func parseDateString(_ s: String) -> Date? {
+        let s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return nil }
+
+        // ISO8601 — with and without fractional seconds
+        let iso = ISO8601DateFormatter()
+        for opts: ISO8601DateFormatter.Options in [
+            [.withInternetDateTime],
+            [.withInternetDateTime, .withFractionalSeconds],
+            [.withFullDate]
+        ] {
+            iso.formatOptions = opts
+            if let d = iso.date(from: s) { return d }
+        }
+
+        // RFC 2822  (e.g. "Wed, 15 Jan 2025 12:00:00 +0000")
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
+        if let d = df.date(from: s) { return d }
+
+        // Common human-readable formats
+        let formats = [
+            "yyyy-MM-dd",
+            "yyyy-MM-dd HH:mm:ss",
+            "MMM d, yyyy",
+            "MMMM d, yyyy",
+            "d MMM yyyy",
+            "MM/dd/yyyy",
+            "yyyy/MM/dd"
+        ]
+        for fmt in formats {
+            df.dateFormat = fmt
+            if let d = df.date(from: s) { return d }
+        }
+
+        // Unix timestamp as integer string
+        if let ts = TimeInterval(s) {
+            let candidate = Date(timeIntervalSince1970: ts)
+            // Sanity-check: after 2000 and not more than a day in the future
+            if candidate > Date(timeIntervalSince1970: 946_684_800) &&
+               candidate <= Date().addingTimeInterval(86_400) {
+                return candidate
+            }
+        }
+
+        return nil
+    }
+
+    // Extracts a publication date encoded in the URL path (e.g. /blog/2025/01/15/slug).
+    // Returns nil when the path contains no recognisable date segment.
+    private static func extractDateFromURL(_ url: URL) -> Date? {
+        let path = url.path
+        let cal = Calendar.current
+
+        // /2025/01/15/  or  /2025/1/15/
+        if let m = path.range(of: #"/(\d{4})/(\d{1,2})/(\d{1,2})(?:/|$)"#, options: .regularExpression) {
+            let parts = String(path[m]).components(separatedBy: "/").filter { !$0.isEmpty }
+            if parts.count >= 3,
+               let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
+               year >= 2000, (1...12).contains(month), (1...31).contains(day) {
+                return cal.date(from: DateComponents(year: year, month: month, day: day))
+            }
+        }
+
+        // /2025/01/  (year + month only — treat as the 1st of the month)
+        if let m = path.range(of: #"/(\d{4})/(\d{1,2})(?:/|$)"#, options: .regularExpression) {
+            let parts = String(path[m]).components(separatedBy: "/").filter { !$0.isEmpty }
+            if parts.count >= 2,
+               let year = Int(parts[0]), let month = Int(parts[1]),
+               year >= 2000, (1...12).contains(month) {
+                return cal.date(from: DateComponents(year: year, month: month, day: 1))
+            }
+        }
+
+        // Compact 8-digit segment: /20250115/
+        for segment in path.components(separatedBy: "/") {
+            guard segment.count == 8, let n = Int(segment), n > 20_000_101 else { continue }
+            let year = n / 10_000
+            let month = (n % 10_000) / 100
+            let day = n % 100
+            if year >= 2000, (1...12).contains(month), (1...31).contains(day) {
+                return cal.date(from: DateComponents(year: year, month: month, day: day))
+            }
+        }
+
         return nil
     }
 
