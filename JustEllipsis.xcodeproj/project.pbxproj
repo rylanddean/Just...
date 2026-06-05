@@ -28,6 +28,7 @@
 		3ACEAFFF075978728EE7EB65 /* ActivityHeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03967B1DE7F120DA0E80009 /* ActivityHeatmapView.swift */; };
 		3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */; };
 		4B13C26BA23068BA674FDD03 /* RSSArticle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6EA6D6C5E383E851F31F032 /* RSSArticle.swift */; };
+		4C1A6B819ABEFFE115144AA6 /* MacLinkReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 240FD0EB3E88A4A61B488C25 /* MacLinkReceiver.swift */; };
 		4F23D3C312836C8F05217A06 /* NewsletterDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90154528A49086081972846 /* NewsletterDirectoryView.swift */; };
 		5200F218FCDCDE23A0BFB0A5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F138A6A626CF6CF070B7A67E /* Assets.xcassets */; };
 		55A0A2EBE317C3AC1EF10C03 /* JustEllipsisShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -85,6 +86,11 @@
 		E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = F70788F7020E27CA19E61A12 /* SwiftSoup */; };
 		E5EE934B550AB6F6E15D6AE8 /* RereadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F314B2513A0B75D17496E9C /* RereadView.swift */; };
 		F167F9B4C6EB23363E004A1A /* ArticleQualityGrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */; };
+		A1B2C3D4E5F601020304A1F6 /* JustEllipsisSafariExtension.appex in Embed Safari Extension */ = {isa = PBXBuildFile; fileRef = E8047D135DF521BF6F514C1C /* JustEllipsisSafariExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8091A2B3C4D5E6F708091A2B /* JustEllipsisMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708091A2B3C4 /* JustEllipsisMacApp.swift */; };
+		91A2B3C4D5E6F708091A2B3C /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D5E6F708091A2B3C4D5E6F7 /* SafariWebExtensionHandler.swift */; };
+		A2B3C4D5E6F708091A2B3C4D /* CloudKitLinkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6F708091A2B3C4D5E6F708 /* CloudKitLinkWriter.swift */; };
+		D5E6F708091A2B3C4D5E6F70 /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = C4D5E6F708091A2B3C4D5E6F /* Resources */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -102,6 +108,13 @@
 			remoteGlobalIDString = 16DBE1A265CA7C974E3E08D0;
 			remoteInfo = JustEllipsisShareExtension;
 		};
+		0E44B30CBFA231D372F8AD75 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 719776280667C2E356BAA398 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D3EE85D07B7FF6B86B1F1F22;
+			remoteInfo = JustEllipsisSafariExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -114,6 +127,17 @@
 				55A0A2EBE317C3AC1EF10C03 /* JustEllipsisShareExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACE8D8BA6DAF88C5018FE011 /* Embed Safari Extension */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1B2C3D4E5F601020304A1F6 /* JustEllipsisSafariExtension.appex in Embed Safari Extension */,
+			);
+			name = "Embed Safari Extension";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -130,11 +154,12 @@
 		1F314B2513A0B75D17496E9C /* RereadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RereadView.swift; sourceTree = "<group>"; };
 		1FB7BE8457A65678C63AA04B /* ReadingDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingDay.swift; sourceTree = "<group>"; };
 		21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleQualityGrade.swift; sourceTree = "<group>"; };
+		240FD0EB3E88A4A61B488C25 /* MacLinkReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLinkReceiver.swift; sourceTree = "<group>"; };
 		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
 		351C38A4FECDC4002E1EF444 /* PipelineProgressTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineProgressTracker.swift; sourceTree = "<group>"; };
-		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		369CC02046EDB9D512264A8B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		3B9D7E057E235E52465D0592 /* JSRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSRenderer.swift; sourceTree = "<group>"; };
 		3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
@@ -152,7 +177,7 @@
 		6C0B2EC65BB2A2B2D76A9BFC /* ActivityRingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRingsCard.swift; sourceTree = "<group>"; };
 		6DD402C01934293F01520002 /* PendingLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingLinkStore.swift; sourceTree = "<group>"; };
 		711256DA53620D4C746AC36F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		79111AB1E05BBF6590D197DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		80160876D84DBAF018BB717D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		84722707AA336D1073651EEF /* CloudSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncService.swift; sourceTree = "<group>"; };
@@ -197,6 +222,16 @@
 		F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainViewModel.swift; sourceTree = "<group>"; };
 		F8881FBE57095A67C1C24497 /* BrainEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEntry.swift; sourceTree = "<group>"; };
 		F971C6F6E981C20C719708AC /* WebFeedScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFeedScraper.swift; sourceTree = "<group>"; };
+		890A67E832D1369C020F0BFF /* JustEllipsisMac.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JustEllipsisMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E8047D135DF521BF6F514C1C /* JustEllipsisSafariExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = JustEllipsisSafariExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A2B3C4D5E6F708091A2B3C4 /* JustEllipsisMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustEllipsisMacApp.swift; sourceTree = "<group>"; };
+		2B3C4D5E6F708091A2B3C4D5 /* JustEllipsisMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsisMac.entitlements; sourceTree = "<group>"; };
+		3C4D5E6F708091A2B3C4D5E6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4D5E6F708091A2B3C4D5E6F7 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		5E6F708091A2B3C4D5E6F708 /* CloudKitLinkWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitLinkWriter.swift; sourceTree = "<group>"; };
+		6F708091A2B3C4D5E6F70809 /* JustEllipsisSafariExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsisSafariExtension.entitlements; sourceTree = "<group>"; };
+		708091A2B3C4D5E6F7080910 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C4D5E6F708091A2B3C4D5E6F /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -207,6 +242,13 @@
 				E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */,
 				6EABD4077863C185AED53BE3 /* FeedKit in Frameworks */,
 				B43E03B1C0A0D1822A6608A7 /* HealthKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B3C4D5E6F708091A2B3C4D5E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -231,6 +273,8 @@
 				35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */,
 				75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */,
 				8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */,
+				890A67E832D1369C020F0BFF /* JustEllipsisMac.app */,
+				E8047D135DF521BF6F514C1C /* JustEllipsisSafariExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -246,6 +290,7 @@
 				BD6345AF40A371C990B21023 /* IntelligenceService.swift */,
 				3B9D7E057E235E52465D0592 /* JSRenderer.swift */,
 				14DCBD1976FCFFE41FE1C4B9 /* LinkPromotionActor.swift */,
+				240FD0EB3E88A4A61B488C25 /* MacLinkReceiver.swift */,
 				B483A2F8D19AD3FE8FC7382B /* NightModeService.swift */,
 				F29BA69FF127357A44A4D22D /* NotificationScheduler.swift */,
 				2E682902D7E4F05A13644A84 /* PrefetchService.swift */,
@@ -264,6 +309,8 @@
 				D5FD1F14C7E7CDC97B936E02 /* JustEllipsisShareExtension */,
 				00A27E9E2443676616BB4BD1 /* JustEllipsisTests */,
 				D01443C8E42567BA7DFBEDC1 /* Shared */,
+				E6F708091A2B3C4D5E6F7080 /* JustEllipsisMac */,
+				F708091A2B3C4D5E6F708091 /* JustEllipsisSafariExtension */,
 				A5273B2F7BAA49FCEBDC2D82 /* Frameworks */,
 				09052ACB65A733352A46C93F /* Products */,
 			);
@@ -409,6 +456,28 @@
 			path = Extensions;
 			sourceTree = "<group>";
 		};
+		E6F708091A2B3C4D5E6F7080 /* JustEllipsisMac */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F708091A2B3C4 /* JustEllipsisMacApp.swift */,
+				3C4D5E6F708091A2B3C4D5E6 /* Info.plist */,
+				2B3C4D5E6F708091A2B3C4D5 /* JustEllipsisMac.entitlements */,
+			);
+			path = JustEllipsisMac;
+			sourceTree = "<group>";
+		};
+		F708091A2B3C4D5E6F708091 /* JustEllipsisSafariExtension */ = {
+			isa = PBXGroup;
+			children = (
+				4D5E6F708091A2B3C4D5E6F7 /* SafariWebExtensionHandler.swift */,
+				5E6F708091A2B3C4D5E6F708 /* CloudKitLinkWriter.swift */,
+				708091A2B3C4D5E6F7080910 /* Info.plist */,
+				6F708091A2B3C4D5E6F70809 /* JustEllipsisSafariExtension.entitlements */,
+				C4D5E6F708091A2B3C4D5E6F /* Resources */,
+			);
+			path = JustEllipsisSafariExtension;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -470,6 +539,44 @@
 			productReference = 8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		BCA5F1BA0F332D9A419B9EB5 /* JustEllipsisMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1581B51143F6AFD0EE4BEFD /* Build configuration list for PBXNativeTarget "JustEllipsisMac" */;
+			buildPhases = (
+				F31D773526C29774C891874A /* Sources */,
+				B3C4D5E6F708091A2B3C4D5E /* Frameworks */,
+				ACE8D8BA6DAF88C5018FE011 /* Embed Safari Extension */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C9D35818BD2F1945D7CA5292 /* PBXTargetDependency */,
+			);
+			name = JustEllipsisMac;
+			packageProductDependencies = (
+			);
+			productName = JustEllipsisMac;
+			productReference = 890A67E832D1369C020F0BFF /* JustEllipsisMac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D3EE85D07B7FF6B86B1F1F22 /* JustEllipsisSafariExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3BD618EAED11D47870AF9A94 /* Build configuration list for PBXNativeTarget "JustEllipsisSafariExtension" */;
+			buildPhases = (
+				279D10AC13FA74C928477663 /* Sources */,
+				6ACB6BEE2242A15C7B7AE3BC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JustEllipsisSafariExtension;
+			packageProductDependencies = (
+			);
+			productName = JustEllipsisSafariExtension;
+			productReference = E8047D135DF521BF6F514C1C /* JustEllipsisSafariExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -479,6 +586,12 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0B22B2BD222A2112071A54FE = {
+						DevelopmentTeam = "";
+					};
+					16DBE1A265CA7C974E3E08D0 = {
+						DevelopmentTeam = "";
+					};
 					36799AF5621258DD12197858 = {
 						DevelopmentTeam = "";
 					};
@@ -505,6 +618,8 @@
 				0B22B2BD222A2112071A54FE /* JustEllipsis */,
 				16DBE1A265CA7C974E3E08D0 /* JustEllipsisShareExtension */,
 				36799AF5621258DD12197858 /* JustEllipsisTests */,
+				BCA5F1BA0F332D9A419B9EB5 /* JustEllipsisMac */,
+				D3EE85D07B7FF6B86B1F1F22 /* JustEllipsisSafariExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -517,6 +632,14 @@
 				5200F218FCDCDE23A0BFB0A5 /* Assets.xcassets in Resources */,
 				D8DF3954E0CB01D122E87439 /* feeds.json in Resources */,
 				29F8953C9E0FD4BFF3F6CD16 /* newsletters.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6ACB6BEE2242A15C7B7AE3BC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5E6F708091A2B3C4D5E6F70 /* Resources in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -576,6 +699,7 @@
 				8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */,
 				2344727D36DCEF1C39989C66 /* LinkCard.swift in Sources */,
 				DC1C00786384C622E0CE99DD /* LinkPromotionActor.swift in Sources */,
+				4C1A6B819ABEFFE115144AA6 /* MacLinkReceiver.swift in Sources */,
 				4F23D3C312836C8F05217A06 /* NewsletterDirectoryView.swift in Sources */,
 				6DAD153E9CF0CBA528E1C44D /* NightModeService.swift in Sources */,
 				D5F69207DA6F30C45588E618 /* NotificationScheduler.swift in Sources */,
@@ -615,6 +739,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F31D773526C29774C891874A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8091A2B3C4D5E6F708091A2B /* JustEllipsisMacApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		279D10AC13FA74C928477663 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				91A2B3C4D5E6F708091A2B3C /* SafariWebExtensionHandler.swift in Sources */,
+				A2B3C4D5E6F708091A2B3C4D /* CloudKitLinkWriter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -628,6 +769,11 @@
 			target = 16DBE1A265CA7C974E3E08D0 /* JustEllipsisShareExtension */;
 			targetProxy = 922AEE6E56E4DAB54517A517 /* PBXContainerItemProxy */;
 		};
+		C9D35818BD2F1945D7CA5292 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D3EE85D07B7FF6B86B1F1F22 /* JustEllipsisSafariExtension */;
+			targetProxy = 0E44B30CBFA231D372F8AD75 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -638,8 +784,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -739,8 +884,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -762,8 +906,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -781,8 +924,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6SD6D59K29;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -872,6 +1014,92 @@
 			};
 			name = Release;
 		};
+		AA001122334455667788BB01 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisMac/JustEllipsisMac.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsisMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AA001122334455667788BB02 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisMac/JustEllipsisMac.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsisMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AA001122334455667788BB03 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisSafariExtension/JustEllipsisSafariExtension.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsisSafariExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac.safari-extension;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AA001122334455667788BB04 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisSafariExtension/JustEllipsisSafariExtension.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
+				INFOPLIST_FILE = JustEllipsisSafariExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac.safari-extension;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -907,6 +1135,24 @@
 			buildConfigurations = (
 				54856E8C500BBB362E41276D /* Debug */,
 				DC71C658670690E0FE0E3DE5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C1581B51143F6AFD0EE4BEFD /* Build configuration list for PBXNativeTarget "JustEllipsisMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA001122334455667788BB01 /* Debug */,
+				AA001122334455667788BB02 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3BD618EAED11D47870AF9A94 /* Build configuration list for PBXNativeTarget "JustEllipsisSafariExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA001122334455667788BB03 /* Debug */,
+				AA001122334455667788BB04 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
