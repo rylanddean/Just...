@@ -13,16 +13,26 @@ private struct ExtCtx: @unchecked Sendable {
 
 final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
 
+    override init() {
+        super.init()
+        log.info("SafariWebExtensionHandler init — process started")
+    }
+
     func beginRequest(with context: NSExtensionContext) {
+        log.info("beginRequest called — \(context.inputItems.count) item(s)")
+
         guard
             let item = context.inputItems.first as? NSExtensionItem,
             let userInfo = item.userInfo as? [String: Any],
             let message = userInfo[SFExtensionMessageKey] as? [String: Any],
             let action = message["action"] as? String
         else {
+            log.error("beginRequest: unexpected input format — completing with empty response")
             context.completeRequest(returningItems: [], completionHandler: nil)
             return
         }
+
+        log.info("beginRequest: action='\(action)'")
 
         switch action {
         case "save":
