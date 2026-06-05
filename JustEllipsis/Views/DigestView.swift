@@ -343,6 +343,7 @@ struct DigestView: View {
                         feedName: lookup[article.feedID]?.title ?? "",
                         isQueued: queuedURLs.contains(article.url),
                         onAdd: { addToQueue(article) },
+                        onRemove: { removeFromQueue(article) },
                         onSeen: { seenBatcher.enqueue(article) }
                     )
                     .listRowBackground(Color.clear)
@@ -510,6 +511,13 @@ struct DigestView: View {
         article.isQueued = true
         try? context.save()
     }
+
+    private func removeFromQueue(_ article: RSSArticle) {
+        guard let link = queue.first(where: { $0.url == article.url }) else { return }
+        article.isQueued = false
+        context.delete(link)
+        try? context.save()
+    }
 }
 
 // MARK: - Seen batcher
@@ -558,6 +566,7 @@ private struct DigestArticleRow: View {
     let feedName: String
     let isQueued: Bool
     let onAdd: () -> Void
+    let onRemove: () -> Void
     let onSeen: () -> Void
 
     @Environment(\.appTheme) private var appTheme
@@ -627,10 +636,15 @@ private struct DigestArticleRow: View {
             Spacer()
 
             if isQueued || justAdded {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(appTheme.accent)
-                    .frame(width: 32, height: 32)
+                Button {
+                    onRemove()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(appTheme.accent)
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(.plain)
             } else {
                 Button {
                     onAdd()
