@@ -1,9 +1,10 @@
 'use strict';
 
-const btn       = document.getElementById('save-btn');
-const titleEl   = document.getElementById('page-title');
-const domainEl  = document.getElementById('page-domain');
-const statusMsg = document.getElementById('status-msg');
+console.log('[Just…] popup loaded');
+
+const btn      = document.getElementById('save-btn');
+const titleEl  = document.getElementById('page-title');
+const domainEl = document.getElementById('page-domain');
 
 let currentURL   = '';
 let currentTitle = '';
@@ -17,7 +18,7 @@ browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
   currentURL   = tab.url   || '';
   currentTitle = tab.title || '';
 
-  titleEl.textContent = currentTitle || currentURL;
+  titleEl.textContent  = currentTitle || currentURL;
 
   try {
     const host = new URL(currentURL).hostname.replace(/^www\./, '');
@@ -26,11 +27,10 @@ browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
     domainEl.textContent = '';
   }
 
-  // Disable save for non-http pages (new-tab, settings, etc.)
   if (!currentURL.startsWith('http')) {
     btn.disabled = true;
+    btn.className = 'save-btn error';
     btn.textContent = 'Nothing to save.';
-    btn.classList.add('error');
   }
 });
 
@@ -39,64 +39,40 @@ browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
 btn.addEventListener('click', async () => {
   if (!currentURL || btn.disabled) return;
 
-  setLoading();
+  btn.disabled = true;
+  btn.className = 'save-btn loading';
+  btn.textContent = 'Saving…';
 
   let response;
   try {
+    console.log('[Just…] sending native message for:', currentURL);
     response = await browser.runtime.sendNativeMessage('application', {
       action: 'save',
       url:    currentURL,
       title:  currentTitle
     });
-  } catch {
-    setError();
+    console.log('[Just…] native response:', JSON.stringify(response));
+  } catch (err) {
+    console.error('[Just…] native message failed:', err);
+    btn.disabled = false;
+    btn.className = 'save-btn error';
+    btn.textContent = 'Couldn\'t connect to Just…';
     return;
   }
 
   const result = response?.result ?? 'error';
 
   if (result === 'success') {
-    setSuccess();
-    setTimeout(() => window.close(), 800);
+    btn.className = 'save-btn success';
+    btn.textContent = 'Kept. Your Brain grows.';
+    setTimeout(() => window.close(), 1200);
   } else if (result === 'duplicate') {
-    setDuplicate();
-    setTimeout(() => window.close(), 800);
+    btn.className = 'save-btn duplicate';
+    btn.textContent = 'Already in your queue.';
+    setTimeout(() => window.close(), 1200);
   } else {
-    setError();
+    btn.disabled = false;
+    btn.className = 'save-btn error';
+    btn.textContent = 'Couldn\'t save this link.';
   }
 });
-
-// ── State helpers ──────────────────────────────────────────
-
-function setLoading() {
-  btn.disabled = true;
-  btn.textContent = 'Add to Just…';
-  btn.classList.add('loading');
-  btn.classList.remove('success', 'duplicate', 'error');
-  statusMsg.textContent = '';
-  statusMsg.className = 'status-msg';
-}
-
-function setSuccess() {
-  btn.disabled = true;
-  btn.textContent = '✓';
-  btn.classList.remove('loading', 'duplicate', 'error');
-  btn.classList.add('success');
-  statusMsg.textContent = '';
-}
-
-function setDuplicate() {
-  btn.disabled = true;
-  btn.textContent = '—';
-  btn.classList.remove('loading', 'success', 'error');
-  btn.classList.add('duplicate');
-  statusMsg.textContent = 'Already in your queue.';
-}
-
-function setError() {
-  btn.disabled = false;
-  btn.textContent = 'Couldn\'t save this link.';
-  btn.classList.remove('loading', 'success', 'duplicate');
-  btn.classList.add('error');
-  statusMsg.textContent = '';
-}

@@ -1,5 +1,11 @@
 import CloudKit
 import Foundation
+import os.log
+
+private let ckLog = Logger(
+    subsystem: "com.rylandean.justellipsis.mac.safari-extension",
+    category: "cloudkit"
+)
 
 enum CloudKitLinkWriter {
 
@@ -12,11 +18,36 @@ enum CloudKitLinkWriter {
             !url.isEmpty,
             let parsed = URL(string: url),
             parsed.scheme == "https" || parsed.scheme == "http"
-        else { return "error" }
+        else {
+            ckLog.error("save: invalid URL '\(url)'")
+            return "error"
+        }
 
-        let db = CKContainer(identifier: containerID).privateCloudDatabase
+        // Quick iCloud availability check — surfaced as a clear log line.
+        guard FileManager.default.ubiquityIdentityToken != nil else {
+            ckLog.error("save: iCloud not available (not signed in?)")
+            return "error"
+        }
 
-        if await isDuplicate(url: url, db: db) { return "duplicate" }
+        let container = CKContainer(identifier: containerID)
+        let db = container.privateCloudDatabase
+
+        // Verify container access before trying to write.
+        do {
+            let status = try await container.accountStatus()
+            guard status == .available else {
+                ckLog.error("save: CloudKit account status = \(String(describing: status))")
+                return "error"
+            }
+        } catch {
+            ckLog.error("save: accountStatus error: \(error)")
+            return "error"
+        }
+
+        if await isDuplicate(url: url, db: db) {
+            ckLog.info("save: duplicate — '\(url)'")
+            return "duplicate"
+        }
 
         let record = CKRecord(recordType: recordType)
         record["url"]     = url as CKRecordValue
@@ -29,8 +60,10 @@ enum CloudKitLinkWriter {
 
         do {
             try await db.save(record)
+            ckLog.info("save: success — '\(url)'")
             return "success"
         } catch {
+            ckLog.error("save: CKDatabase.save failed: \(error)")
             return "error"
         }
     }
@@ -45,9 +78,12 @@ enum CloudKitLinkWriter {
     private static func isDuplicate(url: String, db: CKDatabase) async -> Bool {
         let pred  = NSPredicate(format: "url == %@", url)
         let query = CKQuery(recordType: recordType, predicate: pred)
-        guard let (results, _) = try? await db.records(matching: query, desiredKeys: ["url"]) else {
+        do {
+            let (results, _) = try await db.records(matching: query, desiredKeys: ["url"])
+            return !results.isEmpty
+        } catch {
+            ckLog.error("isDuplicate: query failed: \(error) — treating as not duplicate")
             return false
         }
-        return !results.isEmpty
     }
 }
