@@ -6,6 +6,7 @@ import CloudKit
 // the local SwiftData store. Called on every foreground — no-op when there
 // are no pending records. Deletes the CloudKit records after promotion so
 // each link is processed exactly once.
+@MainActor
 final class MacLinkReceiver {
 
     private static let containerID = "iCloud.com.rylandean.justellipsis"
