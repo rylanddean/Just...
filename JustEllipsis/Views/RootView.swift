@@ -106,11 +106,19 @@ struct RootView: View {
         Task { await actor.promotePendingLinks() }
     }
 
+    // Promotes any JE_PendingLink records written by the Mac Safari extension.
+    // No-op when iCloud is unavailable or there are no pending records.
+    private func checkMacPendingLinks() {
+        let receiver = MacLinkReceiver(modelContainer: context.container)
+        receiver.checkAndPromote()
+    }
+
     private func runStartupWorkIfNeeded(force: Bool) {
         let now = Date()
         if !force && now.timeIntervalSince(lastStartupWorkAt) < 3 { return }
         lastStartupWorkAt = now
         processPendingLinks()
+        checkMacPendingLinks()
         PrefetchService.prefetchInProcess(container: context.container)
         if activityRingsEnabled {
             Task { await healthKit.fetchTodaySummary() }

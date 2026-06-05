@@ -1,0 +1,119 @@
+/* Just… Safari Extension — brand tokens
+   pageBg   #0C0A08   surface  #141210   amber    #E8A83E
+   amberDim #8A6420   cream    #F5ECD7   muted    #8A8070
+   subtle   #5A5248   danger   #E05A5A
+*/
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 320px;
+  min-height: 140px;
+  background: #0C0A08;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #8A6420;
+  border-radius: 0; /* Safari clips the popup chrome */
+}
+
+/* ── Metadata ─────────────────────────────────────────────── */
+
+#page-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 32px;
+}
+
+.page-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 13px;
+  font-weight: normal;
+  color: #F5ECD7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.page-domain {
+  font-family: 'Menlo', 'SFMono-Regular', 'Courier New', monospace;
+  font-size: 10px;
+  color: #8A8070;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Save button ──────────────────────────────────────────── */
+
+.save-btn {
+  width: 100%;
+  padding: 10px 0;
+  background: #E8A83E;
+  color: #0C0A08;
+  border: none;
+  border-radius: 8px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+  letter-spacing: 0.01em;
+}
+
+.save-btn:hover:not(:disabled) { opacity: 0.88; }
+.save-btn:active:not(:disabled) { opacity: 0.72; }
+
+.save-btn:disabled { cursor: default; }
+
+.save-btn.loading {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.save-btn.success {
+  background: #141210;
+  color: #E8A83E;
+  border: 1px solid #8A6420;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.save-btn.duplicate {
+  background: #141210;
+  color: #8A8070;
+  border: 1px solid #5A5248;
+  font-size: 18px;
+}
+
+.save-btn.error {
+  background: #141210;
+  color: #E05A5A;
+  border: 1px solid #E05A5A;
+  font-size: 13px;
+}
+
+/* ── Status line below button ─────────────────────────────── */
+
+.status-msg {
+  font-family: 'Menlo', 'SFMono-Regular', 'Courier New', monospace;
+  font-size: 11px;
+  color: #8A8070;
+  min-height: 14px;
+  text-align: center;
+}
+
+.status-msg.error-text { color: #E05A5A; }
+
+/* ── Keyboard hint ────────────────────────────────────────── */
+
+.shortcut-hint {
+  font-family: 'Menlo', 'SFMono-Regular', 'Courier New', monospace;
+  font-size: 10px;
+  color: #5A5248;
+  letter-spacing: 0.05em;
+  align-self: flex-end;
+  margin-top: auto;
+}
