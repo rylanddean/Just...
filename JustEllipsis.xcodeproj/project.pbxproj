@@ -791,6 +791,7 @@
 			);
 			outputPaths = (
 			);
+			alwaysOutOfDate = 1;
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "cp -r \"${SRCROOT}/JustEllipsisSafariExtension/Resources/.\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/\"\n";
