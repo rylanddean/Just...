@@ -26,6 +26,10 @@
     "activeTab"
   ],
 
+  "host_permissions": [
+    "http://localhost:21471/*"
+  ],
+
   "commands": {
     "save-link": {
       "suggested_key": {

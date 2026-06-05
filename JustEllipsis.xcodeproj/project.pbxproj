@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B6CF72D9BDD745ADA40632A4 /* LocalLinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5E711511B74964A9A35B18 /* LocalLinkServer.swift */; };
+		48394EBD12614ECDB4958E26 /* CloudKitLinkWriter.swift in Sources (Mac) */ = {isa = PBXBuildFile; fileRef = 5E6F708091A2B3C4D5E6F708 /* CloudKitLinkWriter.swift */; };
 		02D548CD6FBF8D61C9A919E4 /* ReflectViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDA3E54FDEF2BEF53809AB3 /* ReflectViewModel.swift */; };
 		0395E0DD27E8DDF39E9D392B /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A693417E50D769C81214D035 /* RootView.swift */; };
 		0C8B04F60CFD5F9C87119FDC /* DigestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5125754A6D578D4450448D7 /* DigestView.swift */; };
@@ -150,6 +152,7 @@
 		11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakEngineTests.swift; sourceTree = "<group>"; };
 		14DCBD1976FCFFE41FE1C4B9 /* LinkPromotionActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPromotionActor.swift; sourceTree = "<group>"; };
 		15F2C68064C12A47B02C21E2 /* Date+RelativeShort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+RelativeShort.swift"; sourceTree = "<group>"; };
+		0B5E711511B74964A9A35B18 /* LocalLinkServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalLinkServer.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F708091A2B3C4 /* JustEllipsisMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustEllipsisMacApp.swift; sourceTree = "<group>"; };
 		1CDA3E54FDEF2BEF53809AB3 /* ReflectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectViewModel.swift; sourceTree = "<group>"; };
 		1F314B2513A0B75D17496E9C /* RereadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RereadView.swift; sourceTree = "<group>"; };
@@ -443,6 +446,7 @@
 			isa = PBXGroup;
 			children = (
 				1A2B3C4D5E6F708091A2B3C4 /* JustEllipsisMacApp.swift */,
+				0B5E711511B74964A9A35B18 /* LocalLinkServer.swift */,
 				3C4D5E6F708091A2B3C4D5E6 /* Info.plist */,
 				2B3C4D5E6F708091A2B3C4D5 /* JustEllipsisMac.entitlements */,
 			);
@@ -753,6 +757,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8091A2B3C4D5E6F708091A2B /* JustEllipsisMacApp.swift in Sources */,
+				B6CF72D9BDD745ADA40632A4 /* LocalLinkServer.swift in Sources */,
+				48394EBD12614ECDB4958E26 /* CloudKitLinkWriter.swift in Sources (Mac) */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

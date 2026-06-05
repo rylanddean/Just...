@@ -25,14 +25,15 @@ browser.commands.onCommand.addListener(async command => {
 
   let response;
   try {
-    response = await browser.runtime.sendNativeMessage('application', {
-      action: 'save',
-      url:    tab.url,
-      title:  tab.title || ''
+    const res = await fetch('http://localhost:21471/', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ url: tab.url, title: tab.title || '' })
     });
-    console.log('[Just…] native response:', JSON.stringify(response));
+    response = await res.json();
+    console.log('[Just…] server response:', JSON.stringify(response));
   } catch (err) {
-    console.error('[Just…] native message error:', err);
+    console.error('[Just…] server request failed:', err);
     flashBadge('!', '#E05A5A');
     return;
   }

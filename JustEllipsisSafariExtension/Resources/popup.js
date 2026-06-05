@@ -45,15 +45,16 @@ btn.addEventListener('click', async () => {
 
   let response;
   try {
-    console.log('[Just…] sending native message for:', currentURL);
-    response = await browser.runtime.sendNativeMessage('application', {
-      action: 'save',
-      url:    currentURL,
-      title:  currentTitle
+    console.log('[Just…] POSTing to local server for:', currentURL);
+    const res = await fetch('http://localhost:21471/', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ url: currentURL, title: currentTitle })
     });
-    console.log('[Just…] native response:', JSON.stringify(response));
+    response = await res.json();
+    console.log('[Just…] server response:', JSON.stringify(response));
   } catch (err) {
-    console.error('[Just…] native message failed:', err);
+    console.error('[Just…] server request failed:', err);
     btn.disabled = false;
     btn.className = 'save-btn error';
     btn.textContent = 'Couldn\'t connect to Just…';
