@@ -112,6 +112,7 @@ final class LocalLinkServer: @unchecked Sendable {
             "Access-Control-Allow-Origin: *",
             "Access-Control-Allow-Methods: POST, OPTIONS",
             "Access-Control-Allow-Headers: Content-Type",
+            "Access-Control-Allow-Private-Network: true",   // CORS-RFC1918 / Private Network Access
             "Connection: close",
             "", ""                      // blank line ends headers
         ].joined(separator: "\r\n")
