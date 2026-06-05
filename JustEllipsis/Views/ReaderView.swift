@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import SafariServices
+import MessageUI
 
 struct ReaderView: View {
     let link: QueuedLink
@@ -25,6 +26,9 @@ struct ReaderView: View {
     @State private var pendingEntry: BrainEntry?
     @State private var safariURL: URL?
     @State private var pendingThreadLink: PendingThreadLink?
+    @State private var pendingQuote: PendingQuote?
+    @State private var pendingMessageQuote: PendingQuote?
+    @State private var showQuoteSaved = false
     @State private var isNearBottom = false
     @State private var overScrollDelta: CGFloat = 0
     @State private var isTextSizeControlVisible = false
@@ -72,6 +76,8 @@ struct ReaderView: View {
                 } else if let error = viewModel.error {
                     errorBannerView(error)
                 }
+
+                if showQuoteSaved { quoteSavedToast }
             }
             .task {
                 await viewModel.load(link: link, context: context)
@@ -86,6 +92,15 @@ struct ReaderView: View {
                     .presentationDetents([.height(180)])
                     .presentationDragIndicator(.visible)
                     .presentationBackground(appTheme.background)
+            }
+            .sheet(item: $pendingQuote) { quote in
+                quoteSheet(for: quote)
+                    .presentationDetents([.height(140)])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(appTheme.background)
+            }
+            .fullScreenCover(item: $pendingMessageQuote) { quote in
+                MessageComposerView(body: quoteMessageBody(for: quote))
             }
         }
     }
@@ -374,6 +389,15 @@ struct ReaderView: View {
                     onLinkTapped: { urlString in
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         pendingThreadLink = PendingThreadLink(urlString: urlString)
+                    },
+                    onQuoteSelected: { selectedText in
+                        guard pendingQuote == nil, !selectedText.isEmpty else { return }
+                        pendingQuote = PendingQuote(
+                            text: selectedText,
+                            url: link.url,
+                            title: content.title,
+                            domain: content.domain
+                        )
                     }
                 )
 
@@ -549,6 +573,72 @@ struct ReaderView: View {
         }
     }
 
+    // MARK: - Quote capture
+
+    private var quoteSavedToast: some View {
+        VStack {
+            Spacer()
+            Text("Kept. Your Brain grows.")
+                .font(AppTheme.sansSerif(13, weight: .medium))
+                .foregroundStyle(appTheme.background)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(appTheme.accent)
+                .clipShape(Capsule())
+                .padding(.bottom, 48)
+        }
+        .transition(.opacity)
+        .allowsHitTesting(false)
+    }
+
+    private func quoteSheet(for quote: PendingQuote) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(quote.text)
+                .font(AppTheme.serif(15))
+                .foregroundStyle(appTheme.text)
+                .lineLimit(3)
+                .lineSpacing(2)
+                .italic()
+
+            HStack(spacing: 0) {
+                Button("Keep this") {
+                    saveQuote(quote)
+                }
+                .font(AppTheme.sansSerif(15, weight: .semibold))
+                .foregroundStyle(appTheme.accent)
+
+                Spacer()
+
+                if MFMessageComposeViewController.canSendText() {
+                    Button("Send via Messages") {
+                        pendingQuote = nil
+                        pendingMessageQuote = quote
+                    }
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+                }
+            }
+        }
+        .padding(AppTheme.pagePadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func quoteMessageBody(for quote: PendingQuote) -> String {
+        "\"\(quote.text)\"\n\n\(quote.title)\n\(quote.url)"
+    }
+
+    private func saveQuote(_ quote: PendingQuote) {
+        pendingQuote = nil
+        let entry = QuoteEntry(text: quote.text, url: quote.url, title: quote.title, domain: quote.domain)
+        context.insert(entry)
+        try? context.save()
+        withAnimation(.easeIn(duration: 0.2)) { showQuoteSaved = true }
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            withAnimation(.easeOut(duration: 0.3)) { showQuoteSaved = false }
+        }
+    }
+
     private func openReflect(content: StrippedContent) {
         let entry = BrainEntry(url: link.url, title: content.title, domain: content.domain)
         entry.wordCount = content.estimatedWordCount
@@ -570,6 +660,44 @@ struct ReaderView: View {
             context.insert(day)
         }
         try? context.save()
+    }
+}
+
+// MARK: - Quote
+
+private struct PendingQuote: Identifiable {
+    let id = UUID()
+    let text: String
+    let url: String
+    let title: String
+    let domain: String
+}
+
+// MARK: - SMS composer
+
+private struct MessageComposerView: UIViewControllerRepresentable {
+    let body: String
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIViewController(context: Context) -> MFMessageComposeViewController {
+        let vc = MFMessageComposeViewController()
+        vc.body = body
+        vc.messageComposeDelegate = context.coordinator
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {}
+
+    final class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
+        func messageComposeViewController(
+            _ controller: MFMessageComposeViewController,
+            didFinishWith result: MessageComposeResult
+        ) {
+            DispatchQueue.main.async {
+                controller.dismiss(animated: true)
+            }
+        }
     }
 }
 

@@ -191,7 +191,7 @@ struct JustEllipsisApp: App {
             : .none
 
         // Main store: app data + feeds — optionally CloudKit-synced
-        let mainSchema = Schema([QueuedLink.self, BrainEntry.self, ReadingDay.self, RSSFeed.self])
+        let mainSchema = Schema([QueuedLink.self, BrainEntry.self, ReadingDay.self, RSSFeed.self, QuoteEntry.self])
 
         // Articles store: ephemeral RSS articles — never synced to CloudKit
         let articlesSchema = Schema([RSSArticle.self])
@@ -221,7 +221,7 @@ struct JustEllipsisApp: App {
 
             let fullSchema = Schema([
                 QueuedLink.self, BrainEntry.self, ReadingDay.self,
-                RSSFeed.self, RSSArticle.self
+                RSSFeed.self, RSSArticle.self, QuoteEntry.self
             ])
             if let container = try? ModelContainer(
                 for: fullSchema,
