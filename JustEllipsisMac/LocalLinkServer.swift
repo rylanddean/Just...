@@ -57,13 +57,49 @@ final class LocalLinkServer: @unchecked Sendable {
 
     private func handleConnection(_ connection: NWConnection) {
         connection.start(queue: queue)
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] data, _, _, error in
-            guard let self, let data, error == nil else {
+        accumulate(Data(), on: connection)
+    }
+
+    /// Reads chunks until we have a complete HTTP request (headers + full body),
+    /// then hands off to processRequest. This prevents "malformed body" errors
+    /// when the POST body arrives in a separate TCP segment from the headers.
+    private func accumulate(_ buffer: Data, on connection: NWConnection) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] chunk, _, _, error in
+            guard let self else { return }
+            guard let chunk, error == nil else {
                 connection.cancel()
                 return
             }
-            self.processRequest(data: data, connection: connection)
+
+            let accumulated = buffer + chunk
+
+            if self.isCompleteHTTPRequest(accumulated) {
+                self.processRequest(data: accumulated, connection: connection)
+            } else {
+                self.accumulate(accumulated, on: connection)
+            }
         }
+    }
+
+    /// Returns true once we hold at least as many bytes as the Content-Length header specifies.
+    private func isCompleteHTTPRequest(_ data: Data) -> Bool {
+        guard let raw = String(data: data, encoding: .utf8),
+              let separatorRange = raw.range(of: "\r\n\r\n") else {
+            return false     // headers not yet complete
+        }
+
+        // If there's a Content-Length, wait until the body is fully buffered.
+        if let clRange = raw.range(of: "Content-Length: ",
+                                   options: .caseInsensitive,
+                                   range: raw.startIndex..<separatorRange.lowerBound),
+           let eol = raw[clRange.upperBound...].range(of: "\r\n"),
+           let contentLength = Int(raw[clRange.upperBound..<eol.lowerBound]) {
+            let headerByteCount = raw[...separatorRange.upperBound]
+                .utf8.count          // bytes up to and including the blank line
+            return data.count >= headerByteCount + contentLength
+        }
+
+        return true     // no Content-Length → treat as complete (e.g. OPTIONS)
     }
 
     private func processRequest(data: Data, connection: NWConnection) {
@@ -120,7 +156,12 @@ final class LocalLinkServer: @unchecked Sendable {
         var response = headers.data(using: .utf8)!
         response.append(bodyBytes)
 
-        connection.send(content: response, completion: .contentProcessed { _ in
+        // isComplete: true sends a TCP FIN after the response so the remote
+        // reads all data before the connection closes (avoids RST truncation).
+        connection.send(content: response,
+                        contentContext: .finalMessage,
+                        isComplete: true,
+                        completion: .contentProcessed { _ in
             connection.cancel()
         })
     }
