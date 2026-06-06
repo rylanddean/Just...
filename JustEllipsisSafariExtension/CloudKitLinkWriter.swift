@@ -23,12 +23,6 @@ enum CloudKitLinkWriter {
             return "error"
         }
 
-        // Quick iCloud availability check — surfaced as a clear log line.
-        guard FileManager.default.ubiquityIdentityToken != nil else {
-            ckLog.error("save: iCloud not available (not signed in?)")
-            return "error"
-        }
-
         let container = CKContainer(identifier: containerID)
         let db = container.privateCloudDatabase
 
