@@ -121,7 +121,7 @@ final class LocalLinkServer: @unchecked Sendable {
             let json = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any],
             let url = json["url"] as? String
         else {
-            serverLog.error("processRequest: malformed body in request")
+            serverLog.error("processRequest: malformed body — \(data.count) bytes, preview: \(raw.prefix(300))")
             send("{\"result\":\"error\"}", to: connection)
             return
         }
