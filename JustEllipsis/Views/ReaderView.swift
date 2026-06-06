@@ -29,6 +29,7 @@ struct ReaderView: View {
     @State private var pendingQuote: PendingQuote?
     @State private var pendingMessageQuote: PendingQuote?
     @State private var showQuoteSaved = false
+    @State private var clearSelectionToken: UUID?
     @State private var isNearBottom = false
     @State private var overScrollDelta: CGFloat = 0
     @State private var isTextSizeControlVisible = false
@@ -93,7 +94,9 @@ struct ReaderView: View {
                     .presentationDragIndicator(.visible)
                     .presentationBackground(appTheme.background)
             }
-            .sheet(item: $pendingQuote) { quote in
+            .sheet(item: $pendingQuote, onDismiss: {
+                clearSelectionToken = UUID()
+            }) { quote in
                 quoteSheet(for: quote)
                     .presentationDetents([.height(140)])
                     .presentationDragIndicator(.visible)
@@ -391,14 +394,18 @@ struct ReaderView: View {
                         pendingThreadLink = PendingThreadLink(urlString: urlString)
                     },
                     onQuoteSelected: { selectedText in
-                        guard pendingQuote == nil, !selectedText.isEmpty else { return }
+                        guard pendingQuote == nil,
+                              pendingEntry == nil,
+                              pendingThreadLink == nil,
+                              !selectedText.isEmpty else { return }
                         pendingQuote = PendingQuote(
                             text: selectedText,
                             url: link.url,
                             title: content.title,
                             domain: content.domain
                         )
-                    }
+                    },
+                    clearSelectionToken: clearSelectionToken
                 )
 
                 if isNearBottom {
@@ -611,8 +618,12 @@ struct ReaderView: View {
 
                 if MFMessageComposeViewController.canSendText() {
                     Button("Send via Messages") {
+                        let q = quote
                         pendingQuote = nil
-                        pendingMessageQuote = quote
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(400))
+                            pendingMessageQuote = q
+                        }
                     }
                     .font(AppTheme.sansSerif(14))
                     .foregroundStyle(appTheme.text.opacity(0.5))

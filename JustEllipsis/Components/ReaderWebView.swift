@@ -25,7 +25,7 @@ private let quoteSelectionJS = """
     }
     debounce=setTimeout(function(){
       window.webkit.messageHandlers.quoteSelected.postMessage(text);
-    },250);
+    },2000);
   });
 })();
 """
@@ -41,6 +41,7 @@ struct ReaderWebView: UIViewRepresentable {
     var onReflectTrigger: () -> Void = {}
     var onLinkTapped: (String) -> Void = { _ in }
     var onQuoteSelected: (String) -> Void = { _ in }
+    var clearSelectionToken: UUID? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
@@ -81,6 +82,10 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onQuoteSelected = onQuoteSelected
         context.coordinator.requestedFontSize = fontSize
         context.coordinator.requestedLineSpacing = lineSpacing
+        if context.coordinator.lastClearSelectionToken != clearSelectionToken {
+            context.coordinator.lastClearSelectionToken = clearSelectionToken
+            webView.evaluateJavaScript("window.getSelection().removeAllRanges()", completionHandler: nil)
+        }
         let bgColor = UIColor(theme.bg)
         webView.backgroundColor = bgColor
         webView.scrollView.backgroundColor = bgColor
@@ -130,6 +135,7 @@ struct ReaderWebView: UIViewRepresentable {
         var appliedNightMode: Bool? = nil
         var appliedFontSize: CGFloat = -1
         var appliedLineSpacing: CGFloat = -1
+        var lastClearSelectionToken: UUID? = nil
 
         init(
             onScrollProgress: @escaping (Double) -> Void,
