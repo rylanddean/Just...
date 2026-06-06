@@ -1,62 +1,37 @@
 'use strict';
 
-// ── Native-messaging relay ─────────────────────────────────
-//
-// browser.runtime.sendMessage() from the popup reaches this background page
-// first. We forward to SafariWebExtensionHandler via safari.extension
-// .dispatchMessage() and relay the native response back to the popup via
-// the stored sendResponse callback.
-//
-// safari.self.addEventListener("message") is how Safari delivers the
-// completeRequest() reply from the Swift handler back to the JS page
-// that called dispatchMessage().
-
-let pendingSendResponse = null;
-
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    const { action, url = '', title = '' } = message ?? {};
-
-    if (action === 'save') {
-        pendingSendResponse = sendResponse;
-        safari.extension.dispatchMessage('save', { url, title });
-        return true; // keep channel open — response is async
-    }
-
-    if (action === 'check') {
-        pendingSendResponse = sendResponse;
-        safari.extension.dispatchMessage('check', { url });
-        return true;
-    }
-});
-
-// Safari delivers SafariWebExtensionHandler's completeRequest() reply here.
-safari.self.addEventListener('message', event => {
-    const result = event.message?.result ?? 'error';
-    if (pendingSendResponse) {
-        pendingSendResponse({ result });
-        pendingSendResponse = null;
-    }
-});
+// Loud load marker so we can confirm the background script even runs.
+console.log('[Just…] background.js loaded');
+console.log('[Just…] typeof safari:', typeof safari);
+console.log('[Just…] typeof browser.runtime.sendNativeMessage:', typeof browser?.runtime?.sendNativeMessage);
 
 // ── Keyboard shortcut: ⌥⇧J ────────────────────────────────
+// browser.runtime.sendNativeMessage() is delivered directly to the native
+// SafariWebExtensionHandler; its completeRequest() reply comes back as the
+// resolved value here. This API is ONLY exposed when the "nativeMessaging"
+// permission is declared in manifest.json — without it the function is
+// undefined. browser.runtime.sendMessage() does NOT reach native in Safari.
 
 browser.commands.onCommand.addListener(async command => {
+    console.log('[Just…] command received:', command);
     if (command !== 'save-link') return;
 
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
     const tab  = tabs[0];
     if (!tab?.url?.startsWith('http')) return;
 
-    // Use a one-shot Promise so we can await the native response.
-    const result = await new Promise(resolve => {
-        pendingSendResponse = ({ result }) => resolve(result);
-        safari.extension.dispatchMessage('save', {
-            url:   tab.url,
-            title: tab.title ?? ''
+    let result = 'error';
+    try {
+        const response = await browser.runtime.sendNativeMessage({
+            action: 'save',
+            url:    tab.url,
+            title:  tab.title ?? ''
         });
-        // Timeout after 15 s — CloudKit can be slow on first launch.
-        setTimeout(() => resolve('error'), 15_000);
-    });
+        console.log('[Just…] native response:', JSON.stringify(response));
+        result = response?.result ?? 'error';
+    } catch (err) {
+        console.error('[Just…] sendMessage failed:', err);
+    }
 
     if (result === 'success') {
         flashBadge('✓', '#E8A83E');

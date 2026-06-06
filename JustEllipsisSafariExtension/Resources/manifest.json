@@ -23,7 +23,8 @@
   },
 
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "nativeMessaging"
   ],
 
   "commands": {

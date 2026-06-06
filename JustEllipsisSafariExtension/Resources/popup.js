@@ -46,7 +46,7 @@ btn.addEventListener('click', async () => {
   let result;
   try {
     console.log('[Just…] sending save to native handler for:', currentURL);
-    const response = await browser.runtime.sendMessage({
+    const response = await browser.runtime.sendNativeMessage({
       action: 'save',
       url:    currentURL,
       title:  currentTitle
