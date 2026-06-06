@@ -141,6 +141,7 @@ targets:
         NSMicrophoneUsageDescription: "Voice reflections are transcribed on-device. Audio never leaves your phone."
         NSSpeechRecognitionUsageDescription: "Speech recognition powers voice reflections. All recognition is on-device."
         NSHealthShareUsageDescription: "Activity ring progress appears once you've met your daily reading goal — a quiet reminder to also move."
+        NSLocationWhenInUseUsageDescription: "Just… uses your location once a day to show today's weather in the Digest. It is never stored or shared."
         ITSAppUsesNonExemptEncryption: false
         UIRequiresFullScreen: false
         UIDeviceFamily:
@@ -165,6 +166,7 @@ targets:
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.rylandean.justellipsis
         aps-environment: development
         com.apple.developer.healthkit: true
+        com.apple.developer.weatherkit: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rylandean.justellipsis
@@ -176,6 +178,8 @@ targets:
       - package: SwiftSoup
       - package: FeedKit
       - sdk: HealthKit.framework
+      - sdk: WeatherKit.framework
+      - sdk: CoreLocation.framework
       - target: JustEllipsisShareExtension   # embeds the extension in the app bundle
 
   # ── Share Extension ───────────────────────────────────────────────────────

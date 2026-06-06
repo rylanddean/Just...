@@ -7,6 +7,8 @@ struct DigestView: View {
     @Environment(GradingProgressTracker.self)  private var gradingTracker
     @Environment(PipelineProgressTracker.self) private var pipelineTracker
 
+    @StateObject private var weatherService = DigestWeatherService.shared
+
     @Query private var articles: [RSSArticle]
     @Query(filter: #Predicate<RSSFeed> { !$0.isArchived }) private var feeds: [RSSFeed]
     @Query private var queue: [QueuedLink]
@@ -287,6 +289,13 @@ struct DigestView: View {
                 appTheme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    if let weather = weatherService.weather {
+                        DigestWeatherCard(weather: weather)
+                            .padding(.horizontal, AppTheme.pagePadding)
+                            .padding(.top, 12)
+                            .padding(.bottom, 4)
+                    }
+
                     tagFilterArea(topics: buckets.topics, hasUntagged: buckets.hasUntagged)
 
                     if articles.isEmpty {
@@ -337,6 +346,9 @@ struct DigestView: View {
                 hiddenSeenIDs = hideSeen
                     ? Set(articles.filter { $0.isSeen }.map { $0.id })
                     : []
+            }
+            .task {
+                weatherService.refresh()
             }
         }
     }

@@ -44,6 +44,18 @@ struct AppTheme {
         .system(size: size, weight: weight, design: .default)
     }
 
+    static func mono(_ size: CGFloat) -> Font {
+        .custom("DMMono-Regular", size: size)
+    }
+
+    static func playfair(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        switch weight {
+        case .semibold: return .custom("PlayfairDisplay-SemiBold", size: size)
+        case .bold:     return .custom("PlayfairDisplay-Bold", size: size)
+        default:        return .custom("PlayfairDisplay-Regular", size: size)
+        }
+    }
+
     // MARK: Spacing
 
     static let pagePadding: CGFloat = 20
