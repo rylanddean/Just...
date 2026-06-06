@@ -1,6 +1,12 @@
 import Foundation
 import SwiftData
 import CloudKit
+import os.log
+
+private let receiverLog = Logger(
+    subsystem: "com.rylandean.justellipsis",
+    category: "MacLinkReceiver"
+)
 
 // Promotes JE_PendingLink records written by the Mac Safari extension into
 // the local SwiftData store. Called on every foreground — no-op when there
@@ -25,12 +31,32 @@ final class MacLinkReceiver {
     // MARK: - Promotion
 
     private func promote() async {
-        guard FileManager.default.ubiquityIdentityToken != nil else { return }
+        receiverLog.info("promote: checking for pending Mac links")
 
-        let db = CKContainer(identifier: Self.containerID).privateCloudDatabase
+        let container = CKContainer(identifier: Self.containerID)
+        do {
+            let status = try await container.accountStatus()
+            guard status == .available else {
+                receiverLog.error("promote: CloudKit account status = \(String(describing: status))")
+                return
+            }
+        } catch {
+            receiverLog.error("promote: accountStatus error: \(error)")
+            return
+        }
+
+        let db = container.privateCloudDatabase
         let query = CKQuery(recordType: Self.recordType, predicate: NSPredicate(value: true))
 
-        guard let (results, _) = try? await db.records(matching: query) else { return }
+        let results: [(CKRecord.ID, Result<CKRecord, Error>)]
+        do {
+            (results, _) = try await db.records(matching: query)
+        } catch {
+            receiverLog.error("promote: query failed: \(error)")
+            return
+        }
+
+        receiverLog.info("promote: found \(results.count) pending record(s)")
         guard !results.isEmpty else { return }
 
         let ctx = ModelContext(modelContainer)
@@ -66,10 +92,23 @@ final class MacLinkReceiver {
             toDelete.append(record.recordID)
         }
 
-        try? ctx.save()
+        do {
+            try ctx.save()
+            receiverLog.info("promote: inserted \(toDelete.count) link(s) into SwiftData")
+        } catch {
+            receiverLog.error("promote: SwiftData save failed: \(error)")
+        }
 
         guard !toDelete.isEmpty else { return }
         let op = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: toDelete)
+        op.modifyRecordsResultBlock = { result in
+            switch result {
+            case .success:
+                receiverLog.info("promote: deleted \(toDelete.count) CloudKit record(s)")
+            case .failure(let error):
+                receiverLog.error("promote: CloudKit delete failed: \(error)")
+            }
+        }
         db.add(op)
     }
 }
