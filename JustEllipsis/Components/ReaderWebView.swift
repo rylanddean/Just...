@@ -12,6 +12,24 @@ private let tapLinkJS = """
 })();
 """
 
+private let quoteSelectionJS = """
+(function(){
+  var debounce;
+  document.addEventListener('selectionchange',function(){
+    clearTimeout(debounce);
+    var sel=window.getSelection();
+    var text=sel?sel.toString().trim():'';
+    if(!text){
+      window.webkit.messageHandlers.quoteSelected.postMessage('');
+      return;
+    }
+    debounce=setTimeout(function(){
+      window.webkit.messageHandlers.quoteSelected.postMessage(text);
+    },2000);
+  });
+})();
+"""
+
 struct ReaderWebView: UIViewRepresentable {
     let html: String
     var theme: ReaderTheme = .ember
@@ -22,6 +40,8 @@ struct ReaderWebView: UIViewRepresentable {
     var onOverScrollDelta: (CGFloat) -> Void = { _ in }
     var onReflectTrigger: () -> Void = {}
     var onLinkTapped: (String) -> Void = { _ in }
+    var onQuoteSelected: (String) -> Void = { _ in }
+    var clearSelectionToken: UUID? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
@@ -29,16 +49,20 @@ struct ReaderWebView: UIViewRepresentable {
             onNearBottom: onNearBottom,
             onOverScrollDelta: onOverScrollDelta,
             onReflectTrigger: onReflectTrigger,
-            onLinkTapped: onLinkTapped
+            onLinkTapped: onLinkTapped,
+            onQuoteSelected: onQuoteSelected
         )
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
-        let script = WKUserScript(source: tapLinkJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        config.userContentController.addUserScript(script)
+        let tapScript = WKUserScript(source: tapLinkJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        let quoteScript = WKUserScript(source: quoteSelectionJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        config.userContentController.addUserScript(tapScript)
+        config.userContentController.addUserScript(quoteScript)
         config.userContentController.add(ScriptMessageProxy(context.coordinator), name: "tapLink")
+        config.userContentController.add(ScriptMessageProxy(context.coordinator), name: "quoteSelected")
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.scrollView.delegate = context.coordinator
         webView.backgroundColor = UIColor(theme.bg)
@@ -55,8 +79,13 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onOverScrollDelta = onOverScrollDelta
         context.coordinator.onReflectTrigger = onReflectTrigger
         context.coordinator.onLinkTapped = onLinkTapped
+        context.coordinator.onQuoteSelected = onQuoteSelected
         context.coordinator.requestedFontSize = fontSize
         context.coordinator.requestedLineSpacing = lineSpacing
+        if context.coordinator.lastClearSelectionToken != clearSelectionToken {
+            context.coordinator.lastClearSelectionToken = clearSelectionToken
+            webView.evaluateJavaScript("window.getSelection().removeAllRanges()", completionHandler: nil)
+        }
         let bgColor = UIColor(theme.bg)
         webView.backgroundColor = bgColor
         webView.scrollView.backgroundColor = bgColor
@@ -97,6 +126,7 @@ struct ReaderWebView: UIViewRepresentable {
         var onOverScrollDelta: (CGFloat) -> Void
         var onReflectTrigger: () -> Void
         var onLinkTapped: (String) -> Void
+        var onQuoteSelected: (String) -> Void
         var loadedHTML: String = ""
         var didTrigger = false
         var wasNearBottom = false
@@ -105,24 +135,30 @@ struct ReaderWebView: UIViewRepresentable {
         var appliedNightMode: Bool? = nil
         var appliedFontSize: CGFloat = -1
         var appliedLineSpacing: CGFloat = -1
+        var lastClearSelectionToken: UUID? = nil
 
         init(
             onScrollProgress: @escaping (Double) -> Void,
             onNearBottom: @escaping (Bool) -> Void,
             onOverScrollDelta: @escaping (CGFloat) -> Void,
             onReflectTrigger: @escaping () -> Void,
-            onLinkTapped: @escaping (String) -> Void
+            onLinkTapped: @escaping (String) -> Void,
+            onQuoteSelected: @escaping (String) -> Void
         ) {
             self.onScrollProgress = onScrollProgress
             self.onNearBottom = onNearBottom
             self.onOverScrollDelta = onOverScrollDelta
             self.onReflectTrigger = onReflectTrigger
             self.onLinkTapped = onLinkTapped
+            self.onQuoteSelected = onQuoteSelected
         }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard message.name == "tapLink", let urlString = message.body as? String else { return }
-            DispatchQueue.main.async { self.onLinkTapped(urlString) }
+            if message.name == "tapLink", let urlString = message.body as? String {
+                DispatchQueue.main.async { self.onLinkTapped(urlString) }
+            } else if message.name == "quoteSelected", let text = message.body as? String {
+                DispatchQueue.main.async { self.onQuoteSelected(text) }
+            }
         }
 
         func applyNightModeCSS(_ isNight: Bool, theme: ReaderTheme, on webView: WKWebView) {

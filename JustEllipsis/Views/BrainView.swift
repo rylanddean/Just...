@@ -6,8 +6,10 @@ struct BrainView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme) private var appTheme
     @Query(sort: \BrainEntry.readAt, order: .reverse) private var entries: [BrainEntry]
+    @Query(sort: \QuoteEntry.savedAt, order: .reverse) private var quotes: [QuoteEntry]
     @State private var viewModel = BrainViewModel()
     @State private var selectedEntry: BrainEntry?
+    @State private var selectedQuote: QuoteEntry?
 
     private var rank: BrainRank { viewModel.rank(for: entries) }
     private var progress: Double { viewModel.progressToNextRank(for: entries) }
@@ -76,6 +78,31 @@ struct BrainView: View {
                             sectionHeader("INSIGHTS")
                         }
                         .listSectionSeparator(.hidden)
+
+                        // QUOTES
+                        if !quotes.isEmpty {
+                            Section {
+                                ForEach(quotes) { quote in
+                                    BrainQuoteRow(quote: quote)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { selectedQuote = quote }
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(rowInsets)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                deleteQuote(quote)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                            .tint(AppTheme.danger)
+                                        }
+                                }
+                            } header: {
+                                sectionHeader("QUOTES")
+                            }
+                            .listSectionSeparator(.hidden)
+                        }
 
                         // REVISIT (shown once older entries exist with reflections)
                         if let remembered = viewModel.rememberedEntry {
@@ -163,6 +190,9 @@ struct BrainView: View {
         .sheet(item: $selectedEntry) { entry in
             BrainEntryDetail(entry: entry)
         }
+        .sheet(item: $selectedQuote) { quote in
+            QuoteEntryDetail(quote: quote)
+        }
     }
 
     // MARK: - Timeline header
@@ -197,6 +227,12 @@ struct BrainView: View {
         .padding(.bottom, 2)
         .listRowInsets(EdgeInsets())
         .background(appTheme.background)
+    }
+
+    private func deleteQuote(_ quote: QuoteEntry) {
+        if selectedQuote?.id == quote.id { selectedQuote = nil }
+        context.delete(quote)
+        try? context.save()
     }
 
     // MARK: - Delete
@@ -460,5 +496,112 @@ struct BrainEntryDetail: View {
         entry.reflection = trimmed.isEmpty ? nil : trimmed
         try? context.save()
         isEditing = false
+    }
+}
+
+// MARK: - Quote Row
+
+struct BrainQuoteRow: View {
+    let quote: QuoteEntry
+    @Environment(\.appTheme) private var appTheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(quote.text)
+                .font(AppTheme.serif(15))
+                .foregroundStyle(appTheme.text)
+                .italic()
+                .lineLimit(4)
+                .lineSpacing(2)
+
+            HStack(spacing: 6) {
+                Text(quote.domain)
+                Text("·")
+                Text(quote.savedAt.formatted(.relative(presentation: .named)))
+            }
+            .font(AppTheme.sansSerif(11))
+            .foregroundStyle(appTheme.textFaint)
+
+            Text(quote.title)
+                .font(AppTheme.sansSerif(12, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .lineLimit(1)
+        }
+        .padding(AppTheme.cardPadding)
+        .background(appTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+    }
+}
+
+// MARK: - Quote Detail Sheet
+
+struct QuoteEntryDetail: View {
+    let quote: QuoteEntry
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+    @Environment(\.appTheme) private var appTheme
+    @State private var showSafari = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                appTheme.background.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text(quote.text)
+                            .font(AppTheme.serif(18))
+                            .foregroundStyle(appTheme.text)
+                            .italic()
+                            .lineSpacing(6)
+
+                        Divider().background(appTheme.separator)
+
+                        Button {
+                            showSafari = true
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(quote.title)
+                                    .font(AppTheme.sansSerif(14, weight: .medium))
+                                    .foregroundStyle(appTheme.heading)
+                                    .multilineTextAlignment(.leading)
+                                Text(quote.domain)
+                                    .font(AppTheme.sansSerif(12))
+                                    .foregroundStyle(appTheme.textFaint)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(AppTheme.pagePadding)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(appTheme.accent)
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Delete", role: .destructive) {
+                            context.delete(quote)
+                            try? context.save()
+                            dismiss()
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundStyle(appTheme.accent)
+                    }
+                }
+            }
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+        }
+        .presentationBackground(appTheme.background)
+        .sheet(isPresented: $showSafari) {
+            if let url = URL(string: quote.url) {
+                SafariView(url: url).ignoresSafeArea()
+            }
+        }
     }
 }

@@ -51,6 +51,7 @@ struct DigestView: View {
         let today: [RSSArticle]
         let yesterday: [RSSArticle]
         let earlier: [RSSArticle]
+        let scraped: [(feed: RSSFeed, articles: [RSSArticle])]
         let topics: [String]
         let hasUntagged: Bool
     }
@@ -60,16 +61,17 @@ struct DigestView: View {
         let lookup = feedLookup
         let startOfToday = Calendar.current.startOfDay(for: Date())
         guard let startOfYesterday = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) else {
-            return ArticleBuckets(today: [], yesterday: [], earlier: [], topics: ["All"], hasUntagged: false)
+            return ArticleBuckets(today: [], yesterday: [], earlier: [], scraped: [], topics: ["All"], hasUntagged: false)
         }
 
         var todayDedupe = Set<String>()
         var yesterdayDedupe = Set<String>()
         var earlierDedupe = Set<String>()
-        var todayList:     [RSSArticle] = []
-        var yesterdayList: [RSSArticle] = []
-        var earlierList:   [RSSArticle] = []
-        var topicCounts:   [String: Int] = [:]
+        var todayList:        [RSSArticle] = []
+        var yesterdayList:    [RSSArticle] = []
+        var earlierList:      [RSSArticle] = []
+        var scrapedByFeedID:  [UUID: [RSSArticle]] = [:]
+        var topicCounts:      [String: Int] = [:]
         var hasUntagged = false
 
         for article in articles {
@@ -83,6 +85,11 @@ struct DigestView: View {
                 for topic in article.topics { topicCounts[topic, default: 0] += 1 }
             }
 
+            if lookup[article.feedID]?.feedType == .scraped {
+                scrapedByFeedID[article.feedID, default: []].append(article)
+                continue
+            }
+
             if article.publishedAt >= startOfToday {
                 if todayDedupe.insert(article.url).inserted { todayList.append(article) }
             } else if article.publishedAt >= startOfYesterday {
@@ -92,11 +99,19 @@ struct DigestView: View {
             }
         }
 
+        let scrapedSections = scrapedByFeedID
+            .compactMap { feedID, articles -> (RSSFeed, [RSSArticle])? in
+                guard let feed = lookup[feedID] else { return nil }
+                return (feed, articles)
+            }
+            .sorted { $0.0.title < $1.0.title }
+
         let topTopics = topicCounts.sorted { $0.value > $1.value }.prefix(10).map(\.key)
         return ArticleBuckets(
             today: todayList,
             yesterday: yesterdayList,
             earlier: earlierList,
+            scraped: scrapedSections,
             topics: ["All"] + topTopics,
             hasUntagged: hasUntagged
         )
@@ -196,12 +211,14 @@ struct DigestView: View {
     private enum DigestItem: Identifiable {
         case brainHeader
         case dateHeader(String)
+        case feedGroupHeader(String)
         case article(RSSArticle)
 
         var id: String {
             switch self {
             case .brainHeader: return "header-brain"
             case .dateHeader(let label): return "header-\(label)"
+            case .feedGroupHeader(let name): return "feedgroup-\(name)"
             case .article(let a): return a.id.uuidString
             }
         }
@@ -239,6 +256,20 @@ struct DigestView: View {
         if !earlier.isEmpty {
             items.append(.dateHeader("EARLIER"))
             items.append(contentsOf: earlier.map { .article($0) })
+        }
+
+        let scrapedSections = buckets.scraped.compactMap { feed, articles -> (RSSFeed, [RSSArticle])? in
+            let filtered = articles.filter { !recURLs.contains($0.url) && topicMatch($0) }
+            return filtered.isEmpty ? nil : (feed, filtered)
+        }
+        if !scrapedSections.isEmpty {
+            items.append(.dateHeader("WEBSITES"))
+            for (feed, articles) in scrapedSections {
+                if scrapedSections.count > 1 {
+                    items.append(.feedGroupHeader(feed.title))
+                }
+                items.append(contentsOf: articles.map { .article($0) })
+            }
         }
 
         return items
@@ -337,12 +368,23 @@ struct DigestView: View {
                             bottom: 4,
                             trailing: AppTheme.pagePadding
                         ))
+                case .feedGroupHeader(let name):
+                    feedGroupDivider(name)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: 12,
+                            leading: AppTheme.pagePadding,
+                            bottom: 4,
+                            trailing: AppTheme.pagePadding
+                        ))
                 case .article(let article):
                     DigestArticleRow(
                         article: article,
                         feedName: lookup[article.feedID]?.title ?? "",
                         isQueued: queuedURLs.contains(article.url),
                         onAdd: { addToQueue(article) },
+                        onRemove: { removeFromQueue(article) },
                         onSeen: { seenBatcher.enqueue(article) }
                     )
                     .listRowBackground(Color.clear)
@@ -497,6 +539,14 @@ struct DigestView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func feedGroupDivider(_ name: String) -> some View {
+        Text(name.uppercased())
+            .font(AppTheme.sansSerif(10, weight: .medium))
+            .foregroundStyle(appTheme.textFaint.opacity(0.6))
+            .kerning(1.5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func addToQueue(_ article: RSSArticle) {
         guard !queuedURLs.contains(article.url) else { return }
         let maxOrder = queue.map { $0.sortOrder }.max() ?? -1
@@ -508,6 +558,13 @@ struct DigestView: View {
         )
         context.insert(link)
         article.isQueued = true
+        try? context.save()
+    }
+
+    private func removeFromQueue(_ article: RSSArticle) {
+        guard let link = queue.first(where: { $0.url == article.url }) else { return }
+        article.isQueued = false
+        context.delete(link)
         try? context.save()
     }
 }
@@ -558,6 +615,7 @@ private struct DigestArticleRow: View {
     let feedName: String
     let isQueued: Bool
     let onAdd: () -> Void
+    let onRemove: () -> Void
     let onSeen: () -> Void
 
     @Environment(\.appTheme) private var appTheme
@@ -627,10 +685,15 @@ private struct DigestArticleRow: View {
             Spacer()
 
             if isQueued || justAdded {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(appTheme.accent)
-                    .frame(width: 32, height: 32)
+                Button {
+                    onRemove()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(appTheme.accent)
+                        .frame(width: 32, height: 32)
+                }
+                .buttonStyle(.plain)
             } else {
                 Button {
                     onAdd()
