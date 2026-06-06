@@ -94,7 +94,7 @@ final class LocalLinkServer: @unchecked Sendable {
                                    range: raw.startIndex..<separatorRange.lowerBound),
            let eol = raw[clRange.upperBound...].range(of: "\r\n"),
            let contentLength = Int(raw[clRange.upperBound..<eol.lowerBound]) {
-            let headerByteCount = raw[...separatorRange.upperBound]
+            let headerByteCount = raw[..<separatorRange.upperBound]
                 .utf8.count          // bytes up to and including the blank line
             return data.count >= headerByteCount + contentLength
         }
