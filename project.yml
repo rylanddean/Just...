@@ -134,6 +134,7 @@ targets:
           - com.rylandean.justellipsis.rssfetch
           - com.rylandean.justellipsis.grading
         UIBackgroundModes:
+          - audio
           - fetch
           - processing
           - remote-notification

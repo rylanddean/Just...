@@ -89,6 +89,7 @@
 		D8DF3954E0CB01D122E87439 /* feeds.json in Resources */ = {isa = PBXBuildFile; fileRef = DEB0F696771B8EDE0D4FC2B2 /* feeds.json */; };
 		DC1C00786384C622E0CE99DD /* LinkPromotionActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DCBD1976FCFFE41FE1C4B9 /* LinkPromotionActor.swift */; };
 		DF47C19BEF474C1C7B732E11 /* Date+RelativeShort.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F2C68064C12A47B02C21E2 /* Date+RelativeShort.swift */; };
+		E093E874A024D23AB7094BB1 /* SpeechPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9948E07EF67BDBD96AF4C9C5 /* SpeechPlayer.swift */; };
 		E2EB2EA9151BA6D2E9C5700B /* BrainEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E031427BDE66D20C2190203 /* BrainEngine.swift */; };
 		E4C64FB18B12689A4A2873F7 /* BrainDietPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E01C072C66A485762BAC5A3 /* BrainDietPanel.swift */; };
 		E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = F70788F7020E27CA19E61A12 /* SwiftSoup */; };
@@ -181,6 +182,7 @@
 		8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = JustEllipsisTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		918E56AAA1341A431C65A71A /* QuoteEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteEntry.swift; sourceTree = "<group>"; };
 		94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSRecommendationEngine.swift; sourceTree = "<group>"; };
+		9948E07EF67BDBD96AF4C9C5 /* SpeechPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechPlayer.swift; sourceTree = "<group>"; };
 		9CCE38775A8F19539D1A2868 /* FeedURLNormaliser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedURLNormaliser.swift; sourceTree = "<group>"; };
 		9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustEllipsisApp.swift; sourceTree = "<group>"; };
 		9D55C543A6A1CB887D6732BF /* FeedsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedsView.swift; sourceTree = "<group>"; };
@@ -282,6 +284,7 @@
 				2E682902D7E4F05A13644A84 /* PrefetchService.swift */,
 				00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */,
 				94BE4B4155F6D56546DADA87 /* RSSRecommendationEngine.swift */,
+				9948E07EF67BDBD96AF4C9C5 /* SpeechPlayer.swift */,
 				CF8F2E5BD9B19E85484537FE /* StreakEngine.swift */,
 				F971C6F6E981C20C719708AC /* WebFeedScraper.swift */,
 			);
@@ -698,6 +701,7 @@
 				E5EE934B550AB6F6E15D6AE8 /* RereadView.swift in Sources */,
 				0395E0DD27E8DDF39E9D392B /* RootView.swift in Sources */,
 				7C28C1742A5A65634AE19449 /* SettingsView.swift in Sources */,
+				E093E874A024D23AB7094BB1 /* SpeechPlayer.swift in Sources */,
 				3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */,
 				65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */,
 				688CEC6AED164C8E57D6F3F7 /* WebFeedScraper.swift in Sources */,
