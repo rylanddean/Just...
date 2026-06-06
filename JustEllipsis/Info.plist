@@ -90,6 +90,7 @@
 	<string>Speech recognition powers voice reflections. All recognition is on-device.</string>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>audio</string>
 		<string>fetch</string>
 		<string>processing</string>
 		<string>remote-notification</string>

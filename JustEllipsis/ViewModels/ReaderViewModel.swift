@@ -15,6 +15,29 @@ final class ReaderViewModel {
     var generatedPrompt: String? = nil
     var generatedDNA: String? = nil
 
+    // MARK: - Listen mode
+
+    /// Sentences segmented from the article body by `ReaderWebView`, in reading
+    /// order. Drives TTS in Listen mode and keeps highlight indices aligned with
+    /// the spans rendered in the web view.
+    var sentences: [String] = []
+    var speechPlayer: SpeechPlayer?
+    var isListenMode: Bool = false
+
+    /// Lazily creates the player on first use, then begins playback.
+    func startListening(title: String, estimatedMinutes: Int) {
+        let player = speechPlayer ?? SpeechPlayer()
+        speechPlayer = player
+        player.load(sentences: sentences, title: title, estimatedMinutes: estimatedMinutes)
+        isListenMode = true
+        player.play()
+    }
+
+    func stopListening() {
+        speechPlayer?.stop()
+        isListenMode = false
+    }
+
     func load(link: QueuedLink, context: ModelContext) async {
         error = nil
         isLoading = true

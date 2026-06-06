@@ -12,6 +12,59 @@ private let tapLinkJS = """
 })();
 """
 
+// Wraps each prose sentence in a span so Listen mode can highlight and scroll to
+// the sentence being spoken. Segmentation happens here (not in Swift) so the
+// sentence array reported back stays perfectly aligned with the rendered spans.
+// Sentence boundaries: . ? ! followed by whitespace — a simple heuristic that
+// works well for prose. Occasional over-splitting on "Dr.", "U.S." is acceptable.
+private let segmentSentencesJS = """
+(function(){
+  function segment(){
+    if(document.getElementById('jst-sentence-style')){return;}
+    var style=document.createElement('style');
+    style.id='jst-sentence-style';
+    style.textContent='.active-sentence{background:rgba(138,100,32,0.35);border-radius:3px;}';
+    (document.head||document.documentElement).appendChild(style);
+
+    var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{
+      acceptNode:function(n){
+        if(!n.nodeValue||!n.nodeValue.trim())return NodeFilter.FILTER_REJECT;
+        var p=n.parentElement;
+        if(!p)return NodeFilter.FILTER_REJECT;
+        var t=p.tagName;
+        if(t==='SCRIPT'||t==='STYLE'||t==='NOSCRIPT')return NodeFilter.FILTER_REJECT;
+        if(p.closest('.jst-sentence'))return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var nodes=[];
+    while(walker.nextNode())nodes.push(walker.currentNode);
+
+    var sentences=[];
+    var idx=0;
+    nodes.forEach(function(node){
+      var parts=node.nodeValue.match(/[^.!?]+[.!?]+(?:\\s+|$)|[^.!?]+$/g);
+      if(!parts)return;
+      var frag=document.createDocumentFragment();
+      parts.forEach(function(part){
+        var trimmed=part.trim();
+        if(!trimmed){frag.appendChild(document.createTextNode(part));return;}
+        var span=document.createElement('span');
+        span.className='jst-sentence';
+        span.setAttribute('data-idx',idx);
+        span.textContent=part;
+        frag.appendChild(span);
+        sentences.push(trimmed);
+        idx++;
+      });
+      node.parentNode.replaceChild(frag,node);
+    });
+    window.webkit.messageHandlers.sentences.postMessage(sentences);
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',segment);}else{segment();}
+})();
+"""
+
 private let quoteSelectionJS = """
 (function(){
   var debounce;
@@ -41,6 +94,11 @@ struct ReaderWebView: UIViewRepresentable {
     var onReflectTrigger: () -> Void = {}
     var onLinkTapped: (String) -> Void = { _ in }
     var onQuoteSelected: (String) -> Void = { _ in }
+    var onSentencesReady: ([String]) -> Void = { _ in }
+    /// Index of the sentence currently being spoken in Listen mode, or nil to
+    /// clear any highlight. Driving this from SwiftUI re-runs `updateUIView`,
+    /// which highlights and scrolls the matching span into view.
+    var activeSentenceIndex: Int? = nil
     var clearSelectionToken: UUID? = nil
 
     func makeCoordinator() -> Coordinator {
@@ -50,7 +108,8 @@ struct ReaderWebView: UIViewRepresentable {
             onOverScrollDelta: onOverScrollDelta,
             onReflectTrigger: onReflectTrigger,
             onLinkTapped: onLinkTapped,
-            onQuoteSelected: onQuoteSelected
+            onQuoteSelected: onQuoteSelected,
+            onSentencesReady: onSentencesReady
         )
     }
 
@@ -59,10 +118,13 @@ struct ReaderWebView: UIViewRepresentable {
         config.websiteDataStore = .nonPersistent()
         let tapScript = WKUserScript(source: tapLinkJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         let quoteScript = WKUserScript(source: quoteSelectionJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        let segmentScript = WKUserScript(source: segmentSentencesJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         config.userContentController.addUserScript(tapScript)
         config.userContentController.addUserScript(quoteScript)
+        config.userContentController.addUserScript(segmentScript)
         config.userContentController.add(ScriptMessageProxy(context.coordinator), name: "tapLink")
         config.userContentController.add(ScriptMessageProxy(context.coordinator), name: "quoteSelected")
+        config.userContentController.add(ScriptMessageProxy(context.coordinator), name: "sentences")
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.scrollView.delegate = context.coordinator
         webView.backgroundColor = UIColor(theme.bg)
@@ -80,6 +142,7 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.onReflectTrigger = onReflectTrigger
         context.coordinator.onLinkTapped = onLinkTapped
         context.coordinator.onQuoteSelected = onQuoteSelected
+        context.coordinator.onSentencesReady = onSentencesReady
         context.coordinator.requestedFontSize = fontSize
         context.coordinator.requestedLineSpacing = lineSpacing
         if context.coordinator.lastClearSelectionToken != clearSelectionToken {
@@ -96,6 +159,7 @@ struct ReaderWebView: UIViewRepresentable {
             context.coordinator.appliedLineSpacing = -1  // reset so line spacing reapplies after load
             context.coordinator.didTrigger = false
             context.coordinator.wasNearBottom = false
+            context.coordinator.lastHighlightIndex = nil
             webView.loadHTMLString(html, baseURL: nil)
         } else {
             context.coordinator.applyFontSizeIfNeeded(on: webView)
@@ -108,6 +172,8 @@ struct ReaderWebView: UIViewRepresentable {
                 context.coordinator.applyNightModeCSS(isNight, theme: theme, on: webView)
             }
         }
+
+        context.coordinator.applyHighlightIfNeeded(activeSentenceIndex, on: webView)
     }
 
     // Breaks the retain cycle: WKUserContentController strongly retains its
@@ -127,6 +193,8 @@ struct ReaderWebView: UIViewRepresentable {
         var onReflectTrigger: () -> Void
         var onLinkTapped: (String) -> Void
         var onQuoteSelected: (String) -> Void
+        var onSentencesReady: ([String]) -> Void
+        var lastHighlightIndex: Int? = nil
         var loadedHTML: String = ""
         var didTrigger = false
         var wasNearBottom = false
@@ -143,7 +211,8 @@ struct ReaderWebView: UIViewRepresentable {
             onOverScrollDelta: @escaping (CGFloat) -> Void,
             onReflectTrigger: @escaping () -> Void,
             onLinkTapped: @escaping (String) -> Void,
-            onQuoteSelected: @escaping (String) -> Void
+            onQuoteSelected: @escaping (String) -> Void,
+            onSentencesReady: @escaping ([String]) -> Void
         ) {
             self.onScrollProgress = onScrollProgress
             self.onNearBottom = onNearBottom
@@ -151,6 +220,7 @@ struct ReaderWebView: UIViewRepresentable {
             self.onReflectTrigger = onReflectTrigger
             self.onLinkTapped = onLinkTapped
             self.onQuoteSelected = onQuoteSelected
+            self.onSentencesReady = onSentencesReady
         }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -158,7 +228,30 @@ struct ReaderWebView: UIViewRepresentable {
                 DispatchQueue.main.async { self.onLinkTapped(urlString) }
             } else if message.name == "quoteSelected", let text = message.body as? String {
                 DispatchQueue.main.async { self.onQuoteSelected(text) }
+            } else if message.name == "sentences", let list = message.body as? [String] {
+                DispatchQueue.main.async { self.onSentencesReady(list) }
             }
+        }
+
+        /// Highlights the active sentence span and scrolls it to the centre, or
+        /// clears the highlight when `index` is nil.
+        func applyHighlightIfNeeded(_ index: Int?, on webView: WKWebView) {
+            guard lastHighlightIndex != index else { return }
+            lastHighlightIndex = index
+            let js: String
+            if let index {
+                js = """
+                (function(){
+                  var prev=document.querySelector('.jst-sentence.active-sentence');
+                  if(prev)prev.classList.remove('active-sentence');
+                  var el=document.querySelector('.jst-sentence[data-idx="\(index)"]');
+                  if(el){el.classList.add('active-sentence');el.scrollIntoView({block:'center',behavior:'smooth'});}
+                })();
+                """
+            } else {
+                js = "(function(){var p=document.querySelector('.jst-sentence.active-sentence');if(p)p.classList.remove('active-sentence');})();"
+            }
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
         func applyNightModeCSS(_ isNight: Bool, theme: ReaderTheme, on webView: WKWebView) {

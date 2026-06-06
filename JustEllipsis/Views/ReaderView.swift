@@ -83,6 +83,9 @@ struct ReaderView: View {
             .task {
                 await viewModel.load(link: link, context: context)
             }
+            .onDisappear {
+                viewModel.speechPlayer?.stop()
+            }
             .preferredColorScheme(appTheme.colorScheme)
             .sheet(item: $safariURL) { url in
                 SafariView(url: url)
@@ -283,74 +286,19 @@ struct ReaderView: View {
 
     private func articleView(_ content: StrippedContent) -> some View {
         VStack(spacing: 0) {
-            HStack {
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(appTheme.text.opacity(0.5))
+            if viewModel.isListenMode {
+                listenPlayerBar(content)
+                    .transition(.opacity)
+            } else {
+                standardTopBar(content)
+
+                if isTextSizeControlVisible {
+                    textSizeControl
+                        .padding(.horizontal, AppTheme.pagePadding)
+                        .padding(.bottom, 10)
+                        .background(appTheme.background)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                VStack(spacing: 1) {
-                    Text(content.domain)
-                        .font(AppTheme.sansSerif(12, weight: .medium))
-                        .foregroundStyle(appTheme.text.opacity(0.5))
-
-                    Text("\(content.estimatedReadingMinutes) min read")
-                        .font(AppTheme.sansSerif(10))
-                        .foregroundStyle(appTheme.text.opacity(0.3))
-                }
-
-                Spacer()
-
-                HStack(spacing: 16) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            isTextSizeControlVisible.toggle()
-                        }
-                    } label: {
-                        Image(systemName: "textformat.size")
-                            .font(.system(size: 13))
-                            .foregroundStyle(
-                                isTextSizeControlVisible
-                                ? appTheme.accent
-                                : appTheme.text.opacity(0.4)
-                            )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        safariURL = URL(string: link.url)
-                    } label: {
-                        Image(systemName: "globe")
-                            .font(.system(size: 13))
-                            .foregroundStyle(appTheme.text.opacity(0.4))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        UIPasteboard.general.string = link.url
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 13))
-                            .foregroundStyle(appTheme.text.opacity(0.4))
-                    }
-                    .buttonStyle(.plain)
-
-                }
-            }
-            .padding(.horizontal, AppTheme.pagePadding)
-            .padding(.vertical, 12)
-            .background(appTheme.background)
-
-            if isTextSizeControlVisible {
-                textSizeControl
-                    .padding(.horizontal, AppTheme.pagePadding)
-                    .padding(.bottom, 10)
-                    .background(appTheme.background)
-                    .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             // Progress indicator
@@ -405,6 +353,10 @@ struct ReaderView: View {
                             domain: content.domain
                         )
                     },
+                    onSentencesReady: { sentences in
+                        viewModel.sentences = sentences
+                    },
+                    activeSentenceIndex: viewModel.isListenMode ? viewModel.speechPlayer?.currentIndex : nil,
                     clearSelectionToken: clearSelectionToken
                 )
 
@@ -414,6 +366,171 @@ struct ReaderView: View {
                 }
             }
         }
+    }
+
+    private func standardTopBar(_ content: StrippedContent) -> some View {
+        HStack {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            VStack(spacing: 1) {
+                Text(content.domain)
+                    .font(AppTheme.sansSerif(12, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+
+                Text("\(content.estimatedReadingMinutes) min read")
+                    .font(AppTheme.sansSerif(10))
+                    .foregroundStyle(appTheme.text.opacity(0.3))
+            }
+
+            Spacer()
+
+            HStack(spacing: 16) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.startListening(
+                            title: content.title,
+                            estimatedMinutes: content.estimatedReadingMinutes
+                        )
+                    }
+                } label: {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 13))
+                        .foregroundStyle(appTheme.text.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        isTextSizeControlVisible.toggle()
+                    }
+                } label: {
+                    Image(systemName: "textformat.size")
+                        .font(.system(size: 13))
+                        .foregroundStyle(
+                            isTextSizeControlVisible
+                            ? appTheme.accent
+                            : appTheme.text.opacity(0.4)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    safariURL = URL(string: link.url)
+                } label: {
+                    Image(systemName: "globe")
+                        .font(.system(size: 13))
+                        .foregroundStyle(appTheme.text.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    UIPasteboard.general.string = link.url
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 13))
+                        .foregroundStyle(appTheme.text.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 12)
+        .background(appTheme.background)
+    }
+
+    @ViewBuilder
+    private func listenPlayerBar(_ content: StrippedContent) -> some View {
+        let player = viewModel.speechPlayer
+        HStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.stopListening()
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.5))
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Button {
+                player?.skipBack()
+            } label: {
+                Image(systemName: "gobackward.10")
+                    .font(.system(size: 18))
+                    .foregroundStyle(appTheme.text.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                player?.togglePlayPause()
+            } label: {
+                Image(systemName: (player?.isPlaying ?? false) ? "pause.fill" : "play.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(appTheme.accent)
+                    .frame(width: 44)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 8)
+
+            speedPicker
+
+            Spacer()
+
+            Button {
+                viewModel.stopListening()
+                openReflect(content: content)
+            } label: {
+                Text("Done")
+                    .font(AppTheme.sansSerif(14, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 12)
+        .background(appTheme.background)
+    }
+
+    @ViewBuilder
+    private var speedPicker: some View {
+        if let player = viewModel.speechPlayer {
+            Menu {
+                ForEach(SpeechPlayer.Speed.options, id: \.self) { option in
+                    Button {
+                        player.speedMultiplier = option
+                    } label: {
+                        if player.speedMultiplier == option {
+                            Label(speedLabel(option), systemImage: "checkmark")
+                        } else {
+                            Text(speedLabel(option))
+                        }
+                    }
+                }
+            } label: {
+                Text(speedLabel(player.speedMultiplier))
+                    .font(AppTheme.sansSerif(13, weight: .medium))
+                    .foregroundStyle(appTheme.text.opacity(0.6))
+                    .frame(minWidth: 44)
+            }
+        }
+    }
+
+    private func speedLabel(_ value: Float) -> String {
+        let trimmed = value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", value)
+            : String(format: "%g", value)
+        return "\(trimmed)×"
     }
 
     private var textSizeControl: some View {
