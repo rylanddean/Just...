@@ -59,9 +59,11 @@
 		949A68996476CD7276C0382C /* AddLinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA108705DC55D44129CFA2E /* AddLinkView.swift */; };
 		963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FFDB49A234476554B1FE83 /* QueuedLink.swift */; };
 		9849593C087887E7D973C4C3 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC9E572634F88976268D3AB9 /* OnboardingView.swift */; };
+		9932C7DAB285A83EFBD5BC7D /* LocalLinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48A89B62E0CCEAE1C4044D35 /* LocalLinkServer.swift */; };
 		A2B143A00787D4144D1E41B7 /* PrefetchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E682902D7E4F05A13644A84 /* PrefetchService.swift */; };
 		A683565502BA61332A25F23B /* BrainEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5FFE2DFE392AFFCF9E68E21 /* BrainEngineTests.swift */; };
 		AB60A86711520B76E110A37A /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB525487287C343A913E2DB /* AppRouter.swift */; };
+		AD9703C167D0903B874FAB6E /* CloudKitLinkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4706CABDEEDA508F021C50 /* CloudKitLinkWriter.swift */; };
 		ADEF75807293AFD73AACF68E /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 646F64DBC62E5B05B45AC067 /* ReaderView.swift */; };
 		B0045FAF553CEDA8423AA3B7 /* FeedURLNormaliser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CCE38775A8F19539D1A2868 /* FeedURLNormaliser.swift */; };
 		B2F38D292704272C04A106AC /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369CC02046EDB9D512264A8B /* AppTheme.swift */; };
@@ -87,6 +89,7 @@
 		E4C64FB18B12689A4A2873F7 /* BrainDietPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E01C072C66A485762BAC5A3 /* BrainDietPanel.swift */; };
 		E4D7316ADD83A178426C23B6 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = F70788F7020E27CA19E61A12 /* SwiftSoup */; };
 		E5EE934B550AB6F6E15D6AE8 /* RereadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F314B2513A0B75D17496E9C /* RereadView.swift */; };
+		EA5DE3044975570A5960CB37 /* JustEllipsisMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AD233BD2BF3D30185F6E65C /* JustEllipsisMacApp.swift */; };
 		EDF1132B0F8BCFBFC11D5181 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3160A6CE1D05866269300956 /* AppDelegate.swift */; };
 		F167F9B4C6EB23363E004A1A /* ArticleQualityGrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */; };
 /* End PBXBuildFile section */
@@ -136,6 +139,7 @@
 		21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleQualityGrade.swift; sourceTree = "<group>"; };
 		240FD0EB3E88A4A61B488C25 /* MacLinkReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLinkReceiver.swift; sourceTree = "<group>"; };
 		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2AD233BD2BF3D30185F6E65C /* JustEllipsisMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustEllipsisMacApp.swift; sourceTree = "<group>"; };
 		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
 		3160A6CE1D05866269300956 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -149,6 +153,10 @@
 		420304C73D3C2F1BA89FB9AE /* GradingProgressTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradingProgressTracker.swift; sourceTree = "<group>"; };
 		46A719D305320A1D2B22BA50 /* LinkCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkCard.swift; sourceTree = "<group>"; };
 		47BE1C9EB59A42E35267C8A4 /* ActivityChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityChart.swift; sourceTree = "<group>"; };
+		48A89B62E0CCEAE1C4044D35 /* LocalLinkServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalLinkServer.swift; sourceTree = "<group>"; };
+		4B4706CABDEEDA508F021C50 /* CloudKitLinkWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitLinkWriter.swift; sourceTree = "<group>"; };
+		4BE2E2600EFF07639FDFE09A /* JustEllipsisMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsisMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4C06966C3552F09BFD350160 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		53C8EBE71DB26F97014284EE /* ReaderTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTheme.swift; sourceTree = "<group>"; };
 		5DAE9F4B42AFCFBD95276C19 /* FeedDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDetailView.swift; sourceTree = "<group>"; };
 		5FB525487287C343A913E2DB /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
@@ -201,6 +209,7 @@
 		F138A6A626CF6CF070B7A67E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F232598215B53DB59A71324A /* ReflectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectView.swift; sourceTree = "<group>"; };
 		F29BA69FF127357A44A4D22D /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
+		F69A481D7B9690EFB2677915 /* JustEllipsisMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsisMac.entitlements; sourceTree = "<group>"; };
 		F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainViewModel.swift; sourceTree = "<group>"; };
 		F6B42540B5E640979EF29E55 /* MacLinkSubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLinkSubscriptionService.swift; sourceTree = "<group>"; };
 		F8881FBE57095A67C1C24497 /* BrainEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEntry.swift; sourceTree = "<group>"; };
@@ -237,6 +246,7 @@
 			isa = PBXGroup;
 			children = (
 				35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */,
+				4BE2E2600EFF07639FDFE09A /* JustEllipsisMac.app */,
 				75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */,
 				8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */,
 			);
@@ -271,6 +281,8 @@
 			isa = PBXGroup;
 			children = (
 				91899AD1B13D711403952D59 /* JustEllipsis */,
+				F0C093D2FEC940CDAE51DC2D /* JustEllipsisMac */,
+				D8921DAF06E6EAB0F768DD78 /* JustEllipsisSafariExtension */,
 				D5FD1F14C7E7CDC97B936E02 /* JustEllipsisShareExtension */,
 				00A27E9E2443676616BB4BD1 /* JustEllipsisTests */,
 				D01443C8E42567BA7DFBEDC1 /* Shared */,
@@ -404,6 +416,14 @@
 			path = JustEllipsisShareExtension;
 			sourceTree = "<group>";
 		};
+		D8921DAF06E6EAB0F768DD78 /* JustEllipsisSafariExtension */ = {
+			isa = PBXGroup;
+			children = (
+				4B4706CABDEEDA508F021C50 /* CloudKitLinkWriter.swift */,
+			);
+			path = JustEllipsisSafariExtension;
+			sourceTree = "<group>";
+		};
 		EDFB46DED7E1BEE4F3DDD295 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -411,6 +431,17 @@
 				EFA606DC043A9F40ABDA855B /* newsletters.json */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		F0C093D2FEC940CDAE51DC2D /* JustEllipsisMac */ = {
+			isa = PBXGroup;
+			children = (
+				4C06966C3552F09BFD350160 /* Info.plist */,
+				F69A481D7B9690EFB2677915 /* JustEllipsisMac.entitlements */,
+				2AD233BD2BF3D30185F6E65C /* JustEllipsisMacApp.swift */,
+				48A89B62E0CCEAE1C4044D35 /* LocalLinkServer.swift */,
+			);
+			path = JustEllipsisMac;
 			sourceTree = "<group>";
 		};
 		FC428901B72727DBBE717F3C /* Extensions */ = {
@@ -482,6 +513,23 @@
 			productReference = 8E5AAEF7100A0AE7B33ED92B /* JustEllipsisTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		FA2BE2E89E733D03186F08CA /* JustEllipsisMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00FF43FC789C5FD43C4649E /* Build configuration list for PBXNativeTarget "JustEllipsisMac" */;
+			buildPhases = (
+				76EFBCA8275A4E262E921485 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JustEllipsisMac;
+			packageProductDependencies = (
+			);
+			productName = JustEllipsisMac;
+			productReference = 4BE2E2600EFF07639FDFE09A /* JustEllipsisMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -498,6 +546,9 @@
 						DevelopmentTeam = "";
 					};
 					36799AF5621258DD12197858 = {
+						DevelopmentTeam = "";
+					};
+					FA2BE2E89E733D03186F08CA = {
 						DevelopmentTeam = "";
 					};
 				};
@@ -521,6 +572,7 @@
 			projectRoot = "";
 			targets = (
 				0B22B2BD222A2112071A54FE /* JustEllipsis */,
+				FA2BE2E89E733D03186F08CA /* JustEllipsisMac */,
 				16DBE1A265CA7C974E3E08D0 /* JustEllipsisShareExtension */,
 				36799AF5621258DD12197858 /* JustEllipsisTests */,
 			);
@@ -541,6 +593,16 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		76EFBCA8275A4E262E921485 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD9703C167D0903B874FAB6E /* CloudKitLinkWriter.swift in Sources */,
+				EA5DE3044975570A5960CB37 /* JustEllipsisMacApp.swift in Sources */,
+				9932C7DAB285A83EFBD5BC7D /* LocalLinkServer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		849D8157F9F1DDED542F1CD8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -653,6 +715,25 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		3641A44122107E0B07A1D7D1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisMac/JustEllipsisMac.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = JustEllipsisMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		41F2237914769AF6B7B51893 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -749,7 +830,6 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
@@ -833,6 +913,25 @@
 			};
 			name = Debug;
 		};
+		C3B1BC4B887515C111EFEDD4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JustEllipsisMac/JustEllipsisMac.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = JustEllipsisMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
 		DC71C658670690E0FE0E3DE5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -883,7 +982,6 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -925,6 +1023,15 @@
 			buildConfigurations = (
 				54856E8C500BBB362E41276D /* Debug */,
 				DC71C658670690E0FE0E3DE5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F00FF43FC789C5FD43C4649E /* Build configuration list for PBXNativeTarget "JustEllipsisMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3B1BC4B887515C111EFEDD4 /* Debug */,
+				3641A44122107E0B07A1D7D1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

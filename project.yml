@@ -18,6 +18,48 @@ configs:
   Debug: debug
   Release: release
 
+schemes:
+  JustEllipsis:
+    build:
+      targets:
+        JustEllipsis: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - JustEllipsisTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  JustEllipsisMac:
+    build:
+      targets:
+        JustEllipsisMac: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  JustEllipsisShareExtension:
+    build:
+      targets:
+        JustEllipsisShareExtension: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -189,20 +231,40 @@ targets:
       - target: JustEllipsis
         embed: false
 
-schemes:
-  JustEllipsis:
-    build:
-      targets:
-        JustEllipsis: all
-    run:
-      config: Debug
-    test:
-      config: Debug
-      targets:
-        - JustEllipsisTests
-    profile:
-      config: Release
-    analyze:
-      config: Debug
-    archive:
-      config: Release
+  # ── Mac Companion App ─────────────────────────────────────────────────────
+  # Note: JustEllipsisSafariExtension must be added manually in Xcode
+  # (XcodeGen does not support the safari-web-extension product type).
+  # See SAFARI_EXTENSION_SETUP.md for instructions.
+  JustEllipsisMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: JustEllipsisMac
+      # CloudKitLinkWriter is owned by the Safari extension but shared here
+      # so LocalLinkServer.swift resolves the symbol at compile time.
+      - path: JustEllipsisSafariExtension/CloudKitLinkWriter.swift
+    info:
+      path: JustEllipsisMac/Info.plist
+      properties:
+        CFBundleName: "Just…"
+        CFBundleDisplayName: "Just…"
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        LSUIElement: true
+    entitlements:
+      path: JustEllipsisMac/JustEllipsisMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.rylandean.justellipsis
+        com.apple.developer.icloud-services:
+          - CloudKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rylandean.justellipsis.mac
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
