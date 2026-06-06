@@ -28,6 +28,10 @@ final class MacLinkReceiver {
         Task { await promote() }
     }
 
+    func checkAndPromoteAsync() async {
+        await promote()
+    }
+
     // MARK: - Promotion
 
     private func promote() async {

@@ -122,6 +122,7 @@ targets:
           - CloudKit
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.rylandean.justellipsis
         aps-environment: development
+        com.apple.developer.healthkit: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rylandean.justellipsis
@@ -187,3 +188,21 @@ targets:
     dependencies:
       - target: JustEllipsis
         embed: false
+
+schemes:
+  JustEllipsis:
+    build:
+      targets:
+        JustEllipsis: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - JustEllipsisTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

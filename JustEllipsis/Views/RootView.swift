@@ -119,6 +119,7 @@ struct RootView: View {
         lastStartupWorkAt = now
         processPendingLinks()
         checkMacPendingLinks()
+        MacLinkSubscriptionService.ensureSubscribed()
         PrefetchService.prefetchInProcess(container: context.container)
         if activityRingsEnabled {
             Task { await healthKit.fetchTodaySummary() }
