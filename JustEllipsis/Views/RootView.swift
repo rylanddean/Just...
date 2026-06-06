@@ -12,6 +12,7 @@ struct RootView: View {
 
     @State private var hasRunInitialStartupWork = false
     @State private var lastStartupWorkAt: Date = .distantPast
+    @State private var showFirstLinkPrompt = false
 
     @AppStorage(ReaderTheme.defaultsKey)         private var themeRaw:         String = "ember"
     @AppStorage(NightModeService.startHourKey)   private var nightStartHour:   Int    = NightModeService.defaultStartHour
@@ -41,9 +42,16 @@ struct RootView: View {
         @Bindable var router = router
 
         if !hasCompletedOnboarding {
-            OnboardingView {
+            OnboardingView { seededFeeds in
                 hasCompletedOnboarding = true
                 runStartupWorkIfNeeded(force: true)
+                // Only nudge the user to add their own link when onboarding
+                // didn't already seed any feeds. Wait for the view swap.
+                if !seededFeeds {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showFirstLinkPrompt = true
+                    }
+                }
             }
             .environment(\.appTheme, activeTheme)
         } else {
@@ -75,6 +83,10 @@ struct RootView: View {
         .tint(activeTheme.accent)
         .preferredColorScheme(activeTheme.colorScheme)
         .environment(\.appTheme, activeTheme)
+        .sheet(isPresented: $showFirstLinkPrompt) {
+            AddLinkView()
+                .environment(\.appTheme, activeTheme)
+        }
         .task {
             activeTheme = computeTheme()
             guard !hasRunInitialStartupWork else { return }
