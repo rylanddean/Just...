@@ -5,6 +5,8 @@ import BackgroundTasks
 @main
 struct JustEllipsisApp: App {
 
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     let container: ModelContainer = makeContainer()
     @State private var router = AppRouter()
     @State private var gradingTracker = GradingProgressTracker()
@@ -14,7 +16,12 @@ struct JustEllipsisApp: App {
 
     static let lastAppOpenKey = "lastAppOpenAt"
 
+    // Shared with AppDelegate so it can create a MacLinkReceiver in response to
+    // a CloudKit silent push while the app is backgrounded.
+    @MainActor static var sharedContainer: ModelContainer?
+
     init() {
+        JustEllipsisApp.sharedContainer = container
         registerRSSBackgroundTask()
         registerGradingBackgroundTask()
     }
