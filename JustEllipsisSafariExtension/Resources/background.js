@@ -2,14 +2,6 @@
 
 console.log('[Just…] background.js loaded');
 
-// Log what APIs are available so we can see what Safari exposes
-console.log('[Just…] browser.action:', typeof browser?.action);
-console.log('[Just…] browser.commands:', typeof browser?.commands);
-console.log('[Just…] browser.runtime:', typeof browser?.runtime);
-
-// Log extension info
-browser.runtime.getManifest && console.log('[Just…] manifest:', JSON.stringify(browser.runtime.getManifest()));
-
 // ── Keyboard shortcut: ⌥⇧J ────────────────────────────────
 // Silent save — no popup. Acknowledges via a brief badge on the toolbar icon.
 
@@ -21,25 +13,22 @@ browser.commands.onCommand.addListener(async command => {
   const tab  = tabs[0];
   if (!tab?.url?.startsWith('http')) return;
 
-  console.log('[Just…] saving:', tab.url);
+  console.log('[Just…] saving via native handler:', tab.url);
 
-  let response;
+  let result;
   try {
-    const res = await fetch('http://localhost:21471/', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ url: tab.url, title: tab.title || '' })
+    const response = await browser.runtime.sendMessage({
+      action: 'save',
+      url:    tab.url,
+      title:  tab.title || ''
     });
-    response = await res.json();
-    console.log('[Just…] server response:', JSON.stringify(response));
+    console.log('[Just…] native response:', JSON.stringify(response));
+    result = response?.result ?? 'error';
   } catch (err) {
-    console.error('[Just…] server request failed:', err);
+    console.error('[Just…] native message failed:', err);
     flashBadge('!', '#E05A5A');
     return;
   }
-
-  const result = response?.result ?? 'error';
-  console.log('[Just…] result:', result);
 
   if (result === 'success') {
     flashBadge('✓', '#E8A83E');

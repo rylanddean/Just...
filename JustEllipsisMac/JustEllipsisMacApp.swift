@@ -12,12 +12,10 @@ struct JustEllipsisMacApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let server = LocalLinkServer()
-
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // No dock icon, no menu bar entry — the companion exists solely to host
-        // the Safari extension and appears only in Safari → Settings → Extensions.
+        // No dock icon, no menu bar entry — this app exists solely as the
+        // required container for the Safari Web Extension. All CloudKit writes
+        // happen inside the extension process via SafariWebExtensionHandler.
         NSApplication.shared.setActivationPolicy(.accessory)
-        server.start()
     }
 }

@@ -18,7 +18,7 @@ browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
   currentURL   = tab.url   || '';
   currentTitle = tab.title || '';
 
-  titleEl.textContent  = currentTitle || currentURL;
+  titleEl.textContent = currentTitle || currentURL;
 
   try {
     const host = new URL(currentURL).hostname.replace(/^www\./, '');
@@ -43,25 +43,23 @@ btn.addEventListener('click', async () => {
   btn.className = 'save-btn loading';
   btn.textContent = 'Saving…';
 
-  let response;
+  let result;
   try {
-    console.log('[Just…] POSTing to local server for:', currentURL);
-    const res = await fetch('http://localhost:21471/', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ url: currentURL, title: currentTitle })
+    console.log('[Just…] sending save to native handler for:', currentURL);
+    const response = await browser.runtime.sendMessage({
+      action: 'save',
+      url:    currentURL,
+      title:  currentTitle
     });
-    response = await res.json();
-    console.log('[Just…] server response:', JSON.stringify(response));
+    console.log('[Just…] native response:', JSON.stringify(response));
+    result = response?.result ?? 'error';
   } catch (err) {
-    console.error('[Just…] server request failed:', err);
+    console.error('[Just…] native message failed:', err);
     btn.disabled = false;
     btn.className = 'save-btn error';
     btn.textContent = 'Couldn\'t connect to Just…';
     return;
   }
-
-  const result = response?.result ?? 'error';
 
   if (result === 'success') {
     btn.className = 'save-btn success';
