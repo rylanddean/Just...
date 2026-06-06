@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    Just… toolbar icon — Playfair Display Italic ellipsis (…) glyph.
+    Export as template PNG at 16×16 and 32×32 so Safari can tint for
+    light/dark toolbar modes. Use black (#000000) fill with alpha only.
+
+    To export:
+      1. Open this file in Sketch / Figma / Pixelmator
+      2. Export as PNG at 1× (16×16) → toolbar-icon-16.png
+      3. Export as PNG at 2× (32×32) → toolbar-icon-32.png
+      4. In Xcode asset catalog, mark both as Template Image
+  -->
+  <text
+    x="50%"
+    y="72%"
+    text-anchor="middle"
+    font-family="'Playfair Display', Georgia, serif"
+    font-style="italic"
+    font-weight="600"
+    font-size="22"
+    fill="#000000"
+  >…</text>
+</svg>

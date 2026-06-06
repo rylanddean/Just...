@@ -1,0 +1,122 @@
+/* Just… Safari Extension
+   pageBg #0C0A08 · surface #141210 · amber #E8A83E
+   amberDim #8A6420 · cream #F5ECD7 · muted #8A8070
+   subtle #5A5248 · danger #E05A5A
+*/
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 300px;
+  background: #0C0A08;
+  padding: 16px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-smooth: always;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Top accent ───────────────────────────────────────────── */
+
+body::before {
+  content: '';
+  display: block;
+  height: 2px;
+  background: #E8A83E;
+  border-radius: 1px;
+  margin-bottom: 2px;
+}
+
+/* ── Page metadata ────────────────────────────────────────── */
+
+#page-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-domain {
+  font-family: 'Menlo', 'SFMono-Regular', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8A6420;
+}
+
+.page-title {
+  font-family: Georgia, 'Playfair Display', serif;
+  font-size: 14px;
+  font-weight: normal;
+  color: #F5ECD7;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Save button ──────────────────────────────────────────── */
+
+.save-btn {
+  width: 100%;
+  padding: 11px 0;
+  background: #E8A83E;
+  color: #0C0A08;
+  border: none;
+  border-radius: 6px;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: opacity 0.1s ease, background 0.15s ease;
+  outline: none;
+}
+
+.save-btn:hover:not(:disabled) { opacity: 0.86; }
+.save-btn:active:not(:disabled) { opacity: 0.68; }
+.save-btn:disabled { cursor: default; }
+
+.save-btn.loading {
+  background: #1C1917;
+  color: #8A8070;
+  cursor: default;
+}
+
+.save-btn.success {
+  background: #1C1917;
+  color: #E8A83E;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.save-btn.duplicate {
+  background: #1C1917;
+  color: #5A5248;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.save-btn.error {
+  background: #1C1917;
+  color: #E05A5A;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Footer ───────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.shortcut-hint {
+  font-family: 'Menlo', 'SFMono-Regular', monospace;
+  font-size: 10px;
+  color: #5A5248;
+  letter-spacing: 0.04em;
+}

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Just…",
+  "version": "1.0",
+  "description": "Add the current page to Just…",
+
+  "icons": {
+    "16": "images/toolbar-icon-16.png",
+    "32": "images/toolbar-icon-32.png"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/toolbar-icon-16.png",
+      "32": "images/toolbar-icon-32.png"
+    }
+  },
+
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+
+  "permissions": [
+    "activeTab",
+    "nativeMessaging"
+  ],
+
+  "commands": {
+    "save-link": {
+      "suggested_key": {
+        "default": "Alt+Shift+J"
+      },
+      "description": "Add current page to Just…"
+    }
+  }
+}
