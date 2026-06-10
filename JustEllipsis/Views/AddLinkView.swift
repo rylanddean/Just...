@@ -98,6 +98,21 @@ struct AddLinkView: View {
         .presentationBackground(appTheme.background)
     }
 
+    // MARK: - Rewrite
+
+    private func fireRewriteIfNeeded(for link: QueuedLink) {
+        guard #available(iOS 26, *),
+              IntelligenceService.isAvailable,
+              UserDefaults.standard.bool(forKey: "rewrite.enabled"),
+              link.rewrittenTitle == nil,
+              let title = link.title, !title.isEmpty else { return }
+        let capturedContext = context
+        Task {
+            link.rewrittenTitle = await IntelligenceService.rewriteTitle(title)
+            try? capturedContext.save()
+        }
+    }
+
     // MARK: - Actions
 
     private func addLink() {
@@ -126,6 +141,7 @@ struct AddLinkView: View {
                 link.domain = result.content.domain
                 link.cachedHTML = result.rawHTML
                 try? context.save()
+                fireRewriteIfNeeded(for: link)
             }
             isValidating = false
             dismiss()

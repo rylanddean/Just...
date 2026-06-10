@@ -97,7 +97,9 @@ struct RSSFetchService {
             await actor.summarizePendingArticles(tracker: pipelineTracker)
             print("[Fetch] summarizePendingArticles done — starting gradeNewArticles")
             await actor.gradeNewArticles(tracker: tracker)
-            print("[Fetch] gradeNewArticles done")
+            print("[Fetch] gradeNewArticles done — starting rewritePendingTitles")
+            await actor.rewritePendingTitles()
+            print("[Fetch] rewritePendingTitles done")
             scheduleGradingBackgroundTaskIfNeeded()
         }
     }
@@ -175,6 +177,7 @@ struct RSSFetchService {
             await actor.tagPendingArticles()
             await actor.summarizePendingArticles()
             await actor.gradeNewArticles(tracker: tracker)
+            await actor.rewritePendingTitles()
             scheduleGradingBackgroundTaskIfNeeded()
         }
     }
@@ -852,6 +855,32 @@ actor RSSFetchActor {
         }
         gradingLog.info("gradeNewArticles: done — \(graded) graded, \(failed) failed")
         if let tracker { await MainActor.run { tracker.markFinished() } }
+    }
+
+    // MARK: - Title Rewriting
+
+    func rewritePendingTitles() async {
+        guard #available(iOS 26, *) else { return }
+        guard UserDefaults.standard.bool(forKey: "rewrite.enabled") else { return }
+        guard IntelligenceService.isAvailable else { return }
+
+        // Only articles that have been graded but not yet had their title assessed.
+        // rewrittenTitle == nil means unassessed; "" means assessed-clean (sentinel).
+        let descriptor = FetchDescriptor<RSSArticle>()
+        let all = (try? modelContext.fetch(descriptor)) ?? []
+        let pending = all.filter { $0.qualityGrade != nil && $0.rewrittenTitle == nil }
+        guard !pending.isEmpty else { return }
+
+        for article in pending {
+            guard !Task.isCancelled else { return }
+            let id = article.persistentModelID
+            let title = article.title
+            let rewrite = await IntelligenceService.rewriteTitle(title)
+            if let article = modelContext.model(for: id) as? RSSArticle {
+                article.rewrittenTitle = rewrite ?? ""  // "" = assessed, not clickbait
+                try? modelContext.save()
+            }
+        }
     }
 
     // MARK: - Parsing

@@ -838,10 +838,13 @@ private struct DigestArticleRow: View {
                     FaviconView(domain: domain)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(article.title)
-                            .font(AppTheme.sansSerif(14, weight: .medium))
-                            .foregroundStyle(article.isSeen ? appTheme.textFaint : appTheme.heading)
-                            .lineLimit(titleLineLimit)
+                        TitleWithRewriteIndicator(
+                            displayTitle: article.displayTitle,
+                            originalTitle: article.hasRewrite ? article.title : nil,
+                            font: AppTheme.sansSerif(14, weight: .medium)
+                        )
+                        .foregroundStyle(article.isSeen ? appTheme.textFaint : appTheme.heading)
+                        .lineLimit(titleLineLimit)
 
                         if let summary = article.summary ?? article.feedDescription, !summary.isEmpty {
                             Text(summary)

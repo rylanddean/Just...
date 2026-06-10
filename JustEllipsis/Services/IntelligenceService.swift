@@ -111,6 +111,19 @@ struct RelevanceScore {
 
 @available(iOS 26, *)
 @Generable
+struct TitleAssessment {
+    @Guide(description: """
+        Assess this article headline for sensationalism, emotional manipulation,
+        or information withholding designed to drive clicks.
+        If it is clickbait: rewrite as a neutral, factual headline under 15 words.
+        If it is not clickbait: return exactly the string "CLEAN".
+        No quotation marks. No punctuation beyond what the headline requires.
+        """)
+    var result: String
+}
+
+@available(iOS 26, *)
+@Generable
 struct FeedCategoryAssessment {
     @Guide(description: """
         Return exactly one category label from the allowed categories list.
@@ -277,6 +290,19 @@ extension IntelligenceService {
 
         let raw = response?.content.category.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return normalized.first { $0.caseInsensitiveCompare(raw) == .orderedSame }
+    }
+
+    // MARK: Title Rewriting
+
+    // Returns a rewritten title if the original is clickbait, nil if it's clean.
+    static func rewriteTitle(_ title: String) async -> String? {
+        let session = LanguageModelSession()
+        let response = try? await session.respond(
+            to: "Assess this headline: \(title)",
+            generating: TitleAssessment.self
+        )
+        let result = response?.content.result ?? "CLEAN"
+        return result == "CLEAN" ? nil : result
     }
 
     // MARK: Errors

@@ -327,6 +327,17 @@ struct ReaderView: View {
                 }
             }
 
+            if link.rewrittenTitle != nil {
+                TitleWithRewriteIndicator(
+                    displayTitle: link.displayTitle,
+                    originalTitle: link.title
+                )
+                .lineLimit(2)
+                .padding(.horizontal, AppTheme.pagePadding)
+                .padding(.bottom, 8)
+                .background(appTheme.background)
+            }
+
             // Progress indicator
             GeometryReader { geo in
                 Rectangle()
@@ -794,11 +805,15 @@ struct ReaderView: View {
     }
 
     private func openReflect(content: StrippedContent) {
-        let entry = BrainEntry(url: sourceURL, title: content.title, domain: content.domain)
+        let rewrittenTitle: String?
+        if case .queued(let link) = source { rewrittenTitle = link.rewrittenTitle } else { rewrittenTitle = nil }
+        let displayTitle = rewrittenTitle ?? content.title
+        let entry = BrainEntry(url: sourceURL, title: displayTitle, domain: content.domain)
         entry.wordCount = content.estimatedWordCount
         entry.dna = viewModel.generatedDNA
         entry.readingSeconds = viewModel.elapsedReadingSeconds
         entry.estimatedReadSeconds = viewModel.estimatedReadSeconds
+        entry.rewrittenTitle = rewrittenTitle
         pendingEntry = entry
     }
 

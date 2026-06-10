@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage(NightModeService.startMinuteKey)        private var nightStartMinute: Int    = NightModeService.defaultStartMinute
     @AppStorage(NightModeService.overrideKey)           private var nightOverride:    String = "auto"
     @AppStorage("activityRings.enabled")                private var activityRingsEnabled: Bool = false
+    @AppStorage("rewrite.enabled")                      private var rewriteEnabled:   Bool = true
 
     @AppStorage(NotificationScheduler.morningEnabledKey) private var morningEnabled:  Bool = false
     @AppStorage(NotificationScheduler.morningHourKey)    private var morningHour:     Int  = NotificationScheduler.defaultMorningHour
@@ -66,6 +67,7 @@ struct SettingsView: View {
                         syncSection
                         streakSection
                         remindersSection
+                        readingSection
                         themeSection
                         nightModeSection
                         healthSection
@@ -435,6 +437,39 @@ struct SettingsView: View {
         guard notificationAuthStatus == .notDetermined else { return }
         _ = await NotificationScheduler.requestPermission()
         notificationAuthStatus = await NotificationScheduler.authorizationStatus()
+    }
+
+    // MARK: - Reading Section
+
+    private var readingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("READING")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Rewrite clickbait titles")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(
+                            IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint
+                        )
+                    Text(
+                        IntelligenceService.isAvailable
+                            ? "Calm, factual titles replace manipulative ones. Tap ✦ to see the original."
+                            : "Requires Apple Intelligence."
+                    )
+                    .font(AppTheme.sansSerif(12))
+                    .foregroundStyle(appTheme.textFaint)
+                }
+                Spacer()
+                Toggle("", isOn: $rewriteEnabled)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .disabled(!IntelligenceService.isAvailable)
+            }
+        }
     }
 
     // MARK: - Theme Section
