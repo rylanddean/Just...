@@ -422,6 +422,10 @@ struct BrainEntryDetail: View {
                             Text(entry.domain)
                             Text("·")
                             Text(entry.readAt.formatted(date: .long, time: .omitted))
+                            if entry.readingSeconds > 0 {
+                                Text("·")
+                                Text(formatReadTime(entry.readingSeconds))
+                            }
                         }
                         .font(AppTheme.sansSerif(12))
                         .foregroundStyle(appTheme.textFaint)
@@ -484,6 +488,11 @@ struct BrainEntryDetail: View {
         .fullScreenCover(isPresented: $showReread) {
             RereadView(url: entry.url, domain: entry.domain)
         }
+    }
+
+    private func formatReadTime(_ seconds: Int) -> String {
+        if seconds < 60 { return "\(seconds)s" }
+        return "\(seconds / 60) min"
     }
 
     private func beginEdit() {

@@ -14,6 +14,7 @@ final class BrainViewModel {
 
     private(set) var cachedInsightParagraph: String = ""
     private(set) var cachedWeeklyWords: [String] = []
+    private(set) var cachedStats: (kept: Double, skipped: Double, avgSeconds: Double, avgReadSeconds: Double) = (0, 0, 0, 0)
     private var cacheEntryCount: Int = -1
 
     func refreshCacheIfNeeded(entries: [BrainEntry]) {
@@ -21,6 +22,7 @@ final class BrainViewModel {
         cacheEntryCount = entries.count
         cachedWeeklyWords = weeklyDNA(entries: entries)
         cachedInsightParagraph = insightParagraph(entries: entries)
+        cachedStats = reflectionStats(entries: entries)
     }
 
     // MARK: - Rank
@@ -152,13 +154,16 @@ final class BrainViewModel {
         return freq.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(5).map(\.key)
     }
 
-    func reflectionStats(entries: [BrainEntry]) -> (kept: Double, skipped: Double, avgSeconds: Double) {
-        guard !entries.isEmpty else { return (0, 0, 0) }
+    func reflectionStats(entries: [BrainEntry]) -> (kept: Double, skipped: Double, avgSeconds: Double, avgReadSeconds: Double) {
+        guard !entries.isEmpty else { return (0, 0, 0, 0) }
         let reflected = entries.filter { !($0.reflection ?? "").isEmpty }
+        let withReadTime = entries.filter { $0.readingSeconds > 0 }
         let kept = Double(reflected.count) / Double(entries.count)
         let avg = reflected.isEmpty ? 0.0
             : Double(reflected.map(\.reflectionSeconds).reduce(0, +)) / Double(reflected.count)
-        return (kept, 1 - kept, avg)
+        let avgRead = withReadTime.isEmpty ? 0.0
+            : Double(withReadTime.map(\.readingSeconds).reduce(0, +)) / Double(withReadTime.count)
+        return (kept, 1 - kept, avg, avgRead)
     }
 
     func topDomains(entries: [BrainEntry]) -> [(domain: String, count: Int)] {

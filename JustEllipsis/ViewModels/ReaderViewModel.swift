@@ -38,6 +38,24 @@ final class ReaderViewModel {
         isListenMode = false
     }
 
+    // MARK: - Reading time
+
+    private var articleOpenedAt: Date?
+
+    func articleDidAppear() {
+        if articleOpenedAt == nil { articleOpenedAt = Date() }
+    }
+
+    var elapsedReadingSeconds: Int {
+        guard let opened = articleOpenedAt else { return 0 }
+        return Int(Date().timeIntervalSince(opened))
+    }
+
+    var estimatedReadSeconds: Int {
+        guard let wc = content?.estimatedWordCount, wc > 0 else { return 0 }
+        return max(1, wc / 4)   // 238 wpm ≈ 4 words/sec
+    }
+
     func load(link: QueuedLink, context: ModelContext) async {
         error = nil
         isLoading = true

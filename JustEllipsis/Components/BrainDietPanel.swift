@@ -7,6 +7,10 @@ struct BrainDietPanel: View {
 
     @Environment(\.appTheme) private var appTheme
 
+    private var stats: (kept: Double, skipped: Double, avgSeconds: Double, avgReadSeconds: Double) {
+        viewModel.cachedStats
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(viewModel.cachedInsightParagraph)
@@ -14,6 +18,10 @@ struct BrainDietPanel: View {
                 .foregroundStyle(appTheme.text)
                 .lineSpacing(5)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            if stats.kept > 0 || stats.avgReadSeconds > 0 {
+                ReflectionStatsRow(stats: stats)
+            }
 
             if !viewModel.cachedWeeklyWords.isEmpty {
                 FlowLayout(spacing: 6) {
@@ -42,6 +50,49 @@ struct BrainDietPanel: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(appTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+    }
+}
+
+// MARK: - Reflection Stats Row
+
+private struct ReflectionStatsRow: View {
+    let stats: (kept: Double, skipped: Double, avgSeconds: Double, avgReadSeconds: Double)
+
+    @Environment(\.appTheme) private var appTheme
+
+    var body: some View {
+        HStack(spacing: 0) {
+            statCell(label: "Kept", value: "\(Int(stats.kept * 100))%")
+            statCell(label: "Skipped", value: "\(Int(stats.skipped * 100))%")
+            if stats.avgSeconds > 0 {
+                statCell(label: "Avg. reflect", value: formatSeconds(stats.avgSeconds))
+            }
+            if stats.avgReadSeconds > 0 {
+                statCell(label: "Avg. read", value: formatSeconds(stats.avgReadSeconds))
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func statCell(label: String, value: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(AppTheme.sansSerif(15, weight: .medium))
+                .foregroundStyle(appTheme.heading)
+                .monospacedDigit()
+            Text(label)
+                .font(AppTheme.sansSerif(10))
+                .foregroundStyle(appTheme.textFaint)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func formatSeconds(_ seconds: Double) -> String {
+        guard seconds > 0 else { return "—" }
+        if seconds < 60 { return "\(Int(seconds))s" }
+        let m = Int(seconds) / 60
+        let s = Int(seconds) % 60
+        return s > 0 ? "\(m)m \(s)s" : "\(m)m"
     }
 }
 

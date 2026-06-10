@@ -338,6 +338,7 @@ struct ReaderView: View {
 
             // Article + pull indicator overlay
             ZStack(alignment: .bottom) {
+                Color.clear.frame(width: 0, height: 0).onAppear { viewModel.articleDidAppear() }
                 ReaderWebView(
                     html: content.body,
                     theme: effectiveReaderTheme,
@@ -796,6 +797,8 @@ struct ReaderView: View {
         let entry = BrainEntry(url: sourceURL, title: content.title, domain: content.domain)
         entry.wordCount = content.estimatedWordCount
         entry.dna = viewModel.generatedDNA
+        entry.readingSeconds = viewModel.elapsedReadingSeconds
+        entry.estimatedReadSeconds = viewModel.estimatedReadSeconds
         pendingEntry = entry
     }
 
