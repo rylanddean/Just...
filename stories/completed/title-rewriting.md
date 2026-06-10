@@ -2,7 +2,7 @@
 
 **Tier:** Free (Apple Intelligence required)  
 **Effort:** S  
-**Status:** Backlog — Artifact-Inspired
+**Status:** Done
 
 When a link lands in the queue, on-device AI evaluates the title for sensationalism. If it detects manipulation, it silently rewrites to a calm, factual version. Shown wherever the article appears in the app. The original title is always recoverable with a tap. No flagging step. No crowdsourcing. Entirely private.
 
