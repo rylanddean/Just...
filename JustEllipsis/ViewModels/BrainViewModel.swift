@@ -206,4 +206,19 @@ final class BrainViewModel {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
     }
+
+    static func recentConcepts(entries: [BrainEntry], limit: Int = 5) -> [String] {
+        let recent = entries
+            .filter { $0.dna != nil }
+            .sorted { $0.readAt > $1.readAt }
+            .prefix(20)
+        var frequency: [String: Int] = [:]
+        for entry in recent {
+            entry.dna?.components(separatedBy: " · ")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .forEach { frequency[$0, default: 0] += 1 }
+        }
+        return frequency.sorted { $0.value > $1.value }.prefix(limit).map(\.key)
+    }
 }

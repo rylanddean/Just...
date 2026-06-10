@@ -19,6 +19,9 @@ struct DigestView: View {
     @AppStorage("digest.hideNoise")                   private var hideNoise:         Bool = false
     @AppStorage("digest.hideSeen")                    private var hideSeen:          Bool = false
     @AppStorage(RSSFetchService.retentionDaysKey)     private var retentionDays:     Int  = RSSFetchService.defaultRetentionDays
+    @AppStorage("digest.brainRanked")                 private var brainRanked:       Bool = false
+
+    @Environment(DigestRelevanceStore.self) private var relevanceStore
 
     private var retentionLabel: String {
         switch retentionDays {
@@ -124,6 +127,24 @@ struct DigestView: View {
             hasUntagged: hasUntagged,
             inWindow: inWindow
         )
+    }
+
+    // MARK: - Brain Ranking
+
+    private func ranked(_ articles: [RSSArticle]) -> [RSSArticle] {
+        guard brainRanked else { return articles }
+        return articles.sorted { a, b in
+            let sa = relevanceStore.score(for: a.id)
+            let sb = relevanceStore.score(for: b.id)
+            if sa != sb { return sa > sb }
+            return a.publishedAt > b.publishedAt
+        }
+    }
+
+    private func triggerScoring() {
+        guard brainRanked else { return }
+        let concepts = BrainViewModel.recentConcepts(entries: Array(brainEntries))
+        relevanceStore.computeScores(for: Array(articles), concepts: concepts)
     }
 
     // MARK: - Recommendations
@@ -256,19 +277,19 @@ struct DigestView: View {
             items.append(.brainCarousel(recs))
         }
 
-        let today = buckets.today.filter { !recURLs.contains($0.url) && topicMatch($0) }
+        let today = ranked(buckets.today.filter { !recURLs.contains($0.url) && topicMatch($0) })
         if !today.isEmpty {
             items.append(.dateHeader("TODAY"))
             items.append(contentsOf: today.map { .article($0) })
         }
 
-        let yesterday = buckets.yesterday.filter { !recURLs.contains($0.url) && topicMatch($0) }
+        let yesterday = ranked(buckets.yesterday.filter { !recURLs.contains($0.url) && topicMatch($0) })
         if !yesterday.isEmpty {
             items.append(.dateHeader("YESTERDAY"))
             items.append(contentsOf: yesterday.map { .article($0) })
         }
 
-        let earlier = buckets.earlier.filter { !recURLs.contains($0.url) && topicMatch($0) }
+        let earlier = ranked(buckets.earlier.filter { !recURLs.contains($0.url) && topicMatch($0) })
         if !earlier.isEmpty {
             items.append(.dateHeader("EARLIER"))
             items.append(contentsOf: earlier.map { .article($0) })
@@ -374,6 +395,12 @@ struct DigestView: View {
                 }()
                 ReaderView(source: source)
             }
+            .onAppear { triggerScoring() }
+            .onChange(of: brainRanked) { _, enabled in
+                guard enabled else { return }
+                triggerScoring()
+            }
+            .onChange(of: articles.count) { _, _ in triggerScoring() }
         }
     }
 

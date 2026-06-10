@@ -12,6 +12,7 @@ struct JustEllipsisApp: App {
     @State private var gradingTracker = GradingProgressTracker()
     @State private var pipelineTracker = PipelineProgressTracker()
     @State private var healthKit = HealthKitService()
+    @State private var relevanceStore = DigestRelevanceStore()
     @Environment(\.scenePhase) private var scenePhase
 
     static let lastAppOpenKey = "lastAppOpenAt"
@@ -34,6 +35,7 @@ struct JustEllipsisApp: App {
                 .environment(gradingTracker)
                 .environment(pipelineTracker)
                 .environment(healthKit)
+                .environment(relevanceStore)
                 .onOpenURL { url in
                     handleOpenURL(url)
                 }
