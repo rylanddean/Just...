@@ -236,20 +236,6 @@ extension IntelligenceService {
         }
     }
 
-    // MARK: Article Relevance Scoring
-
-    // Returns a 0.0–1.0 relevance score for a title against a set of Brain DNA concepts.
-    // Uses keyword overlap — no AI required, fast enough to score all Digest articles on appear.
-    static func scoreRelevance(title: String, concepts: [String]) -> Double {
-        guard !concepts.isEmpty else { return 0 }
-        let titleWords = Set(title.lowercased().split(separator: " ").map(String.init))
-        let matched = concepts.filter { concept in
-            let c = concept.lowercased()
-            return titleWords.contains(c) || titleWords.contains(where: { $0.contains(c) || c.contains($0) })
-        }
-        return Double(matched.count) / Double(concepts.count)
-    }
-
     // Returns a relevance score from 0–10 for an article title against a reader profile.
     // Profile is the newline-joined string of "title: reflection" pairs from last 30 Brain entries.
     static func scoreRelevance(articleTitle: String, readerProfile: String) async -> Int {
@@ -328,6 +314,18 @@ extension IntelligenceService {
 // MARK: - Static Fallback Prompts
 
 extension IntelligenceService {
+
+    // Returns a 0.0–1.0 relevance score for a title against a set of Brain DNA concepts.
+    // Uses keyword overlap — no AI required, fast enough to score all Digest articles on appear.
+    static func scoreRelevance(title: String, concepts: [String]) -> Double {
+        guard !concepts.isEmpty else { return 0 }
+        let titleWords = Set(title.lowercased().split(separator: " ").map(String.init))
+        let matched = concepts.filter { concept in
+            let c = concept.lowercased()
+            return titleWords.contains(c) || titleWords.contains(where: { $0.contains(c) || c.contains($0) })
+        }
+        return Double(matched.count) / Double(concepts.count)
+    }
 
     static let fallbackPrompts: [String] = [
         "What stayed with you",
