@@ -102,6 +102,41 @@ struct RSSFetchService {
         }
     }
 
+    // Fetch + prune for a UI-triggered pull-to-refresh.
+    // Returns as soon as new content is visible; tagging, summarising, and grading
+    // continue in a detached background task so the spinner stops early.
+    // Returns the background processing task so callers can track completion.
+    @discardableResult
+    static func fetchForDisplay(
+        container: ModelContainer,
+        tracker: GradingProgressTracker,
+        pipelineTracker: PipelineProgressTracker? = nil
+    ) async -> Task<Void, Never> {
+        let actor = RSSFetchActor(modelContainer: container)
+        await actor.fetchAll()
+        await actor.pruneOldArticles()
+        return Task.detached(priority: .background) {
+            await actor.tagPendingArticles(tracker: pipelineTracker)
+            await actor.summarizePendingArticles(tracker: pipelineTracker)
+            await actor.gradeNewArticles(tracker: tracker)
+            scheduleGradingBackgroundTaskIfNeeded()
+        }
+    }
+
+    // Run the full post-processing pipeline (tag + summarise + grade) without fetching.
+    // Awaitable so the caller can track completion and update UI state.
+    static func runPipeline(
+        container: ModelContainer,
+        tracker: GradingProgressTracker,
+        pipelineTracker: PipelineProgressTracker? = nil
+    ) async {
+        let actor = RSSFetchActor(modelContainer: container)
+        await actor.tagPendingArticles(tracker: pipelineTracker)
+        await actor.summarizePendingArticles(tracker: pipelineTracker)
+        await actor.gradeNewArticles(tracker: tracker)
+        scheduleGradingBackgroundTaskIfNeeded()
+    }
+
     // Deduplicate RSSArticle rows by URL, keeping the richest record per URL.
     static func deduplicateInProcess(container: ModelContainer) {
         Task.detached(priority: .background) {

@@ -9,6 +9,7 @@ final class RSSArticle {
     var title: String = ""
     var publishedAt: Date = Date()
     var isQueued: Bool = false
+    var isRead: Bool? = nil
     var isConfirmationDismissed: Bool = false
     var isSeen: Bool = false
     var feedDescription: String?

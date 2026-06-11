@@ -35,7 +35,7 @@ enum MacLinkSubscriptionService {
         }
 
         let sub = CKQuerySubscription(
-            recordType: MacLinkReceiver.recordType,
+            recordType: "JE_PendingLink",
             predicate: NSPredicate(value: true),
             subscriptionID: subscriptionID,
             options: .firesOnRecordCreation

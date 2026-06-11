@@ -95,7 +95,7 @@ final class ReaderViewModel {
         isLoading = false
     }
 
-    func loadURL(_ urlString: String) async {
+    func loadURL(_ urlString: String, context: ModelContext? = nil) async {
         error = nil
         isLoading = true
         isJSRendering = false
@@ -103,6 +103,15 @@ final class ReaderViewModel {
         do {
             let result = try await fetchContent(urlString: urlString, cachedHTML: nil, theme: theme)
             content = result.content
+            if let context {
+                let readMins = result.content.estimatedReadingMinutes
+                let descriptor = FetchDescriptor<RSSArticle>(predicate: #Predicate { $0.url == urlString })
+                if let article = try? context.fetch(descriptor).first,
+                   article.estimatedReadingMinutes == nil {
+                    article.estimatedReadingMinutes = readMins
+                    try? context.save()
+                }
+            }
         } catch {
             self.error = error
         }
@@ -150,14 +159,11 @@ final class ReaderViewModel {
     }
 
     func markAsRead(link: QueuedLink, context: ModelContext) {
-        // Reset the RSS article's queued flag so it can be re-added from the feed
-        // if the brain entry is later deleted.
         let url = link.url
-        let descriptor = FetchDescriptor<RSSArticle>(
-            predicate: #Predicate { $0.url == url }
-        )
+        let descriptor = FetchDescriptor<RSSArticle>(predicate: #Predicate { $0.url == url })
         if let article = try? context.fetch(descriptor).first {
             article.isQueued = false
+            article.isRead = true
             let feedID = article.feedID
             let feedDescriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == feedID })
             if let feed = try? context.fetch(feedDescriptor).first {
@@ -165,6 +171,25 @@ final class ReaderViewModel {
             }
         }
         context.delete(link)
+        try? context.save()
+    }
+
+    func markDigestRead(url: String, feedID: UUID?, context: ModelContext) {
+        let descriptor = FetchDescriptor<RSSArticle>(predicate: #Predicate { $0.url == url })
+        if let article = try? context.fetch(descriptor).first {
+            article.isRead = true
+            article.isQueued = false
+            if let fid = feedID {
+                let feedDescriptor = FetchDescriptor<RSSFeed>(predicate: #Predicate { $0.id == fid })
+                if let feed = try? context.fetch(feedDescriptor).first {
+                    feed.lastReadAt = Date()
+                }
+            }
+        }
+        let queueDescriptor = FetchDescriptor<QueuedLink>(predicate: #Predicate { $0.url == url })
+        if let link = try? context.fetch(queueDescriptor).first {
+            context.delete(link)
+        }
         try? context.save()
     }
 

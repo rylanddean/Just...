@@ -19,9 +19,10 @@ struct DigestView: View {
     @AppStorage("digest.hideNoise")      private var hideNoise:             Bool = false
     @AppStorage("digest.hideSeen")       private var hideSeen:              Bool = false
 
-    @State private var isFetching = false
+    @State private var isProcessing = false
     @State private var selectedTopic: String = "All"
     @State private var hiddenSeenIDs: Set<UUID> = []
+    @State private var activeDigestArticle: RSSArticle?
 
     // Non-@Observable helpers — mutations don't trigger SwiftUI re-renders.
     @State private var seenBatcher     = SeenBatcher()
@@ -78,6 +79,7 @@ struct DigestView: View {
 
         for article in articles {
             guard lookup[article.feedID] != nil else { continue }
+            if article.isRead == true { continue }
             if gradingEnabled && hideNoise && article.qualityGrade == .noise { continue }
             if hiddenSeenIDs.contains(article.id) { continue }
 
@@ -143,6 +145,7 @@ struct DigestView: View {
 
         let candidates = articles.filter {
             lookup[$0.feedID] != nil &&
+            $0.isRead != true &&
             !queuedSet.contains($0.url) &&
             !brainSet.contains($0.url) &&
             !(gradingEnabled && hideNoise && $0.qualityGrade == .noise)
@@ -323,18 +326,18 @@ struct DigestView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        refetch()
+                        triggerProcessing()
                     } label: {
-                        if isFetching {
+                        if isProcessing {
                             ProgressView()
                                 .tint(appTheme.accent)
                         } else {
-                            Image(systemName: "arrow.clockwise")
+                            Image(systemName: "sparkles")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundStyle(appTheme.accent)
                         }
                     }
-                    .disabled(isFetching)
+                    .disabled(isProcessing)
                 }
             }
             .toolbarBackground(appTheme.background, for: .navigationBar)
@@ -349,6 +352,16 @@ struct DigestView: View {
             }
             .task {
                 weatherService.refresh()
+            }
+            .fullScreenCover(item: $activeDigestArticle) { article in
+                let source: ReadingSource = {
+                    if let link = queue.first(where: { $0.url == article.url }) {
+                        return .queued(link)
+                    }
+                    let d = URL(string: article.url).map { ContentFetcher.extractDomain(from: $0) } ?? article.url
+                    return .digest(url: article.url, title: article.title, domain: d, feedID: article.feedID)
+                }()
+                ReaderView(source: source)
             }
         }
     }
@@ -397,7 +410,8 @@ struct DigestView: View {
                         isQueued: queuedURLs.contains(article.url),
                         onAdd: { addToQueue(article) },
                         onRemove: { removeFromQueue(article) },
-                        onSeen: { seenBatcher.enqueue(article) }
+                        onSeen: { seenBatcher.enqueue(article) },
+                        onRead: { activeDigestArticle = article }
                     )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -414,16 +428,37 @@ struct DigestView: View {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .contentMargins(.bottom, 32, for: .scrollContent)
+        .refreshable { await refetch() }
+        .tint(appTheme.accent)
     }
 
-    private func refetch() {
-        guard !isFetching else { return }
-        isFetching = true
+    private func refetch() async {
         selectedTopic = "All"
-        let task = RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker, pipelineTracker: pipelineTracker)
-        Task {
-            await task.value
-            await MainActor.run { isFetching = false }
+        isProcessing = true
+        let processingTask = await RSSFetchService.fetchForDisplay(
+            container: context.container,
+            tracker: gradingTracker,
+            pipelineTracker: pipelineTracker
+        )
+        // Pull-to-refresh spinner stops here; processing continues in the background.
+        // Track the task so the sparkles button stays in its loading state until done.
+        Task { @MainActor in
+            await processingTask.value
+            isProcessing = false
+        }
+    }
+
+    private func triggerProcessing() {
+        guard !isProcessing else { return }
+        isProcessing = true
+        let container = context.container
+        Task { @MainActor in
+            await RSSFetchService.runPipeline(
+                container: container,
+                tracker: gradingTracker,
+                pipelineTracker: pipelineTracker
+            )
+            isProcessing = false
         }
     }
 
@@ -629,6 +664,7 @@ private struct DigestArticleRow: View {
     let onAdd: () -> Void
     let onRemove: () -> Void
     let onSeen: () -> Void
+    let onRead: () -> Void
 
     @Environment(\.appTheme) private var appTheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -652,49 +688,57 @@ private struct DigestArticleRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FaviconView(domain: domain)
+            Button {
+                onRead()
+            } label: {
+                HStack(spacing: 12) {
+                    FaviconView(domain: domain)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(article.title)
-                    .font(AppTheme.sansSerif(14, weight: .medium))
-                    .foregroundStyle(article.isSeen ? appTheme.textFaint : appTheme.heading)
-                    .lineLimit(titleLineLimit)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(article.title)
+                            .font(AppTheme.sansSerif(14, weight: .medium))
+                            .foregroundStyle(article.isSeen ? appTheme.textFaint : appTheme.heading)
+                            .lineLimit(titleLineLimit)
 
-                if let summary = article.summary ?? article.feedDescription, !summary.isEmpty {
-                    Text(summary)
-                        .font(AppTheme.sansSerif(13, weight: .medium))
-                        .foregroundStyle(appTheme.textFaint)
-                        .lineLimit(summaryLineLimit)
-                        .lineSpacing(2)
-                }
+                        if let summary = article.summary ?? article.feedDescription, !summary.isEmpty {
+                            Text(summary)
+                                .font(AppTheme.sansSerif(13, weight: .medium))
+                                .foregroundStyle(appTheme.textFaint)
+                                .lineLimit(summaryLineLimit)
+                                .lineSpacing(2)
+                        }
 
-                HStack(spacing: 6) {
-                    if !feedName.isEmpty {
-                        Text(feedName)
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
-                            .lineLimit(1)
+                        HStack(spacing: 6) {
+                            if !feedName.isEmpty {
+                                Text(feedName)
+                                    .font(AppTheme.sansSerif(12))
+                                    .foregroundStyle(appTheme.textFaint)
+                                    .lineLimit(1)
 
-                        Text("·")
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
+                                Text("·")
+                                    .font(AppTheme.sansSerif(12))
+                                    .foregroundStyle(appTheme.textFaint)
+                            }
+
+                            Text(article.publishedAt.relativeShort)
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+
+                            if gradingEnabled &&
+                                (gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil) {
+                                Text("·")
+                                    .font(AppTheme.sansSerif(12))
+                                    .foregroundStyle(appTheme.textFaint)
+                                ArticleGradeIndicator(articleID: article.id, grade: article.qualityGrade)
+                            }
+                        }
                     }
 
-                    Text(article.publishedAt.relativeShort)
-                        .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(appTheme.textFaint)
-
-                    if gradingEnabled &&
-                        (gradingTracker.activeIDs.contains(article.id) || article.qualityGrade != nil) {
-                        Text("·")
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
-                        ArticleGradeIndicator(articleID: article.id, grade: article.qualityGrade)
-                    }
+                    Spacer()
                 }
+                .contentShape(Rectangle())
             }
-
-            Spacer()
+            .buttonStyle(.plain)
 
             if isQueued || justAdded {
                 Button {
@@ -706,6 +750,7 @@ private struct DigestArticleRow: View {
                         .frame(width: 32, height: 32)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Remove from queue")
             } else {
                 Button {
                     onAdd()
@@ -720,6 +765,7 @@ private struct DigestArticleRow: View {
                         .overlay(Circle().stroke(appTheme.separator, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Read later")
             }
         }
         .padding(AppTheme.cardPadding)

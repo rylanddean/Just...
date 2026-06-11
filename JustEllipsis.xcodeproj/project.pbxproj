@@ -45,6 +45,7 @@
 		6EABD4077863C185AED53BE3 /* FeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 92B21AB1AB3467409DA79854 /* FeedKit */; };
 		6F55A95F2635E6E07C126DC7 /* ContentFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C6A6E0587BA65D5B8747888 /* ContentFetcherTests.swift */; };
 		7032B03292C0899EC0EAC305 /* RSSFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE22AF6BA2593A1F3AE13771 /* RSSFeed.swift */; };
+		7046EDB1907103504C92CB1B /* ReadingSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C81DBDFA4E780FAC9BEAC7 /* ReadingSource.swift */; };
 		71051F154C5F1E8E4C32F3A8 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */; };
 		71E142A7D93F5DE88AF64BF2 /* GradingProgressTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420304C73D3C2F1BA89FB9AE /* GradingProgressTracker.swift */; };
 		743293124B7106E74EA6C0BC /* FeedDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DAE9F4B42AFCFBD95276C19 /* FeedDetailView.swift */; };
@@ -138,6 +139,7 @@
 		0F0A45B9A3A2BEF27227EE9F /* DigestWeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigestWeatherService.swift; sourceTree = "<group>"; };
 		11AE5C5717F000BAA5316264 /* StreakEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakEngineTests.swift; sourceTree = "<group>"; };
 		14DCBD1976FCFFE41FE1C4B9 /* LinkPromotionActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPromotionActor.swift; sourceTree = "<group>"; };
+		15C81DBDFA4E780FAC9BEAC7 /* ReadingSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSource.swift; sourceTree = "<group>"; };
 		15F2C68064C12A47B02C21E2 /* Date+RelativeShort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+RelativeShort.swift"; sourceTree = "<group>"; };
 		1CDA3E54FDEF2BEF53809AB3 /* ReflectViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectViewModel.swift; sourceTree = "<group>"; };
 		1F314B2513A0B75D17496E9C /* RereadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RereadView.swift; sourceTree = "<group>"; };
@@ -150,7 +152,7 @@
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
 		3160A6CE1D05866269300956 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		351C38A4FECDC4002E1EF444 /* PipelineProgressTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineProgressTracker.swift; sourceTree = "<group>"; };
-		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		35DB4FAAA6A760D8AF494E21 /* JustEllipsis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustEllipsis.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		369CC02046EDB9D512264A8B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		3B9D7E057E235E52465D0592 /* JSRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSRenderer.swift; sourceTree = "<group>"; };
 		3BEAC72937607C4664F84FDA /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
@@ -174,7 +176,7 @@
 		6C0B2EC65BB2A2B2D76A9BFC /* ActivityRingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRingsCard.swift; sourceTree = "<group>"; };
 		6DD402C01934293F01520002 /* PendingLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingLinkStore.swift; sourceTree = "<group>"; };
 		711256DA53620D4C746AC36F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		75D8257CDF48B7EF4F56B2AD /* JustEllipsisShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustEllipsisShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		79111AB1E05BBF6590D197DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		80160876D84DBAF018BB717D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		84722707AA336D1073651EEF /* CloudSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncService.swift; sourceTree = "<group>"; };
@@ -314,6 +316,7 @@
 				918E56AAA1341A431C65A71A /* QuoteEntry.swift */,
 				53C8EBE71DB26F97014284EE /* ReaderTheme.swift */,
 				1FB7BE8457A65678C63AA04B /* ReadingDay.swift */,
+				15C81DBDFA4E780FAC9BEAC7 /* ReadingSource.swift */,
 				C6EA6D6C5E383E851F31F032 /* RSSArticle.swift */,
 				EE22AF6BA2593A1F3AE13771 /* RSSFeed.swift */,
 			);
@@ -556,12 +559,6 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
-					0B22B2BD222A2112071A54FE = {
-						DevelopmentTeam = "";
-					};
-					16DBE1A265CA7C974E3E08D0 = {
-						DevelopmentTeam = "";
-					};
 					36799AF5621258DD12197858 = {
 						DevelopmentTeam = "";
 					};
@@ -696,6 +693,7 @@
 				71051F154C5F1E8E4C32F3A8 /* ReaderViewModel.swift in Sources */,
 				D89468FBE0FFDD4EB0D92C67 /* ReaderWebView.swift in Sources */,
 				7ED49FF7C07BFE3CB2929B46 /* ReadingDay.swift in Sources */,
+				7046EDB1907103504C92CB1B /* ReadingSource.swift in Sources */,
 				77F8A704F081AFC3671D2168 /* ReflectView.swift in Sources */,
 				02D548CD6FBF8D61C9A919E4 /* ReflectViewModel.swift in Sources */,
 				E5EE934B550AB6F6E15D6AE8 /* RereadView.swift in Sources */,
@@ -748,7 +746,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
 				SDKROOT = macosx;
 			};
@@ -762,13 +760,14 @@
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -861,6 +860,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -868,7 +868,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.shareextension;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -883,13 +883,14 @@
 				CODE_SIGN_ENTITLEMENTS = JustEllipsis/JustEllipsis.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsis/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -901,6 +902,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JustEllipsisShareExtension/JustEllipsisShareExtension.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6SD6D59K29;
 				INFOPLIST_FILE = JustEllipsisShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -908,7 +910,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.shareextension;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -946,7 +948,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
 				SDKROOT = macosx;
 			};

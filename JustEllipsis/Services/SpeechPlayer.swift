@@ -148,8 +148,9 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
     // MARK: - AVSpeechSynthesizerDelegate
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        let id = ObjectIdentifier(utterance)
         Task { @MainActor in
-            if let idx = utteranceIndex[ObjectIdentifier(utterance)] {
+            if let idx = utteranceIndex[id] {
                 currentIndex = idx
                 updateNowPlaying()
             }
@@ -157,8 +158,9 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        let id = ObjectIdentifier(utterance)
         Task { @MainActor in
-            guard let idx = utteranceIndex[ObjectIdentifier(utterance)] else { return }
+            guard let idx = utteranceIndex[id] else { return }
             if idx >= sentences.count - 1 {
                 // Reached the end of the article.
                 isPlaying = false
@@ -191,15 +193,14 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
         guard let info = note.userInfo,
               let raw = info[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        let optionRaw = info[AVAudioSessionInterruptionOptionKey] as? UInt
         Task { @MainActor in
             switch type {
             case .began:
                 // Incoming call, Siri, etc. — pause.
                 if self.isPlaying { self.pause() }
             case .ended:
-                let options = (info[AVAudioSessionInterruptionOptionKey] as? UInt).map {
-                    AVAudioSession.InterruptionOptions(rawValue: $0)
-                } ?? []
+                let options = optionRaw.map { AVAudioSession.InterruptionOptions(rawValue: $0) } ?? []
                 if options.contains(.shouldResume) { self.play() }
             @unknown default:
                 break

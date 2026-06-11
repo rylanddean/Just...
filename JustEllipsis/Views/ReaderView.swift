@@ -4,7 +4,16 @@ import SafariServices
 import MessageUI
 
 struct ReaderView: View {
-    let link: QueuedLink
+    let source: ReadingSource
+
+    private var sourceURL: String { source.url }
+
+    private var sourceDomain: String {
+        switch source {
+        case .queued(let link): return link.domain ?? domainFromURL(link.url)
+        case .digest(_, _, let d, _): return d
+        }
+    }
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -81,7 +90,10 @@ struct ReaderView: View {
                 if showQuoteSaved { quoteSavedToast }
             }
             .task {
-                await viewModel.load(link: link, context: context)
+                switch source {
+                case .queued(let link): await viewModel.load(link: link, context: context)
+                case .digest(let url, _, _, _): await viewModel.loadURL(url, context: context)
+                }
             }
             .onDisappear {
                 viewModel.speechPlayer?.stop()
@@ -132,11 +144,20 @@ struct ReaderView: View {
     }
 
     private func reflectView(for entry: BrainEntry) -> some View {
-        ReflectView(entry: entry, link: link, prompt: viewModel.generatedPrompt, onComplete: {
-            viewModel.markAsRead(link: link, context: context)
+        ReflectView(entry: entry, prompt: viewModel.generatedPrompt, onComplete: {
+            markSourceRead()
             updateReadingDay()
             dismiss()
         })
+    }
+
+    private func markSourceRead() {
+        switch source {
+        case .queued(let link):
+            viewModel.markAsRead(link: link, context: context)
+        case .digest(let url, _, _, let feedID):
+            viewModel.markDigestRead(url: url, feedID: feedID, context: context)
+        }
     }
 
     // MARK: - Subviews
@@ -175,14 +196,14 @@ struct ReaderView: View {
 
                 Spacer()
 
-                Text(link.domain ?? domainFromURL(link.url))
+                Text(sourceDomain)
                     .font(AppTheme.sansSerif(12, weight: .medium))
                     .foregroundStyle(appTheme.text.opacity(0.4))
 
                 Spacer()
 
                 Button {
-                    UIPasteboard.general.string = link.url
+                    UIPasteboard.general.string = sourceURL
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 14))
@@ -222,12 +243,17 @@ struct ReaderView: View {
 
             HStack(spacing: 24) {
                 Button("Try again") {
-                    Task { await viewModel.load(link: link, context: context) }
+                    Task {
+                        switch source {
+                        case .queued(let link): await viewModel.load(link: link, context: context)
+                        case .digest(let url, _, _, _): await viewModel.loadURL(url, context: context)
+                        }
+                    }
                 }
                 .font(AppTheme.sansSerif(14, weight: .medium))
                 .foregroundStyle(appTheme.accent)
 
-                if let url = URL(string: link.url) {
+                if let url = URL(string: sourceURL) {
                     Button("Open in browser") {
                         safariURL = url
                     }
@@ -348,7 +374,7 @@ struct ReaderView: View {
                               !selectedText.isEmpty else { return }
                         pendingQuote = PendingQuote(
                             text: selectedText,
-                            url: link.url,
+                            url: sourceURL,
                             title: content.title,
                             domain: content.domain
                         )
@@ -423,7 +449,7 @@ struct ReaderView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    safariURL = URL(string: link.url)
+                    safariURL = URL(string: sourceURL)
                 } label: {
                     Image(systemName: "globe")
                         .font(.system(size: 13))
@@ -432,7 +458,7 @@ struct ReaderView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    UIPasteboard.general.string = link.url
+                    UIPasteboard.general.string = sourceURL
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 13))
@@ -682,8 +708,7 @@ struct ReaderView: View {
             let top = (try? context.fetch(orderFetch))?.first
             let nextOrder = (top?.sortOrder ?? -1) + 1
 
-            let sourceURL = link.url
-            let newLink = QueuedLink(url: urlToAdd, sortOrder: nextOrder, threadSourceURL: sourceURL)
+            let newLink = QueuedLink(url: urlToAdd, sortOrder: nextOrder, threadSourceURL: self.sourceURL)
             context.insert(newLink)
             try? context.save()
 
@@ -768,7 +793,7 @@ struct ReaderView: View {
     }
 
     private func openReflect(content: StrippedContent) {
-        let entry = BrainEntry(url: link.url, title: content.title, domain: content.domain)
+        let entry = BrainEntry(url: sourceURL, title: content.title, domain: content.domain)
         entry.wordCount = content.estimatedWordCount
         entry.dna = viewModel.generatedDNA
         pendingEntry = entry

@@ -33,6 +33,7 @@ struct HomeView: View {
     private var streak: Int { StreakEngine.calculateStreak(from: readingDays, minReads: minReadsPerDay).current }
     private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays, minReads: minReadsPerDay) }
     private var recentActivity: [Bool] { StreakEngine.recentActivity(days: readingDays, count: 7, minReads: minReadsPerDay) }
+    private var hasReadToday: Bool { StreakEngine.hasReadToday(days: readingDays, minReads: minReadsPerDay) }
 
     private var showActivityCard: Bool {
         activityRingsEnabled
@@ -44,6 +45,17 @@ struct HomeView: View {
     private var picks: [QueuedLink] { queue.filter { $0.source == .aiPick } }
     private var manual: [QueuedLink] { queue.filter { $0.source != .aiPick } }
 
+    private var avgAgeDays: Double? {
+        guard !queue.isEmpty else { return nil }
+        let total = queue.reduce(0.0) { $0 + Date().timeIntervalSince($1.addedAt) }
+        return total / Double(queue.count) / 86400
+    }
+
+    private var staleLinks: [QueuedLink] {
+        let cutoff = Date().addingTimeInterval(-2 * 86400)
+        return queue.filter { $0.addedAt < cutoff }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -54,6 +66,8 @@ struct HomeView: View {
                 } else {
                     VStack(spacing: 0) {
                         StreakHeader(streak: streak, isAtRisk: isAtRisk, recentActivity: recentActivity)
+
+                        queueMetaBar
 
                         List {
                             // Activity rings card — shown after daily goal is met
@@ -188,7 +202,7 @@ struct HomeView: View {
             SettingsView()
         }
         .fullScreenCover(item: $activeLink) { link in
-            ReaderView(link: link)
+            ReaderView(source: .queued(link))
         }
         .sheet(item: $safariURL, onDismiss: {
             guard let link = substackLink else { return }
@@ -203,7 +217,7 @@ struct HomeView: View {
         }
         .sheet(item: $pendingSubstackEntry) { entry in
             if let link = substackLink {
-                ReflectView(entry: entry, link: link, onComplete: {
+                ReflectView(entry: entry, onComplete: {
                     markSubstackRead(link)
                     substackLink = nil
                 })
@@ -305,7 +319,48 @@ struct HomeView: View {
         .background(appTheme.background)
     }
 
+    // MARK: - Queue meta bar
+
+    private var queueMetaBar: some View {
+        HStack(alignment: .center, spacing: 0) {
+            if let avg = avgAgeDays, avg >= 1 {
+                let days = Int(avg.rounded())
+                Text("avg. \(days) day\(days == 1 ? "" : "s") old")
+                    .font(AppTheme.mono(12))
+                    .foregroundStyle(avg >= 3 ? appTheme.accent.opacity(0.8) : appTheme.textFaint)
+            }
+
+            Spacer()
+
+            if !staleLinks.isEmpty {
+                Button {
+                    cleanupQueue()
+                } label: {
+                    Text("Clean up queue")
+                        .font(AppTheme.sansSerif(12, weight: .medium))
+                        .foregroundStyle(appTheme.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 8)
+    }
+
     // MARK: - Actions
+
+    private func cleanupQueue() {
+        let cutoff = Date().addingTimeInterval(-2 * 86400)
+        for link in staleLinks where link.addedAt < cutoff {
+            let url = link.url
+            let descriptor = FetchDescriptor<RSSArticle>(predicate: #Predicate { $0.url == url })
+            if let article = try? context.fetch(descriptor).first {
+                article.isQueued = false
+            }
+            context.delete(link)
+        }
+        try? context.save()
+    }
 
     private func deleteLink(_ link: QueuedLink) {
         let url = link.url
@@ -328,35 +383,49 @@ struct HomeView: View {
 
             Spacer()
 
-            VStack(spacing: 12) {
-                Text("Nothing to read.")
-                    .font(AppTheme.sansSerif(18, weight: .medium))
-                    .foregroundStyle(appTheme.heading)
+            if hasReadToday {
+                VStack(spacing: 8) {
+                    Text("Nothing saved for later.")
+                        .font(AppTheme.sansSerif(18, weight: .medium))
+                        .foregroundStyle(appTheme.heading)
 
-                Text(feeds.isEmpty ? "Add a link to start reading." : "Add a link or wait for your picks.")
-                    .font(AppTheme.sansSerif(14))
-                    .foregroundStyle(appTheme.textFaint)
+                    Text("You read today.")
+                        .font(AppTheme.mono(13))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+            } else {
+                VStack(spacing: 12) {
+                    Text("Nothing to read.")
+                        .font(AppTheme.sansSerif(18, weight: .medium))
+                        .foregroundStyle(appTheme.heading)
+
+                    Text(feeds.isEmpty ? "Add a link to start reading." : "Add a link or wait for your picks.")
+                        .font(AppTheme.sansSerif(14))
+                        .foregroundStyle(appTheme.textFaint)
+                }
             }
 
             Spacer()
 
-            Button {
-                showAddLink = true
-            } label: {
-                HStack {
-                    Spacer()
-                    Text("Add a link")
-                        .font(AppTheme.sansSerif(15, weight: .semibold))
-                        .foregroundStyle(appTheme.background)
-                    Spacer()
+            if !hasReadToday {
+                Button {
+                    showAddLink = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text("Add a link")
+                            .font(AppTheme.sansSerif(15, weight: .semibold))
+                            .foregroundStyle(appTheme.background)
+                        Spacer()
+                    }
+                    .frame(height: 48)
+                    .background(appTheme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .frame(height: 48)
-                .background(appTheme.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .buttonStyle(.plain)
+                .padding(.horizontal, AppTheme.pagePadding)
+                .padding(.bottom, 32)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, AppTheme.pagePadding)
-            .padding(.bottom, 32)
         }
     }
 }

@@ -3,7 +3,6 @@ import SwiftData
 
 struct ReflectView: View {
     let entry: BrainEntry
-    let link: QueuedLink
     var prompt: String? = nil
     var onComplete: () -> Void
 
