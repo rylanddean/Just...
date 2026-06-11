@@ -580,8 +580,8 @@ struct AdvancedSettingsView: View {
     }
 
     private func clearAllArticles() {
-        let articles = (try? context.fetch(FetchDescriptor<RSSArticle>())) ?? []
-        articles.forEach { context.delete($0) }
+        // Batch delete at the SQL level — avoids loading every article into memory.
+        try? context.delete(model: RSSArticle.self)
         try? context.save()
     }
 
@@ -590,16 +590,11 @@ struct AdvancedSettingsView: View {
     }
 
     private func resetEverything() {
-        let links   = (try? context.fetch(FetchDescriptor<QueuedLink>())) ?? []
-        let entries = (try? context.fetch(FetchDescriptor<BrainEntry>())) ?? []
-        let days    = (try? context.fetch(FetchDescriptor<ReadingDay>())) ?? []
-        let feeds   = (try? context.fetch(FetchDescriptor<RSSFeed>())) ?? []
-        let articles = (try? context.fetch(FetchDescriptor<RSSArticle>())) ?? []
-        links.forEach    { context.delete($0) }
-        entries.forEach  { context.delete($0) }
-        days.forEach     { context.delete($0) }
-        feeds.forEach    { context.delete($0) }
-        articles.forEach { context.delete($0) }
+        try? context.delete(model: QueuedLink.self)
+        try? context.delete(model: BrainEntry.self)
+        try? context.delete(model: ReadingDay.self)
+        try? context.delete(model: RSSFeed.self)
+        try? context.delete(model: RSSArticle.self)
         try? context.save()
     }
 }

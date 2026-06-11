@@ -9,15 +9,24 @@ struct DigestView: View {
 
     @StateObject private var weatherService = DigestWeatherService.shared
 
-    @Query private var articles: [RSSArticle]
+    @Query(sort: \RSSArticle.publishedAt, order: .reverse) private var articles: [RSSArticle]
     @Query(filter: #Predicate<RSSFeed> { !$0.isArchived }) private var feeds: [RSSFeed]
     @Query private var queue: [QueuedLink]
     @Query(sort: \BrainEntry.readAt, order: .reverse) private var brainEntries: [BrainEntry]
 
-    @AppStorage("streak.minReadsPerDay")  private var minReadsPerDay:       Int  = 1
-    @AppStorage("grading.enabled")       private var gradingEnabled:        Bool = false
-    @AppStorage("digest.hideNoise")      private var hideNoise:             Bool = false
-    @AppStorage("digest.hideSeen")       private var hideSeen:              Bool = false
+    @AppStorage("streak.minReadsPerDay")              private var minReadsPerDay:    Int  = 1
+    @AppStorage("grading.enabled")                    private var gradingEnabled:    Bool = false
+    @AppStorage("digest.hideNoise")                   private var hideNoise:         Bool = false
+    @AppStorage("digest.hideSeen")                    private var hideSeen:          Bool = false
+    @AppStorage(RSSFetchService.retentionDaysKey)     private var retentionDays:     Int  = RSSFetchService.defaultRetentionDays
+
+    private var retentionLabel: String {
+        switch retentionDays {
+        case 1:  return "the past day"
+        case 7:  return "the past week"
+        default: return "the past \(retentionDays) days"
+        }
+    }
 
     @State private var isProcessing = false
     @State private var selectedTopic: String = "All"
@@ -27,18 +36,6 @@ struct DigestView: View {
     // Non-@Observable helpers — mutations don't trigger SwiftUI re-renders.
     @State private var seenBatcher     = SeenBatcher()
     @State private var recCache        = RecommendationCache()
-
-    init() {
-        let stored = UserDefaults.standard.object(forKey: RSSFetchService.retentionDaysKey) as? Int
-        let days = stored ?? RSSFetchService.defaultRetentionDays
-        let startOfToday = Calendar.current.startOfDay(for: Date())
-        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: startOfToday) ?? startOfToday
-        _articles = Query(
-            filter: #Predicate<RSSArticle> { $0.publishedAt >= cutoff },
-            sort: \RSSArticle.publishedAt,
-            order: .reverse
-        )
-    }
 
     // MARK: - Pre-computed lookup (cheap, rebuilt only when feeds change)
 
@@ -57,14 +54,18 @@ struct DigestView: View {
         let scraped: [(feed: RSSFeed, articles: [RSSArticle])]
         let topics: [String]
         let hasUntagged: Bool
+        /// True when at least one article is within the retention window and belongs to a known feed,
+        /// regardless of isRead / hideSeen / topic filters. Drives the empty-state branch.
+        let inWindow: Bool
     }
 
     /// Scans `articles` exactly once, producing date buckets, topic counts, and untagged flag.
     private func buildBuckets() -> ArticleBuckets {
         let lookup = feedLookup
         let startOfToday = Calendar.current.startOfDay(for: Date())
+        let cutoff = Calendar.current.date(byAdding: .day, value: -retentionDays, to: startOfToday) ?? startOfToday
         guard let startOfYesterday = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday) else {
-            return ArticleBuckets(today: [], yesterday: [], earlier: [], scraped: [], topics: ["All"], hasUntagged: false)
+            return ArticleBuckets(today: [], yesterday: [], earlier: [], scraped: [], topics: ["All"], hasUntagged: false, inWindow: false)
         }
 
         var todayDedupe = Set<String>()
@@ -76,9 +77,12 @@ struct DigestView: View {
         var scrapedByFeedID:  [UUID: [RSSArticle]] = [:]
         var topicCounts:      [String: Int] = [:]
         var hasUntagged = false
+        var inWindow = false
 
         for article in articles {
+            guard article.publishedAt >= cutoff else { continue }
             guard lookup[article.feedID] != nil else { continue }
+            inWindow = true
             if article.isRead == true { continue }
             if gradingEnabled && hideNoise && article.qualityGrade == .noise { continue }
             if hiddenSeenIDs.contains(article.id) { continue }
@@ -117,7 +121,8 @@ struct DigestView: View {
             earlier: earlierList,
             scraped: scrapedSections,
             topics: ["All"] + topTopics,
-            hasUntagged: hasUntagged
+            hasUntagged: hasUntagged,
+            inWindow: inWindow
         )
     }
 
@@ -134,7 +139,8 @@ struct DigestView: View {
             queueCount:    queue.count,
             gradingEnabled: gradingEnabled,
             hideNoise:     hideNoise,
-            minReadsPerDay: minReadsPerDay
+            minReadsPerDay: minReadsPerDay,
+            retentionDays:  retentionDays
         )
         if cacheKey == recCache.key { return recCache.result }
 
@@ -143,7 +149,13 @@ struct DigestView: View {
         let queuedSet  = Set(queue.map { $0.url })
         let brainSet   = Set(brainEntries.map { $0.url })
 
+        let cutoff = Calendar.current.date(
+            byAdding: .day,
+            value: -retentionDays,
+            to: Calendar.current.startOfDay(for: Date())
+        ) ?? Date()
         let candidates = articles.filter {
+            $0.publishedAt >= cutoff &&
             lookup[$0.feedID] != nil &&
             $0.isRead != true &&
             !queuedSet.contains($0.url) &&
@@ -214,14 +226,14 @@ struct DigestView: View {
     // MARK: - Digest items (uses pre-built buckets — no additional article scan)
 
     private enum DigestItem: Identifiable {
-        case brainHeader
+        case brainCarousel([RSSArticle])
         case dateHeader(String)
         case feedGroupHeader(String)
         case article(RSSArticle)
 
         var id: String {
             switch self {
-            case .brainHeader: return "header-brain"
+            case .brainCarousel: return "carousel-brain"
             case .dateHeader(let label): return "header-\(label)"
             case .feedGroupHeader(let name): return "feedgroup-\(name)"
             case .article(let a): return a.id.uuidString
@@ -241,8 +253,7 @@ struct DigestView: View {
         let recURLs: Set<String> = recs.map { Set($0.map(\.url)) } ?? []
 
         if let recs, !recs.isEmpty {
-            items.append(.brainHeader)
-            items.append(contentsOf: recs.map { .article($0) })
+            items.append(.brainCarousel(recs))
         }
 
         let today = buckets.today.filter { !recURLs.contains($0.url) && topicMatch($0) }
@@ -301,7 +312,7 @@ struct DigestView: View {
 
                     tagFilterArea(topics: buckets.topics, hasUntagged: buckets.hasUntagged)
 
-                    if articles.isEmpty {
+                    if !buckets.inWindow {
                         emptyState
                     } else if items.isEmpty && hideSeen && selectedTopic == "All" {
                         seenCompleteState
@@ -373,16 +384,11 @@ struct DigestView: View {
         return List {
             ForEach(items) { item in
                 switch item {
-                case .brainHeader:
-                    brainDivider
+                case .brainCarousel(let recs):
+                    brainCarousel(recs, lookup: lookup)
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(
-                            top: 16,
-                            leading: AppTheme.pagePadding,
-                            bottom: 4,
-                            trailing: AppTheme.pagePadding
-                        ))
+                        .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 8, trailing: 0))
                 case .dateHeader(let label):
                     dateDivider(label)
                         .listRowBackground(Color.clear)
@@ -432,6 +438,33 @@ struct DigestView: View {
         .tint(appTheme.accent)
     }
 
+    // MARK: - Brain carousel
+
+    private func brainCarousel(_ recs: [RSSArticle], lookup: [UUID: RSSFeed]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            brainDivider
+                .padding(.horizontal, AppTheme.pagePadding)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(recs) { article in
+                        BrainRecommendationCard(
+                            article: article,
+                            feedName: lookup[article.feedID]?.title ?? "",
+                            isQueued: queuedURLs.contains(article.url),
+                            onAdd: { addToQueue(article) },
+                            onRemove: { removeFromQueue(article) },
+                            onRead: { activeDigestArticle = article }
+                        )
+                        .containerRelativeFrame(.horizontal) { w, _ in w * 0.8 }
+                    }
+                }
+                .padding(.leading, AppTheme.pagePadding)
+                .padding(.trailing, AppTheme.pagePadding)
+            }
+        }
+    }
+
     private func refetch() async {
         selectedTopic = "All"
         isProcessing = true
@@ -465,32 +498,47 @@ struct DigestView: View {
     // MARK: - Empty states
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Text("Nothing from the past week.")
-                .font(AppTheme.sansSerif(16, weight: .medium))
-                .foregroundStyle(appTheme.heading)
+        ScrollView {
+            VStack(spacing: 12) {
+                Text("Nothing from \(retentionLabel).")
+                    .font(AppTheme.sansSerif(16, weight: .medium))
+                    .foregroundStyle(appTheme.heading)
 
-            Text("New articles will appear here after the next fetch.")
-                .font(AppTheme.sansSerif(14))
-                .foregroundStyle(appTheme.textFaint)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                Text("Pull down to fetch new articles.")
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(appTheme.textFaint)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 80)
         }
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .refreshable { await refetch() }
+        .tint(appTheme.accent)
     }
 
     private var seenCompleteState: some View {
-        VStack(spacing: 12) {
-            Text("All read.")
-                .font(AppTheme.sansSerif(16, weight: .medium))
-                .foregroundStyle(appTheme.heading)
+        ScrollView {
+            VStack(spacing: 12) {
+                Text("All read.")
+                    .font(AppTheme.sansSerif(16, weight: .medium))
+                    .foregroundStyle(appTheme.heading)
 
-            Text("Nothing left to surface today.")
-                .font(AppTheme.sansSerif(14))
-                .foregroundStyle(appTheme.textFaint)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                Text("Nothing left to surface today.")
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(appTheme.textFaint)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 80)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .refreshable { await refetch() }
+        .tint(appTheme.accent)
     }
 
     // MARK: - Filter area
@@ -557,13 +605,17 @@ struct DigestView: View {
     }
 
     private var filteredEmptyState: some View {
-        Spacer()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(
-                Text("Nothing here.")
-                    .font(AppTheme.sansSerif(15))
-                    .foregroundStyle(appTheme.textFaint)
-            )
+        ScrollView {
+            Text("Nothing here.")
+                .font(AppTheme.sansSerif(15))
+                .foregroundStyle(appTheme.textFaint)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 80)
+        }
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .refreshable { await refetch() }
+        .tint(appTheme.accent)
     }
 
     private var brainDivider: some View {
@@ -650,9 +702,100 @@ private final class RecommendationCache: @unchecked Sendable {
         let gradingEnabled: Bool
         let hideNoise:      Bool
         let minReadsPerDay: Int
+        let retentionDays:  Int
     }
     var key:    Key?             = nil
     var result: [RSSArticle]?    = nil
+}
+
+// MARK: - Brain recommendation card
+
+private struct BrainRecommendationCard: View {
+    let article: RSSArticle
+    let feedName: String
+    let isQueued: Bool
+    let onAdd: () -> Void
+    let onRemove: () -> Void
+    let onRead: () -> Void
+
+    @Environment(\.appTheme) private var appTheme
+    @State private var justAdded = false
+
+    private var domain: String {
+        guard let url = URL(string: article.url) else { return "" }
+        return ContentFetcher.extractDomain(from: url)
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button {
+                onRead()
+            } label: {
+                HStack(spacing: 10) {
+                    FaviconView(domain: domain)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(article.title)
+                            .font(AppTheme.sansSerif(14, weight: .medium))
+                            .foregroundStyle(appTheme.heading)
+                            .lineLimit(2)
+                            .frame(maxWidth: .infinity, minHeight: 38, alignment: .topLeading)
+
+                        HStack(spacing: 6) {
+                            if !feedName.isEmpty {
+                                Text(feedName)
+                                    .font(AppTheme.sansSerif(12))
+                                    .foregroundStyle(appTheme.textFaint)
+                                    .lineLimit(1)
+                                Text("·")
+                                    .font(AppTheme.sansSerif(12))
+                                    .foregroundStyle(appTheme.textFaint)
+                            }
+                            Text(article.publishedAt.relativeShort)
+                                .font(AppTheme.sansSerif(12))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isQueued || justAdded {
+                Button { onRemove() } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(appTheme.accent)
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove from queue")
+            } else {
+                Button {
+                    onAdd()
+                    justAdded = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(appTheme.heading)
+                        .frame(width: 30, height: 30)
+                        .background(appTheme.background)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(appTheme.separator, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Read later")
+            }
+        }
+        .padding(AppTheme.cardPadding)
+        .background(appTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .onChange(of: isQueued) { _, queued in
+            if !queued { justAdded = false }
+        }
+    }
 }
 
 // MARK: - Article row
