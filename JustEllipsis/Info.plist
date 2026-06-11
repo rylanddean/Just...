@@ -80,8 +80,12 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Activity ring progress appears once you've met your daily reading goal — a quiet reminder to also move.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Just… only reads your activity rings and does not write any health data.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Just… uses your location once a day to show today's weather in the Digest. It is never stored or shared.</string>
 	<key>NSMicrophoneUsageDescription</key>
