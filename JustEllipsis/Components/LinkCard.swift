@@ -12,11 +12,11 @@ struct LinkCard: View {
                 FaviconView(domain: link.domain ?? domainFromURL(link.url))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(link.title ?? link.url)
-                        .font(AppTheme.sansSerif(15, weight: .medium))
-                        .foregroundStyle(appTheme.heading)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                    TitleWithRewriteIndicator(
+                        displayTitle: link.displayTitle,
+                        originalTitle: link.rewrittenTitle != nil ? link.title : nil
+                    )
+                    .lineLimit(2)
 
                     Text(link.domain ?? domainFromURL(link.url))
                         .font(AppTheme.sansSerif(12))

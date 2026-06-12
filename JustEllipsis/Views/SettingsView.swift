@@ -15,6 +15,10 @@ struct SettingsView: View {
     @AppStorage(NightModeService.startMinuteKey)        private var nightStartMinute: Int    = NightModeService.defaultStartMinute
     @AppStorage(NightModeService.overrideKey)           private var nightOverride:    String = "auto"
     @AppStorage("activityRings.enabled")                private var activityRingsEnabled: Bool = false
+    @AppStorage("rewrite.enabled")                      private var rewriteEnabled:   Bool = true
+    @AppStorage("digest.brainRanked")                   private var brainRanked:      Bool = false
+
+    @Query private var brainEntries: [BrainEntry]
 
     @AppStorage(NotificationScheduler.morningEnabledKey) private var morningEnabled:  Bool = false
     @AppStorage(NotificationScheduler.morningHourKey)    private var morningHour:     Int  = NotificationScheduler.defaultMorningHour
@@ -56,6 +60,10 @@ struct SettingsView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
     }
 
+    private var insufficientBrainSignal: Bool {
+        brainEntries.filter { $0.dna != nil }.count < 5
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -66,6 +74,7 @@ struct SettingsView: View {
                         syncSection
                         streakSection
                         remindersSection
+                        readingSection
                         themeSection
                         nightModeSection
                         healthSection
@@ -435,6 +444,70 @@ struct SettingsView: View {
         guard notificationAuthStatus == .notDetermined else { return }
         _ = await NotificationScheduler.requestPermission()
         notificationAuthStatus = await NotificationScheduler.authorizationStatus()
+    }
+
+    // MARK: - Reading Section
+
+    private var readingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("READING")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Rewrite clickbait titles")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(
+                            IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint
+                        )
+                    Text(
+                        IntelligenceService.isAvailable
+                            ? "Calm, factual titles replace manipulative ones. Tap ✦ to see the original."
+                            : "Requires Apple Intelligence."
+                    )
+                    .font(AppTheme.sansSerif(12))
+                    .foregroundStyle(appTheme.textFaint)
+                }
+                Spacer()
+                Toggle("", isOn: $rewriteEnabled)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .disabled(!IntelligenceService.isAvailable)
+            }
+
+            Divider()
+                .background(appTheme.separator)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Rank by Brain relevance")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(
+                            IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint
+                        )
+                    if IntelligenceService.isAvailable && brainRanked && insufficientBrainSignal {
+                        Text("Your Brain needs more entries to influence ranking.")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                    } else {
+                        Text(
+                            IntelligenceService.isAvailable
+                                ? "Articles that match your Brain's recent reading rise to the top."
+                                : "Requires Apple Intelligence."
+                        )
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(appTheme.textFaint)
+                    }
+                }
+                Spacer()
+                Toggle("", isOn: $brainRanked)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .disabled(!IntelligenceService.isAvailable)
+            }
+        }
     }
 
     // MARK: - Theme Section

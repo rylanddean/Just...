@@ -17,6 +17,14 @@ final class RSSArticle {
     var estimatedReadingMinutes: Int?
     var qualityGrade: ArticleQualityGrade?
     var topics: [String] = []
+    var rewrittenTitle: String?
+
+    var displayTitle: String {
+        if let r = rewrittenTitle, !r.isEmpty { return r }
+        return title
+    }
+
+    var hasRewrite: Bool { rewrittenTitle.map { !$0.isEmpty } ?? false }
 
     init(feedID: UUID, url: String, title: String, publishedAt: Date, feedDescription: String? = nil) {
         self.feedID = feedID

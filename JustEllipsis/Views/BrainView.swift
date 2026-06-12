@@ -324,16 +324,20 @@ struct BrainEntryRow: View {
                         .lineSpacing(2)
 
                     // Title is context
-                    Text(entry.title)
-                        .font(AppTheme.sansSerif(12, weight: .medium))
-                        .foregroundStyle(appTheme.textFaint)
-                        .lineLimit(1)
+                    TitleWithRewriteIndicator(
+                        displayTitle: entry.displayTitle,
+                        originalTitle: entry.rewrittenTitle != nil ? entry.title : nil,
+                        font: AppTheme.sansSerif(12, weight: .medium)
+                    )
+                    .lineLimit(1)
                 } else {
                     // No reflection — title is primary
-                    Text(entry.title)
-                        .font(AppTheme.sansSerif(14, weight: .medium))
-                        .foregroundStyle(appTheme.heading)
-                        .lineLimit(2)
+                    TitleWithRewriteIndicator(
+                        displayTitle: entry.displayTitle,
+                        originalTitle: entry.rewrittenTitle != nil ? entry.title : nil,
+                        font: AppTheme.sansSerif(14, weight: .medium)
+                    )
+                    .lineLimit(2)
                 }
             }
 
@@ -414,14 +418,20 @@ struct BrainEntryDetail: View {
                 appTheme.background.ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        Text(entry.title)
-                            .font(AppTheme.sansSerif(20, weight: .semibold))
-                            .foregroundStyle(appTheme.heading)
+                        TitleWithRewriteIndicator(
+                            displayTitle: entry.displayTitle,
+                            originalTitle: entry.rewrittenTitle != nil ? entry.title : nil,
+                            font: AppTheme.sansSerif(20, weight: .semibold)
+                        )
 
                         HStack(spacing: 8) {
                             Text(entry.domain)
                             Text("·")
                             Text(entry.readAt.formatted(date: .long, time: .omitted))
+                            if entry.readingSeconds > 0 {
+                                Text("·")
+                                Text(formatReadTime(entry.readingSeconds))
+                            }
                         }
                         .font(AppTheme.sansSerif(12))
                         .foregroundStyle(appTheme.textFaint)
@@ -484,6 +494,11 @@ struct BrainEntryDetail: View {
         .fullScreenCover(isPresented: $showReread) {
             RereadView(url: entry.url, domain: entry.domain)
         }
+    }
+
+    private func formatReadTime(_ seconds: Int) -> String {
+        if seconds < 60 { return "\(seconds)s" }
+        return "\(seconds / 60) min"
     }
 
     private func beginEdit() {

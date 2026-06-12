@@ -14,6 +14,13 @@ struct ReflectView: View {
     @FocusState private var textFocused: Bool
     @Query private var brainEntries: [BrainEntry]
 
+    private var resolvedPrompt: String {
+        let isRush = entry.estimatedReadSeconds > 0
+            && entry.readingSeconds < Int(Double(entry.estimatedReadSeconds) * 0.2)
+        if isRush { return "Anything catch your eye?" }
+        return prompt ?? IntelligenceService.randomFallbackPrompt()
+    }
+
     var body: some View {
         ZStack {
             appTheme.background.ignoresSafeArea()
@@ -39,7 +46,7 @@ struct ReflectView: View {
             }
         }
         .onAppear {
-            placeholder = prompt ?? IntelligenceService.randomFallbackPrompt()
+            placeholder = resolvedPrompt
             viewModel.startCountdown()
         }
         .preferredColorScheme(appTheme.colorScheme)

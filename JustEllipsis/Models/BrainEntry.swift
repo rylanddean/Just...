@@ -14,6 +14,11 @@ final class BrainEntry {
     var wordCount: Int = 0
     var aiSummary: String?
     var dna: String?
+    var readingSeconds: Int = 0
+    var estimatedReadSeconds: Int = 0
+    var rewrittenTitle: String?
+
+    var displayTitle: String { rewrittenTitle ?? title }
 
     init(url: String, title: String, domain: String) {
         self.url = url
