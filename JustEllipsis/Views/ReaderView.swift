@@ -327,10 +327,10 @@ struct ReaderView: View {
                 }
             }
 
-            if link.rewrittenTitle != nil {
+            if case .queued(let qLink) = source, let rewritten = qLink.rewrittenTitle {
                 TitleWithRewriteIndicator(
-                    displayTitle: link.displayTitle,
-                    originalTitle: link.title
+                    displayTitle: rewritten,
+                    originalTitle: qLink.title
                 )
                 .lineLimit(2)
                 .padding(.horizontal, AppTheme.pagePadding)
