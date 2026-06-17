@@ -567,6 +567,112 @@ footer {
   margin-top: 16px;
 }
 
+/* ─── Guide cards ────────────────────────────────────────── */
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2px;
+  margin-top: 48px;
+}
+
+.guide-card {
+  background: var(--surface);
+  padding: 36px 32px;
+  text-decoration: none;
+  display: block;
+  transition: background 0.2s;
+}
+
+.guide-card:hover {
+  background: var(--surface2);
+  text-decoration: none;
+}
+
+.guide-card-num {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--amber);
+  margin-bottom: 16px;
+  display: block;
+  text-transform: uppercase;
+}
+
+.guide-card h3 {
+  color: var(--cream);
+  margin-bottom: 8px;
+}
+
+.guide-card p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.guide-card-cta {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+}
+
+/* ─── Guide tips ──────────────────────────────────────────── */
+
+.tip {
+  background: var(--surface);
+  border-left: 2px solid var(--amber);
+  padding: 24px 28px;
+  margin: 32px 0;
+}
+
+.tip p {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.tip-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--amber);
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* ─── Guide control list ──────────────────────────────────── */
+
+.control-list {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.control-row {
+  background: var(--surface);
+  padding: 18px 28px;
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.control-name {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--cream);
+}
+
+.control-desc {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0;
+}
+
 /* ─── Responsive ──────────────────────────────────────────── */
 
 @media (max-width: 640px) {
@@ -591,6 +697,11 @@ footer {
   }
 
   .fact-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .control-row {
     grid-template-columns: 1fr;
     gap: 4px;
   }
