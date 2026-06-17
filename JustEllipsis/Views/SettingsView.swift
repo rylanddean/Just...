@@ -16,9 +16,6 @@ struct SettingsView: View {
     @AppStorage(NightModeService.overrideKey)           private var nightOverride:    String = "auto"
     @AppStorage("activityRings.enabled")                private var activityRingsEnabled: Bool = false
     @AppStorage("rewrite.enabled")                      private var rewriteEnabled:   Bool = true
-    @AppStorage("digest.brainRanked")                   private var brainRanked:      Bool = false
-
-    @Query private var brainEntries: [BrainEntry]
 
     @AppStorage(NotificationScheduler.morningEnabledKey) private var morningEnabled:  Bool = false
     @AppStorage(NotificationScheduler.morningHourKey)    private var morningHour:     Int  = NotificationScheduler.defaultMorningHour
@@ -58,10 +55,6 @@ struct SettingsView: View {
 
     private var buildNumber: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
-    }
-
-    private var insufficientBrainSignal: Bool {
-        brainEntries.filter { $0.dna != nil }.count < 5
     }
 
     var body: some View {
@@ -477,36 +470,6 @@ struct SettingsView: View {
                     .disabled(!IntelligenceService.isAvailable)
             }
 
-            Divider()
-                .background(appTheme.separator)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Rank by Brain relevance")
-                        .font(AppTheme.sansSerif(15))
-                        .foregroundStyle(
-                            IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint
-                        )
-                    if IntelligenceService.isAvailable && brainRanked && insufficientBrainSignal {
-                        Text("Your Brain needs more entries to influence ranking.")
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
-                    } else {
-                        Text(
-                            IntelligenceService.isAvailable
-                                ? "Articles that match your Brain's recent reading rise to the top."
-                                : "Requires Apple Intelligence."
-                        )
-                        .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(appTheme.textFaint)
-                    }
-                }
-                Spacer()
-                Toggle("", isOn: $brainRanked)
-                    .labelsHidden()
-                    .tint(appTheme.accent)
-                    .disabled(!IntelligenceService.isAvailable)
-            }
         }
     }
 
