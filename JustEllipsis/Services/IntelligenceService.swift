@@ -111,6 +111,19 @@ struct RelevanceScore {
 
 @available(iOS 26, *)
 @Generable
+struct TitleAssessment {
+    @Guide(description: """
+        Assess this article headline for sensationalism, emotional manipulation,
+        or information withholding designed to drive clicks.
+        If it is clickbait: rewrite as a neutral, factual headline under 15 words.
+        If it is not clickbait: return exactly the string "CLEAN".
+        No quotation marks. No punctuation beyond what the headline requires.
+        """)
+    var result: String
+}
+
+@available(iOS 26, *)
+@Generable
 struct FeedCategoryAssessment {
     @Guide(description: """
         Return exactly one category label from the allowed categories list.
@@ -223,8 +236,6 @@ extension IntelligenceService {
         }
     }
 
-    // MARK: Article Relevance Scoring (used by RSSRecommendationEngine)
-
     // Returns a relevance score from 0–10 for an article title against a reader profile.
     // Profile is the newline-joined string of "title: reflection" pairs from last 30 Brain entries.
     static func scoreRelevance(articleTitle: String, readerProfile: String) async -> Int {
@@ -279,6 +290,19 @@ extension IntelligenceService {
         return normalized.first { $0.caseInsensitiveCompare(raw) == .orderedSame }
     }
 
+    // MARK: Title Rewriting
+
+    // Returns a rewritten title if the original is clickbait, nil if it's clean.
+    static func rewriteTitle(_ title: String) async -> String? {
+        let session = LanguageModelSession()
+        let response = try? await session.respond(
+            to: "Assess this headline: \(title)",
+            generating: TitleAssessment.self
+        )
+        let result = response?.content.result ?? "CLEAN"
+        return result == "CLEAN" ? nil : result
+    }
+
     // MARK: Errors
 
     enum IntelligenceError: Error {
@@ -290,6 +314,18 @@ extension IntelligenceService {
 // MARK: - Static Fallback Prompts
 
 extension IntelligenceService {
+
+    // Returns a 0.0–1.0 relevance score for a title against a set of Brain DNA concepts.
+    // Uses keyword overlap — no AI required, fast enough to score all Digest articles on appear.
+    static func scoreRelevance(title: String, concepts: [String]) -> Double {
+        guard !concepts.isEmpty else { return 0 }
+        let titleWords = Set(title.lowercased().split(separator: " ").map(String.init))
+        let matched = concepts.filter { concept in
+            let c = concept.lowercased()
+            return titleWords.contains(c) || titleWords.contains(where: { $0.contains(c) || c.contains($0) })
+        }
+        return Double(matched.count) / Double(concepts.count)
+    }
 
     static let fallbackPrompts: [String] = [
         "What stayed with you",

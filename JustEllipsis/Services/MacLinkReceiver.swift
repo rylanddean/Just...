@@ -16,7 +16,7 @@ private let receiverLog = Logger(
 final class MacLinkReceiver {
 
     private static let containerID = "iCloud.com.rylandean.justellipsis"
-    static let recordType = "JE_PendingLink"
+    nonisolated static let recordType = "JE_PendingLink"
 
     private let modelContainer: ModelContainer
 

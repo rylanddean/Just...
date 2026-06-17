@@ -387,10 +387,12 @@ private struct ArticleRow: View {
             FaviconView(domain: domain)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(article.title)
-                    .font(AppTheme.sansSerif(14, weight: .medium))
-                    .foregroundStyle(appTheme.heading)
-                    .lineLimit(titleLineLimit)
+                TitleWithRewriteIndicator(
+                    displayTitle: article.displayTitle,
+                    originalTitle: article.hasRewrite ? article.title : nil,
+                    font: AppTheme.sansSerif(14, weight: .medium)
+                )
+                .lineLimit(titleLineLimit)
 
                 if let summary = displaySummary {
                     Text(summary)

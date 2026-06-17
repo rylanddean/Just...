@@ -55,6 +55,10 @@ final class QueuedLink {
     var sourceRaw: String = "manual"
     var threadSourceURL: String?
 
+    var rewrittenTitle: String?
+
+    var displayTitle: String { rewrittenTitle ?? title ?? url }
+
     var prefetchState: PrefetchState {
         get { PrefetchState(rawValue: prefetchStateRaw) ?? .pending }
         set { prefetchStateRaw = newValue.rawValue }

@@ -23,6 +23,7 @@
 		2344727D36DCEF1C39989C66 /* LinkCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46A719D305320A1D2B22BA50 /* LinkCard.swift */; };
 		24271D2A9FCFC50049035718 /* FeedsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D55C543A6A1CB887D6732BF /* FeedsView.swift */; };
 		25AC66CE65822836CC940ED8 /* BrainViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */; };
+		25EE7C693DDCDC5BD478C0F3 /* TitleWithRewriteIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80E1806979E863BB530A7FC /* TitleWithRewriteIndicator.swift */; };
 		286F5A0E2A4A563D35F90F73 /* CountdownRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42F62308F8EC6615789E6A4 /* CountdownRing.swift */; };
 		29F8953C9E0FD4BFF3F6CD16 /* newsletters.json in Resources */ = {isa = PBXBuildFile; fileRef = EFA606DC043A9F40ABDA855B /* newsletters.json */; };
 		2CF7EF3D506F406957F66652 /* ActivityRingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C0B2EC65BB2A2B2D76A9BFC /* ActivityRingsCard.swift */; };
@@ -76,6 +77,7 @@
 		B89A122322A35304859319F6 /* AddLinkIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC7AB214F7101A8578E22F9 /* AddLinkIntent.swift */; };
 		BA81D77627C4EC391E22F535 /* RSSFetchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00575A0AFABA6946B5C9DC29 /* RSSFetchService.swift */; };
 		BC8EBD8DD0B5BAC7EA7B0FD3 /* MacLinkSubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6B42540B5E640979EF29E55 /* MacLinkSubscriptionService.swift */; };
+		BF6316CFE9A35C16D4D7EA70 /* DigestRelevanceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ADC0AF92CE46A50DD86CF5F /* DigestRelevanceStore.swift */; };
 		C5758CD9E02EA13965072A09 /* FeedDirectoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9667F64E5204B686724BC6 /* FeedDirectoryView.swift */; };
 		C57D850E136EA2F6017B58BB /* GradeDots.swift in Sources */ = {isa = PBXBuildFile; fileRef = E99A34628404DFACDBB556C2 /* GradeDots.swift */; };
 		C5E3510BA0839FE572FE05A4 /* ShareFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC763198DE4280198397A77F /* ShareFeedbackView.swift */; };
@@ -168,6 +170,7 @@
 		4C06966C3552F09BFD350160 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		53C8EBE71DB26F97014284EE /* ReaderTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTheme.swift; sourceTree = "<group>"; };
 		53E9DD66F744742A2B2F2607 /* WeatherKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WeatherKit.framework; path = System/Library/Frameworks/WeatherKit.framework; sourceTree = SDKROOT; };
+		5ADC0AF92CE46A50DD86CF5F /* DigestRelevanceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigestRelevanceStore.swift; sourceTree = "<group>"; };
 		5DAE9F4B42AFCFBD95276C19 /* FeedDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedDetailView.swift; sourceTree = "<group>"; };
 		5FB525487287C343A913E2DB /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		646F64DBC62E5B05B45AC067 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
@@ -224,6 +227,7 @@
 		F69A481D7B9690EFB2677915 /* JustEllipsisMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustEllipsisMac.entitlements; sourceTree = "<group>"; };
 		F6AF1AE1D1C4D873D7C71069 /* BrainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainViewModel.swift; sourceTree = "<group>"; };
 		F6B42540B5E640979EF29E55 /* MacLinkSubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLinkSubscriptionService.swift; sourceTree = "<group>"; };
+		F80E1806979E863BB530A7FC /* TitleWithRewriteIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleWithRewriteIndicator.swift; sourceTree = "<group>"; };
 		F8881FBE57095A67C1C24497 /* BrainEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainEntry.swift; sourceTree = "<group>"; };
 		F971C6F6E981C20C719708AC /* WebFeedScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFeedScraper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -274,6 +278,7 @@
 				84722707AA336D1073651EEF /* CloudSyncService.swift */,
 				C30BE16C57FF36029D3185B1 /* ContentFetcher.swift */,
 				0F0A45B9A3A2BEF27227EE9F /* DigestWeatherService.swift */,
+				5ADC0AF92CE46A50DD86CF5F /* DigestRelevanceStore.swift */,
 				9CCE38775A8F19539D1A2868 /* FeedURLNormaliser.swift */,
 				EAE7C10DD9151ABD41669978 /* HealthKitService.swift */,
 				BD6345AF40A371C990B21023 /* IntelligenceService.swift */,
@@ -389,6 +394,7 @@
 				46A719D305320A1D2B22BA50 /* LinkCard.swift */,
 				EA5C02AC5A4F31E6EE858712 /* ReaderWebView.swift */,
 				CC480E509A335B23D95C2896 /* StreakHeader.swift */,
+				F80E1806979E863BB530A7FC /* TitleWithRewriteIndicator.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -559,6 +565,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0B22B2BD222A2112071A54FE = {
+						DevelopmentTeam = "";
+					};
 					36799AF5621258DD12197858 = {
 						DevelopmentTeam = "";
 					};
@@ -656,6 +665,7 @@
 				56DE24619050B42942363268 /* ContentFetcher.swift in Sources */,
 				286F5A0E2A4A563D35F90F73 /* CountdownRing.swift in Sources */,
 				DF47C19BEF474C1C7B732E11 /* Date+RelativeShort.swift in Sources */,
+				BF6316CFE9A35C16D4D7EA70 /* DigestRelevanceStore.swift in Sources */,
 				0C8B04F60CFD5F9C87119FDC /* DigestView.swift in Sources */,
 				16F07144C0E515AE345A6150 /* DigestWeatherCard.swift in Sources */,
 				CFF703F51303F7321DDD6821 /* DigestWeatherService.swift in Sources */,
@@ -702,6 +712,7 @@
 				E093E874A024D23AB7094BB1 /* SpeechPlayer.swift in Sources */,
 				3E92CF441373D20D1C8E3FDD /* StreakEngine.swift in Sources */,
 				65711DC2473F1F82A0964326 /* StreakHeader.swift in Sources */,
+				25EE7C693DDCDC5BD478C0F3 /* TitleWithRewriteIndicator.swift in Sources */,
 				688CEC6AED164C8E57D6F3F7 /* WebFeedScraper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
