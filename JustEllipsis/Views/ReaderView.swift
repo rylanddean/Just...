@@ -5,6 +5,7 @@ import MessageUI
 
 struct ReaderView: View {
     let source: ReadingSource
+    var editionMode: Bool = false
 
     private var sourceURL: String { source.url }
 
@@ -12,6 +13,7 @@ struct ReaderView: View {
         switch source {
         case .queued(let link): return link.domain ?? domainFromURL(link.url)
         case .digest(_, _, let d, _): return d
+        case .dailyEdition(_, _, let d, _): return d
         }
     }
     @Environment(\.modelContext) private var context
@@ -93,6 +95,7 @@ struct ReaderView: View {
                 switch source {
                 case .queued(let link): await viewModel.load(link: link, context: context)
                 case .digest(let url, _, _, _): await viewModel.loadURL(url, context: context)
+                case .dailyEdition(let url, _, _, _): await viewModel.loadURL(url, context: context)
                 }
             }
             .onDisappear {
@@ -143,12 +146,21 @@ struct ReaderView: View {
         }
     }
 
+    @ViewBuilder
     private func reflectView(for entry: BrainEntry) -> some View {
-        ReflectView(entry: entry, prompt: viewModel.generatedPrompt, onComplete: {
-            markSourceRead()
-            updateReadingDay()
-            dismiss()
-        })
+        if editionMode {
+            MicroReflectView(entry: entry, onComplete: {
+                markSourceRead()
+                updateReadingDay()
+                dismiss()
+            })
+        } else {
+            ReflectView(entry: entry, prompt: viewModel.generatedPrompt, onComplete: {
+                markSourceRead()
+                updateReadingDay()
+                dismiss()
+            })
+        }
     }
 
     private func markSourceRead() {
@@ -156,6 +168,8 @@ struct ReaderView: View {
         case .queued(let link):
             viewModel.markAsRead(link: link, context: context)
         case .digest(let url, _, _, let feedID):
+            viewModel.markDigestRead(url: url, feedID: feedID, context: context)
+        case .dailyEdition(let url, _, _, let feedID):
             viewModel.markDigestRead(url: url, feedID: feedID, context: context)
         }
     }
@@ -247,6 +261,7 @@ struct ReaderView: View {
                         switch source {
                         case .queued(let link): await viewModel.load(link: link, context: context)
                         case .digest(let url, _, _, _): await viewModel.loadURL(url, context: context)
+                        case .dailyEdition(let url, _, _, _): await viewModel.loadURL(url, context: context)
                         }
                     }
                 }

@@ -202,8 +202,8 @@ struct JustEllipsisApp: App {
         // Main store: app data + feeds — optionally CloudKit-synced
         let mainSchema = Schema([QueuedLink.self, BrainEntry.self, ReadingDay.self, RSSFeed.self, QuoteEntry.self])
 
-        // Articles store: ephemeral RSS articles — never synced to CloudKit
-        let articlesSchema = Schema([RSSArticle.self])
+        // Articles store: ephemeral data — never synced to CloudKit; wiped and rebuilt on migration failure
+        let articlesSchema = Schema([RSSArticle.self, DailyEdition.self])
 
         if let groupURL = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: PendingLinkStore.appGroupID
@@ -230,14 +230,14 @@ struct JustEllipsisApp: App {
 
             let fullSchema = Schema([
                 QueuedLink.self, BrainEntry.self, ReadingDay.self,
-                RSSFeed.self, RSSArticle.self, QuoteEntry.self
+                RSSFeed.self, RSSArticle.self, QuoteEntry.self, DailyEdition.self
             ])
             if let container = try? ModelContainer(for: fullSchema, configurations: [mainConfig, articlesConfig]) {
                 return container
             }
 
             // Articles store migration failed (e.g. interrupted mid-write on a previous launch).
-            // Articles are ephemeral — wipe the store and its SQLite WAL/SHM side files, then retry.
+            // Articles and daily editions are ephemeral — wipe the store and retry.
             let articlesPath = articlesURL.path
             for path in [articlesPath, articlesPath + "-shm", articlesPath + "-wal"] {
                 try? FileManager.default.removeItem(atPath: path)
@@ -245,12 +245,19 @@ struct JustEllipsisApp: App {
             if let container = try? ModelContainer(for: fullSchema, configurations: [mainConfig, articlesConfig]) {
                 return container
             }
+
+            // Articles store is unrecoverable. Return main store only so user data is never lost.
+            let mainOnlySchema = Schema([QueuedLink.self, BrainEntry.self, ReadingDay.self, RSSFeed.self, QuoteEntry.self])
+            let mainOnlyConfig = ModelConfiguration("main", schema: mainOnlySchema, url: mainURL, cloudKitDatabase: cloudDB)
+            if let container = try? ModelContainer(for: mainOnlySchema, configurations: [mainOnlyConfig]) {
+                return container
+            }
         }
 
         // Fallback: single in-process store (no CloudKit)
         let fullSchema = Schema([
             QueuedLink.self, BrainEntry.self, ReadingDay.self,
-            RSSFeed.self, RSSArticle.self
+            RSSFeed.self, RSSArticle.self, QuoteEntry.self, DailyEdition.self
         ])
         let config = ModelConfiguration(
             schema: fullSchema,

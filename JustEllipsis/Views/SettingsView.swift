@@ -23,6 +23,7 @@ struct SettingsView: View {
     @AppStorage(NotificationScheduler.eveningEnabledKey) private var eveningEnabled:  Bool = false
     @AppStorage(NotificationScheduler.eveningHourKey)    private var eveningHour:     Int  = NotificationScheduler.defaultEveningHour
     @AppStorage(NotificationScheduler.eveningMinuteKey)  private var eveningMinute:   Int  = NotificationScheduler.defaultEveningMinute
+    @AppStorage(NotificationScheduler.editionEnabledKey) private var editionEnabled:  Bool = false
 
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
@@ -425,6 +426,26 @@ struct SettingsView: View {
                                 .tint(appTheme.accent)
                         }
                     }
+                }
+
+                Divider().background(appTheme.separator)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Daily Edition")
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(appTheme.heading)
+                        Text("Notify when today's edition is ready.")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $editionEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                        .onChange(of: editionEnabled) { _, enabled in
+                            if enabled { Task { await requestPermissionIfNeeded() } }
+                        }
                 }
             }
         }
