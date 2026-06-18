@@ -8,15 +8,17 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.appTheme)     private var appTheme
 
-    @AppStorage(ReaderTheme.defaultsKey)                private var themeRaw:         String = "ember"
-    @AppStorage("streak.minReadsPerDay")                private var minReadsPerDay:   Int    = 1
-    @AppStorage(JustEllipsisApp.iCloudSyncKey)          private var iCloudSyncEnabled: Bool  = false
-    @AppStorage(NightModeService.startHourKey)          private var nightStartHour:   Int    = NightModeService.defaultStartHour
-    @AppStorage(NightModeService.startMinuteKey)        private var nightStartMinute: Int    = NightModeService.defaultStartMinute
-    @AppStorage(NightModeService.overrideKey)           private var nightOverride:    String = "auto"
-    @AppStorage("activityRings.enabled")                private var activityRingsEnabled: Bool = false
-    @AppStorage("rewrite.enabled")                      private var rewriteEnabled:   Bool = true
+    // Appearance / reading
+    @AppStorage(ReaderTheme.defaultsKey)                 private var themeRaw:              String = "ember"
+    @AppStorage("streak.minReadsPerDay")                 private var minReadsPerDay:        Int    = 1
+    @AppStorage(JustEllipsisApp.iCloudSyncKey)           private var iCloudSyncEnabled:     Bool   = false
+    @AppStorage(NightModeService.startHourKey)           private var nightStartHour:        Int    = NightModeService.defaultStartHour
+    @AppStorage(NightModeService.startMinuteKey)         private var nightStartMinute:      Int    = NightModeService.defaultStartMinute
+    @AppStorage(NightModeService.overrideKey)            private var nightOverride:         String = "auto"
+    @AppStorage("activityRings.enabled")                 private var activityRingsEnabled:  Bool   = false
+    @AppStorage("rewrite.enabled")                       private var rewriteEnabled:        Bool   = true
 
+    // Reminders
     @AppStorage(NotificationScheduler.morningEnabledKey) private var morningEnabled:  Bool = false
     @AppStorage(NotificationScheduler.morningHourKey)    private var morningHour:     Int  = NotificationScheduler.defaultMorningHour
     @AppStorage(NotificationScheduler.morningMinuteKey)  private var morningMinute:   Int  = NotificationScheduler.defaultMorningMinute
@@ -25,12 +27,33 @@ struct SettingsView: View {
     @AppStorage(NotificationScheduler.eveningMinuteKey)  private var eveningMinute:   Int  = NotificationScheduler.defaultEveningMinute
     @AppStorage(NotificationScheduler.editionEnabledKey) private var editionEnabled:  Bool = false
 
+    // Feeds
+    @AppStorage("rss.fetchHour")                        private var fetchHour:               Int  = RSSFetchService.defaultFetchHour
+    @AppStorage("rss.fetchMinute")                      private var fetchMinute:             Int  = RSSFetchService.defaultFetchMinute
+    @AppStorage(RSSFetchService.fetch2EnabledKey)       private var fetch2Enabled:           Bool = false
+    @AppStorage(RSSFetchService.fetchHour2Key)          private var fetchHour2:              Int  = RSSFetchService.defaultFetchHour2
+    @AppStorage(RSSFetchService.fetchMinute2Key)        private var fetchMinute2:            Int  = RSSFetchService.defaultFetchMinute2
+    @AppStorage(RSSFetchService.retentionDaysKey)       private var articleRetentionDays:    Int  = RSSFetchService.defaultRetentionDays
+    @AppStorage("autoArchiveUnreadEnabled")             private var autoArchiveUnreadEnabled: Bool = false
+    @AppStorage("autoArchiveUnreadDays")                private var autoArchiveUnreadDays:   Int  = 7
+    @AppStorage("autoArchiveDeadEnabled")               private var autoArchiveDeadEnabled:  Bool = false
+    @AppStorage("autoArchiveDeadDays")                  private var autoArchiveDeadDays:     Int  = 14
+
+    // Reading / grading
+    @AppStorage("grading.enabled")                      private var gradingEnabled: Bool = false
+    @AppStorage("digest.hideNoise")                     private var hideNoise:      Bool = false
+
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
-    @Environment(HealthKitService.self) private var healthKit
+    @Environment(HealthKitService.self)          private var healthKit
+    @Environment(GradingProgressTracker.self)    private var gradingTracker
+    @Environment(PipelineProgressTracker.self)   private var pipelineTracker
+
+    @Query private var allArticles: [RSSArticle]
+    @Query(sort: \DailyEdition.date, order: .reverse) private var editions: [DailyEdition]
 
     private enum DialogKind: Identifiable {
-        case clearStreak, forceUpload, forceRestore
+        case clearStreak, forceUpload, forceRestore, clearArticles, deduplicateArticles, resetEverything
         var id: Self { self }
     }
 
@@ -38,9 +61,15 @@ struct SettingsView: View {
         case idle, syncing, success(String), failure(String)
     }
 
+    private enum EditionState: Equatable { case idle, running }
+
     @State private var versionTapCount = 0
     @State private var activeDialog: DialogKind? = nil
     @State private var syncPhase: SyncPhase = .idle
+    @State private var developerUnlocked = false
+    @State private var editionGenerationState: EditionState = .idle
+
+    // MARK: - Computed
 
     private var selectedTheme: ReaderTheme {
         ReaderTheme(rawValue: themeRaw) ?? .ember
@@ -58,6 +87,41 @@ struct SettingsView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
     }
 
+    private var duplicateCount: Int {
+        var seen = Set<String>()
+        var dupes = 0
+        for a in allArticles { if !seen.insert(a.url).inserted { dupes += 1 } }
+        return dupes
+    }
+
+    private var gradingProgressLabel: String {
+        let total  = allArticles.count
+        let graded = allArticles.filter { $0.qualityGrade != nil }.count
+        guard total > 0 else { return "" }
+        return "\(graded) of \(total) graded (\(Int((Double(graded) / Double(total)) * 100))%)"
+    }
+
+    private var gradeCounts: (strong: Int, worthIt: Int, noise: Int, ungraded: Int) {
+        var s = 0, w = 0, n = 0, u = 0
+        for a in allArticles {
+            switch a.qualityGrade {
+            case .strong:  s += 1
+            case .worthIt: w += 1
+            case .noise:   n += 1
+            case nil:      u += 1
+            }
+        }
+        return (s, w, n, u)
+    }
+
+    private var pendingProcessingCount: Int {
+        allArticles.filter { a in
+            a.topics.isEmpty || (a.feedDescription != nil && a.summary == nil)
+        }.count
+    }
+
+    // MARK: - Body
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -69,10 +133,12 @@ struct SettingsView: View {
                         streakSection
                         remindersSection
                         readingSection
-                        themeSection
-                        nightModeSection
-                        healthSection
-                        advancedRow
+                        appearanceSection
+                        feedsSection
+                        dangerSection
+                        if developerUnlocked {
+                            developerSection
+                        }
                         versionFooter
                     }
                     .padding(AppTheme.pagePadding)
@@ -111,6 +177,15 @@ struct SettingsView: View {
             case .forceRestore:
                 Button("Restore", role: .destructive) { scheduleCloudRestore() }
                 Button("Cancel", role: .cancel) { }
+            case .clearArticles:
+                Button("Clear articles", role: .destructive) { clearAllArticles() }
+                Button("Cancel", role: .cancel) { }
+            case .deduplicateArticles:
+                Button("Remove duplicates", role: .destructive) { removeDuplicateArticles() }
+                Button("Cancel", role: .cancel) { }
+            case .resetEverything:
+                Button("Reset everything", role: .destructive) { resetEverything() }
+                Button("Cancel", role: .cancel) { }
             }
         } message: { dialog in
             switch dialog {
@@ -120,18 +195,21 @@ struct SettingsView: View {
                 Text("Your local data will be pushed to iCloud. Any differences on other devices will be resolved on their next sync.")
             case .forceRestore:
                 Text("Local data will be cleared and replaced from iCloud the next time you open Just….")
+            case .clearArticles:
+                Text("All \(allArticles.count) fetched articles will be deleted. Your queue, Brain, and streak are unaffected.")
+            case .deduplicateArticles:
+                Text("\(duplicateCount) duplicate article\(duplicateCount == 1 ? "" : "s") will be removed, keeping the richest copy of each.")
+            case .resetEverything:
+                Text("Your queue, Brain, streak, and feeds will be deleted. This cannot be undone.")
             }
         }
     }
 
-    // MARK: - Sync Section
+    // MARK: - Sync
 
     private var syncSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("SYNC")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.textFaint)
-                .tracking(2)
+            sectionHeader("SYNC")
 
             if iCloudAvailable {
                 VStack(alignment: .leading, spacing: 12) {
@@ -256,14 +334,11 @@ struct SettingsView: View {
         .disabled({ if case .syncing = syncPhase { return true }; return false }())
     }
 
-    // MARK: - Streak Section
+    // MARK: - Streak
 
     private var streakSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("STREAK")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.textFaint)
-                .tracking(2)
+            sectionHeader("STREAK")
 
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
@@ -310,44 +385,11 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Reminders Section
-
-    private var morningTimeBinding: Binding<Date> {
-        Binding(
-            get: {
-                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                c.hour = morningHour; c.minute = morningMinute
-                return Calendar.current.date(from: c) ?? Date()
-            },
-            set: { date in
-                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
-                morningHour   = c.hour   ?? NotificationScheduler.defaultMorningHour
-                morningMinute = c.minute ?? NotificationScheduler.defaultMorningMinute
-            }
-        )
-    }
-
-    private var eveningTimeBinding: Binding<Date> {
-        Binding(
-            get: {
-                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                c.hour = eveningHour; c.minute = eveningMinute
-                return Calendar.current.date(from: c) ?? Date()
-            },
-            set: { date in
-                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
-                eveningHour   = c.hour   ?? NotificationScheduler.defaultEveningHour
-                eveningMinute = c.minute ?? NotificationScheduler.defaultEveningMinute
-            }
-        )
-    }
+    // MARK: - Reminders
 
     private var remindersSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("REMINDERS")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.textFaint)
-                .tracking(2)
+            sectionHeader("REMINDERS")
 
             if notificationAuthStatus == .denied {
                 HStack {
@@ -460,14 +502,11 @@ struct SettingsView: View {
         notificationAuthStatus = await NotificationScheduler.authorizationStatus()
     }
 
-    // MARK: - Reading Section
+    // MARK: - Reading (rewrite + rings + hide noise)
 
     private var readingSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("READING")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.textFaint)
-                .tracking(2)
+            sectionHeader("READING")
 
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
@@ -491,17 +530,57 @@ struct SettingsView: View {
                     .disabled(!IntelligenceService.isAvailable)
             }
 
+            Divider().background(appTheme.separator)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Activity rings")
+                        .font(AppTheme.sansSerif(15))
+                        .foregroundStyle(HealthKitService.isAvailable ? appTheme.heading : appTheme.textFaint)
+                    Text(
+                        HealthKitService.isAvailable
+                            ? "Reading counts toward your fitness rings."
+                            : "Not available on this device."
+                    )
+                    .font(AppTheme.sansSerif(12))
+                    .foregroundStyle(appTheme.textFaint)
+                }
+                Spacer()
+                Toggle("", isOn: $activityRingsEnabled)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .disabled(!HealthKitService.isAvailable)
+                    .onChange(of: activityRingsEnabled) { _, enabled in
+                        guard enabled else { return }
+                        Task {
+                            _ = await healthKit.requestAuthorization()
+                            await healthKit.fetchTodaySummary()
+                        }
+                    }
+            }
+
+            Divider().background(appTheme.separator)
+
+            HStack {
+                Text("Hide noise from digest")
+                    .font(AppTheme.sansSerif(15))
+                    .foregroundStyle(
+                        gradingEnabled && IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint
+                    )
+                Spacer()
+                Toggle("", isOn: $hideNoise)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .disabled(!gradingEnabled || !IntelligenceService.isAvailable)
+            }
         }
     }
 
-    // MARK: - Theme Section
+    // MARK: - Appearance (theme + night mode)
 
-    private var themeSection: some View {
+    private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("APPEARANCE")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.textFaint)
-                .tracking(2)
+            sectionHeader("APPEARANCE")
 
             LazyVGrid(
                 columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
@@ -513,36 +592,12 @@ struct SettingsView: View {
                     }
                 }
             }
-        }
-    }
 
-    // MARK: - Night Mode Section
-
-    private var nightStartBinding: Binding<Date> {
-        Binding(
-            get: {
-                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                comps.hour = nightStartHour; comps.minute = nightStartMinute
-                return Calendar.current.date(from: comps) ?? Date()
-            },
-            set: { date in
-                let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
-                nightStartHour   = comps.hour   ?? NightModeService.defaultStartHour
-                nightStartMinute = comps.minute ?? NightModeService.defaultStartMinute
-            }
-        )
-    }
-
-    private var nightModeSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("NIGHT MODE")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.textFaint)
-                .tracking(2)
+            Divider().background(appTheme.separator)
 
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Starts at")
+                    Text("Night mode starts at")
                         .font(AppTheme.sansSerif(15))
                         .foregroundStyle(nightOverride == "off" ? appTheme.textFaint : appTheme.heading)
                     Text("Blue light removed to help you sleep.")
@@ -566,95 +621,527 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Health Section
+    // MARK: - Feeds
 
-    private var healthSection: some View {
+    private var feedsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("HEALTH")
-                .font(AppTheme.sansSerif(11, weight: .medium))
-                .foregroundStyle(appTheme.textFaint)
-                .tracking(2)
+            sectionHeader("FEEDS")
+
+            HStack {
+                settingLabel("Daily fetch", sub: "When background refresh runs.")
+                Spacer()
+                DatePicker("", selection: fetchTimeBinding, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+            }
+
+            HStack {
+                settingLabel("Second fetch", sub: "Run a second refresh later in the day.")
+                Spacer()
+                if fetch2Enabled {
+                    DatePicker("", selection: fetchTime2Binding, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                }
+                Toggle("", isOn: $fetch2Enabled)
+                    .labelsHidden()
+                    .tint(appTheme.accent)
+                    .onChange(of: fetch2Enabled) { _, _ in RSSFetchService.scheduleNextBackgroundTask() }
+            }
+
+            Divider().background(appTheme.separator)
+
+            HStack {
+                settingLabel("Article retention", sub: "How many days of feed articles to keep.")
+                Spacer()
+                Picker("", selection: $articleRetentionDays) {
+                    Text("1 day").tag(1)
+                    Text("2 days").tag(2)
+                    Text("3 days").tag(3)
+                    Text("5 days").tag(5)
+                    Text("7 days").tag(7)
+                }
+                .pickerStyle(.menu)
+                .font(AppTheme.sansSerif(14))
+                .tint(appTheme.accent)
+            }
+            .onChange(of: articleRetentionDays) { _, _ in
+                clearAllArticles()
+                RSSFetchService.fetchInProcess(
+                    container: context.container,
+                    tracker: gradingTracker,
+                    pipelineTracker: pipelineTracker
+                )
+            }
+
+            Divider().background(appTheme.separator)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    settingLabel(
+                        "Auto-archive unread",
+                        sub: autoArchiveUnreadEnabled ? "Archive feeds you haven't read in:" : "Off"
+                    )
+                    Spacer()
+                    Toggle("", isOn: $autoArchiveUnreadEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                }
+                if autoArchiveUnreadEnabled {
+                    Picker("", selection: $autoArchiveUnreadDays) {
+                        Text("7 days").tag(7)
+                        Text("14 days").tag(14)
+                        Text("30 days").tag(30)
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+
+            Divider().background(appTheme.separator)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    settingLabel(
+                        "Auto-archive dead feeds",
+                        sub: autoArchiveDeadEnabled ? "Archive feeds with no new articles in:" : "Off"
+                    )
+                    Spacer()
+                    Toggle("", isOn: $autoArchiveDeadEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                }
+                if autoArchiveDeadEnabled {
+                    Picker("", selection: $autoArchiveDeadDays) {
+                        Text("7 days").tag(7)
+                        Text("14 days").tag(14)
+                        Text("30 days").tag(30)
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+        }
+    }
+
+    // MARK: - Danger
+
+    private var dangerSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            sectionHeader("DANGER")
+
+            if duplicateCount > 0 {
+                dangerButton("Remove \(duplicateCount) duplicate article\(duplicateCount == 1 ? "" : "s").") {
+                    activeDialog = .deduplicateArticles
+                }
+            }
+            dangerButton("Clear all articles.") { activeDialog = .clearArticles }
+            dangerButton("Reset everything.") { activeDialog = .resetEverything }
+            dangerButton("Clear streak.") { activeDialog = .clearStreak }
+        }
+    }
+
+    // MARK: - Developer (unlocked via version tap)
+
+    private var developerSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline) {
+                sectionHeader("PROCESSING")
+                Spacer()
+                if IntelligenceService.isAvailable && !pipelineTracker.isRunning {
+                    Button("Process now") {
+                        RSSFetchService.pipelineInProcess(
+                            container: context.container,
+                            pipelineTracker: pipelineTracker
+                        )
+                    }
+                    .font(AppTheme.sansSerif(13, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+                }
+            }
+
+            if !IntelligenceService.isAvailable {
+                Text("Requires Apple Intelligence.")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+            } else if pipelineTracker.isRunning {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.75)
+                        .tint(appTheme.accent)
+                    Text("\(pipelineTracker.phase) \(pipelineTracker.current) of \(pipelineTracker.total)…")
+                        .font(AppTheme.sansSerif(13))
+                        .foregroundStyle(appTheme.textFaint)
+                    Spacer()
+                }
+            } else {
+                if let error = pipelineTracker.lastError {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle")
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppTheme.danger)
+                        Text(error)
+                            .font(AppTheme.sansSerif(13))
+                            .foregroundStyle(AppTheme.danger.opacity(0.85))
+                        Spacer()
+                    }
+                }
+                VStack(spacing: 8) {
+                    if pendingProcessingCount > 0 {
+                        statRow("Pending", value: "\(pendingProcessingCount) articles")
+                    }
+                    if let tagSummary = pipelineTracker.lastTagSummary {
+                        statRow("Tags", value: tagSummary)
+                    }
+                    if let summarySummary = pipelineTracker.lastSummarizeSummary {
+                        statRow("Summaries", value: summarySummary)
+                    }
+                    if let runAt = pipelineTracker.lastRunAt {
+                        statRow("Last run", value: lastRunLabel(runAt, duration: pipelineTracker.lastRunDuration))
+                    }
+                }
+            }
+
+            Divider().background(appTheme.separator)
 
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Activity rings")
+                    Text("Article grading")
                         .font(AppTheme.sansSerif(15))
-                        .foregroundStyle(HealthKitService.isAvailable ? appTheme.heading : appTheme.textFaint)
-                    if !HealthKitService.isAvailable {
-                        Text("Not available on this device.")
+                        .foregroundStyle(IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint)
+                    if !IntelligenceService.isAvailable {
+                        Text("Requires Apple Intelligence.")
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.textFaint)
-                    } else {
-                        Text("Fitness rings appear once your daily reading goal is met.")
+                    } else if gradingEnabled && !allArticles.isEmpty {
+                        Text(gradingProgressLabel)
                             .font(AppTheme.sansSerif(12))
                             .foregroundStyle(appTheme.textFaint)
                     }
                 }
                 Spacer()
-                Toggle("", isOn: $activityRingsEnabled)
+                Toggle("", isOn: $gradingEnabled)
                     .labelsHidden()
                     .tint(appTheme.accent)
-                    .disabled(!HealthKitService.isAvailable)
-                    .onChange(of: activityRingsEnabled) { _, enabled in
-                        guard enabled else { return }
-                        Task {
-                            _ = await healthKit.requestAuthorization()
-                            await healthKit.fetchTodaySummary()
+                    .disabled(!IntelligenceService.isAvailable)
+                    .onChange(of: gradingEnabled) { _, enabled in
+                        if enabled {
+                            RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
                         }
                     }
             }
-        }
-    }
 
-    // MARK: - Advanced Row
+            if gradingEnabled && IntelligenceService.isAvailable {
+                gradingActionRow
+                gradeBreakdown
+            }
 
-    private var advancedRow: some View {
-        NavigationLink(destination: AdvancedSettingsView()) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Advanced")
-                        .font(AppTheme.sansSerif(15))
-                        .foregroundStyle(appTheme.heading)
-                    Text("Feeds, processing, data management.")
-                        .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(appTheme.textFaint)
+            Divider().background(appTheme.separator)
+
+            sectionHeader("EDITION")
+
+            VStack(alignment: .leading, spacing: 10) {
+                if let edition = editions.first(where: { Calendar.current.isDateInToday($0.date) }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Today's edition")
+                                .font(AppTheme.sansSerif(14))
+                                .foregroundStyle(appTheme.heading)
+                            Text("\(edition.totalCount) articles · index \(edition.currentIndex)\(edition.isComplete ? " · complete" : "")")
+                                .font(AppTheme.mono(11))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                        Spacer()
+                    }
+                    Divider().background(appTheme.separator)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11))
-                    .foregroundStyle(appTheme.textFaint)
+
+                Button {
+                    generateEditionNow()
+                } label: {
+                    HStack(spacing: 8) {
+                        if editionGenerationState == .running {
+                            ProgressView()
+                                .tint(appTheme.accent)
+                                .scaleEffect(0.8)
+                        }
+                        Text(editionGenerationState == .running ? "Generating…" : "Generate Edition Now")
+                            .font(AppTheme.sansSerif(14, weight: editionGenerationState == .idle ? .medium : .regular))
+                            .foregroundStyle(editionGenerationState == .idle ? appTheme.accent : appTheme.textFaint)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(editionGenerationState == .running)
             }
         }
-        .buttonStyle(.plain)
     }
 
-    // MARK: - Version Footer
+    // MARK: - Grading subviews
+
+    @ViewBuilder
+    private var gradingActionRow: some View {
+        if gradingTracker.isRunning {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .scaleEffect(0.75)
+                    .tint(appTheme.accent)
+                Text("Grading…")
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+                Spacer()
+            }
+            .padding(.leading, 16)
+        } else if let error = gradingTracker.lastError {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.system(size: 13))
+                    .foregroundStyle(AppTheme.danger)
+                Text(error)
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(AppTheme.danger.opacity(0.85))
+                Spacer()
+                Button("Retry") {
+                    gradingTracker.lastError = nil
+                    RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
+                }
+                .font(AppTheme.sansSerif(13, weight: .medium))
+                .foregroundStyle(appTheme.accent)
+            }
+            .padding(.leading, 16)
+        } else {
+            let ungradedCount = allArticles.filter { $0.qualityGrade == nil }.count
+            if ungradedCount > 0 {
+                HStack {
+                    Spacer()
+                    Button("Grade now") {
+                        RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
+                    }
+                    .font(AppTheme.sansSerif(13, weight: .medium))
+                    .foregroundStyle(appTheme.accent)
+                }
+                .padding(.leading, 16)
+            }
+        }
+    }
+
+    private var gradeBreakdown: some View {
+        VStack(spacing: 6) {
+            gradeRow(label: "Strong",   grade: .strong,  count: gradeCounts.strong)
+            gradeRow(label: "Worth it", grade: .worthIt, count: gradeCounts.worthIt)
+            gradeRow(label: "Noise",    grade: .noise,   count: gradeCounts.noise)
+            ungradedRow(count: gradeCounts.ungraded)
+        }
+        .padding(.leading, 16)
+    }
+
+    private func gradeRow(label: String, grade: ArticleQualityGrade, count: Int) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { i in
+                    Circle()
+                        .fill(i < grade.filledCount ? grade.color : grade.color.opacity(0.2))
+                        .frame(width: 5, height: 5)
+                }
+            }
+            .frame(width: 22)
+            .padding(.top, 3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(AppTheme.sansSerif(13))
+                    .foregroundStyle(appTheme.textFaint)
+                Text(grade.rationale)
+                    .font(AppTheme.sansSerif(11))
+                    .foregroundStyle(appTheme.textFaint.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Text("\(count)")
+                .font(AppTheme.sansSerif(13).monospacedDigit())
+                .foregroundStyle(appTheme.textFaint)
+                .padding(.top, 1)
+        }
+    }
+
+    private func ungradedRow(count: Int) -> some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Circle()
+                        .fill(appTheme.accent.opacity(0.2))
+                        .frame(width: 5, height: 5)
+                }
+            }
+            .frame(width: 22)
+            Text("Ungraded")
+                .font(AppTheme.sansSerif(13))
+                .foregroundStyle(appTheme.textFaint)
+            Spacer()
+            Text("\(count)")
+                .font(AppTheme.sansSerif(13).monospacedDigit())
+                .foregroundStyle(appTheme.textFaint)
+        }
+    }
+
+    // MARK: - Version footer
 
     private var versionFooter: some View {
         Button {
             versionTapCount += 1
             if versionTapCount >= 10 {
-                activeDialog = .clearStreak
+                developerUnlocked.toggle()
                 versionTapCount = 0
             }
         } label: {
             Text("Just… \(appVersion) (\(buildNumber))")
                 .font(AppTheme.sansSerif(12))
-                .foregroundStyle(appTheme.textFaint)
+                .foregroundStyle(developerUnlocked ? appTheme.accent.opacity(0.6) : appTheme.textFaint)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 8)
         }
         .buttonStyle(.plain)
     }
 
+    // MARK: - Bindings
+
+    private var morningTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                c.hour = morningHour; c.minute = morningMinute
+                return Calendar.current.date(from: c) ?? Date()
+            },
+            set: { date in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                morningHour   = c.hour   ?? NotificationScheduler.defaultMorningHour
+                morningMinute = c.minute ?? NotificationScheduler.defaultMorningMinute
+            }
+        )
+    }
+
+    private var eveningTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                c.hour = eveningHour; c.minute = eveningMinute
+                return Calendar.current.date(from: c) ?? Date()
+            },
+            set: { date in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                eveningHour   = c.hour   ?? NotificationScheduler.defaultEveningHour
+                eveningMinute = c.minute ?? NotificationScheduler.defaultEveningMinute
+            }
+        )
+    }
+
+    private var nightStartBinding: Binding<Date> {
+        Binding(
+            get: {
+                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                comps.hour = nightStartHour; comps.minute = nightStartMinute
+                return Calendar.current.date(from: comps) ?? Date()
+            },
+            set: { date in
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+                nightStartHour   = comps.hour   ?? NightModeService.defaultStartHour
+                nightStartMinute = comps.minute ?? NightModeService.defaultStartMinute
+            }
+        )
+    }
+
+    private var fetchTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                c.hour = fetchHour; c.minute = fetchMinute
+                return Calendar.current.date(from: c) ?? Date()
+            },
+            set: { date in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                fetchHour   = c.hour   ?? RSSFetchService.defaultFetchHour
+                fetchMinute = c.minute ?? RSSFetchService.defaultFetchMinute
+                RSSFetchService.scheduleNextBackgroundTask()
+            }
+        )
+    }
+
+    private var fetchTime2Binding: Binding<Date> {
+        Binding(
+            get: {
+                var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                c.hour = fetchHour2; c.minute = fetchMinute2
+                return Calendar.current.date(from: c) ?? Date()
+            },
+            set: { date in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                fetchHour2   = c.hour   ?? RSSFetchService.defaultFetchHour2
+                fetchMinute2 = c.minute ?? RSSFetchService.defaultFetchMinute2
+                RSSFetchService.scheduleNextBackgroundTask()
+            }
+        )
+    }
+
     // MARK: - Helpers
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(AppTheme.mono(11))
+            .foregroundStyle(appTheme.textFaint)
+            .tracking(2)
+    }
+
+    private func settingLabel(_ title: String, sub: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(AppTheme.sansSerif(15))
+                .foregroundStyle(appTheme.heading)
+            Text(sub)
+                .font(AppTheme.sansSerif(12))
+                .foregroundStyle(appTheme.textFaint)
+        }
+    }
+
+    private func statRow(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(AppTheme.sansSerif(13))
+                .foregroundStyle(appTheme.textFaint)
+            Spacer()
+            Text(value)
+                .font(AppTheme.sansSerif(12).monospacedDigit())
+                .foregroundStyle(appTheme.textFaint)
+        }
+    }
+
+    private func dangerButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Spacer()
+                Text(label)
+                    .font(AppTheme.sansSerif(15, weight: .medium))
+                    .foregroundStyle(AppTheme.danger)
+                Spacer()
+            }
+            .frame(height: 48)
+            .background(AppTheme.danger.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius)
+                    .stroke(AppTheme.danger.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Dialog title
 
     private var dialogTitle: String {
         switch activeDialog {
-        case .clearStreak:  "Clear streak?"
-        case .forceUpload:  "Upload to iCloud?"
-        case .forceRestore: "Restore from iCloud?"
-        case nil:           ""
+        case .clearStreak:        "Clear streak?"
+        case .forceUpload:        "Upload to iCloud?"
+        case .forceRestore:       "Restore from iCloud?"
+        case .clearArticles:      "Clear all articles?"
+        case .deduplicateArticles: "Remove duplicates?"
+        case .resetEverything:    "Reset everything?"
+        case nil:                 ""
         }
     }
 
@@ -704,6 +1191,56 @@ struct SettingsView: View {
         let days = (try? context.fetch(FetchDescriptor<ReadingDay>())) ?? []
         days.forEach { context.delete($0) }
         try? context.save()
+    }
+
+    private func clearAllArticles() {
+        try? context.delete(model: RSSArticle.self)
+        try? context.save()
+    }
+
+    private func removeDuplicateArticles() {
+        RSSFetchService.deduplicateInProcess(container: context.container)
+    }
+
+    private func resetEverything() {
+        try? context.delete(model: QueuedLink.self)
+        try? context.delete(model: BrainEntry.self)
+        try? context.delete(model: ReadingDay.self)
+        try? context.delete(model: RSSFeed.self)
+        try? context.delete(model: RSSArticle.self)
+        try? context.save()
+    }
+
+    private func generateEditionNow() {
+        editionGenerationState = .running
+        for edition in editions where Calendar.current.isDateInToday(edition.date) {
+            context.delete(edition)
+        }
+        try? context.save()
+
+        Task {
+            let actor = RSSFetchActor(modelContainer: context.container)
+            await actor.generateDailyEditionIfNeeded()
+            editionGenerationState = .idle
+        }
+    }
+
+    private func lastRunLabel(_ date: Date, duration: TimeInterval?) -> String {
+        let timeStr = date.formatted(date: .omitted, time: .shortened)
+        let cal = Calendar.current
+        let label: String
+        if cal.isDateInToday(date) {
+            label = "today at \(timeStr)"
+        } else if cal.isDateInYesterday(date) {
+            label = "yesterday at \(timeStr)"
+        } else {
+            label = date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        }
+        guard let dur = duration, dur >= 1 else { return label }
+        let mins = Int(dur / 60)
+        let secs = Int(dur) % 60
+        let durStr = mins > 0 ? "\(mins)m \(secs)s" : "\(secs)s"
+        return "\(label) · \(durStr)"
     }
 }
 
