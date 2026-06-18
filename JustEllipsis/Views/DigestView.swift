@@ -399,6 +399,10 @@ struct DigestView: View {
             .task {
                 weatherService.refresh()
             }
+            .task {
+                guard articles.isEmpty, !isProcessing else { return }
+                await refetch()
+            }
             .fullScreenCover(item: $activeDigestArticle) { article in
                 let source: ReadingSource = {
                     if let link = queue.first(where: { $0.url == article.url }) {
