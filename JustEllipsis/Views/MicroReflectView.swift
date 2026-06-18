@@ -42,6 +42,10 @@ struct MicroReflectView: View {
             }
         }
         .preferredColorScheme(appTheme.colorScheme)
+        .task {
+            try? await Task.sleep(for: .milliseconds(300))
+            textFocused = true
+        }
     }
 
     private var inputArea: some View {

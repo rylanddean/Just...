@@ -49,6 +49,10 @@ struct ReflectView: View {
             placeholder = resolvedPrompt
             viewModel.startCountdown()
         }
+        .task {
+            try? await Task.sleep(for: .milliseconds(300))
+            textFocused = true
+        }
         .preferredColorScheme(appTheme.colorScheme)
     }
 
