@@ -147,5 +147,10 @@ struct RootView: View {
             eveningHour: eveningHour,
             eveningMinute: eveningMinute
         )
+        let lastFetch = UserDefaults.standard.object(forKey: RSSFetchService.lastFetchCompletedAtKey) as? Date
+        let isStale = lastFetch.map { now.timeIntervalSince($0) > RSSFetchService.autoFetchThreshold } ?? true
+        if isStale {
+            RSSFetchService.fetchInProcess(container: context.container, tracker: gradingTracker)
+        }
     }
 }

@@ -400,7 +400,13 @@ struct DigestView: View {
                 weatherService.refresh()
             }
             .task {
-                guard articles.isEmpty, !isProcessing else { return }
+                guard !isProcessing else { return }
+                let lastCompleted = UserDefaults.standard.object(forKey: RSSFetchService.lastFetchCompletedAtKey) as? Date
+                let lastStarted   = UserDefaults.standard.object(forKey: RSSFetchService.lastFetchStartedAtKey)   as? Date
+                let needsRefresh  = lastCompleted.map { Date().timeIntervalSince($0) > RSSFetchService.autoFetchThreshold } ?? true
+                // Avoid doubling up when RootView's auto-fetch is already in flight.
+                let fetchInFlight = lastStarted.map { Date().timeIntervalSince($0) < 120 } ?? false
+                guard (articles.isEmpty || needsRefresh), !fetchInFlight else { return }
                 await refetch()
             }
             .fullScreenCover(item: $activeDigestArticle) { article in

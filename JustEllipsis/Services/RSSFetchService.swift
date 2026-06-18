@@ -24,10 +24,16 @@ struct RSSFetchService {
         try? BGTaskScheduler.shared.submit(request)
     }
 
+    // Timestamps written at the start/end of every fetchAll() — used for staleness checks.
+    static let lastFetchStartedAtKey   = "rss.lastFetchStartedAt"
+    static let lastFetchCompletedAtKey = "rss.lastFetchCompletedAt"
+    // Foreground auto-fetch fires when the last completed fetch is older than this.
+    static let autoFetchThreshold: TimeInterval = 2 * 3600  // 2 hours
+
     // UserDefaults keys — read here and written by SettingsView via @AppStorage.
     static let fetchHourKey   = "rss.fetchHour"
     static let fetchMinuteKey = "rss.fetchMinute"
-    static let defaultFetchHour   = 7
+    static let defaultFetchHour   = 5  // 5 AM gives iOS more overnight window vs 7 AM
     static let defaultFetchMinute = 0
 
     static let fetch2EnabledKey    = "rss.fetch2Enabled"
@@ -258,6 +264,7 @@ actor RSSFetchActor {
 
     // Fetch all non-paused, non-archived feeds, parse, store new RSSArticle records.
     func fetchAll() async {
+        UserDefaults.standard.set(Date(), forKey: RSSFetchService.lastFetchStartedAtKey)
         let descriptor = FetchDescriptor<RSSFeed>(
             predicate: #Predicate { !$0.isPaused && !$0.isArchived }
         )
@@ -289,6 +296,7 @@ actor RSSFetchActor {
         for (result, feedID) in results {
             store(result: result, feedID: feedID, existingURLs: &existingURLs)
         }
+        UserDefaults.standard.set(Date(), forKey: RSSFetchService.lastFetchCompletedAtKey)
     }
 
     // Prune articles published before their feed type's retention window.
