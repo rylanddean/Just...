@@ -15,6 +15,7 @@ struct HomeView: View {
         d.fetchLimit = 5
         return d
     }()
+    @Query(sort: \DailyEdition.date, order: .reverse) private var editions: [DailyEdition]
 
     @AppStorage("streak.minReadsPerDay")                  private var minReadsPerDay:       Int  = 1
     @AppStorage("activityRings.enabled")                 private var activityRingsEnabled: Bool = false
@@ -29,6 +30,7 @@ struct HomeView: View {
     @State private var substackLink: QueuedLink?
     @State private var pendingSubstackEntry: BrainEntry?
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
+    @State private var showingEdition: DailyEdition?
 
     private var streak: Int { StreakEngine.calculateStreak(from: readingDays, minReads: minReadsPerDay).current }
     private var isAtRisk: Bool { StreakEngine.isStreakAtRisk(days: readingDays, minReads: minReadsPerDay) }
@@ -44,6 +46,7 @@ struct HomeView: View {
 
     private var picks: [QueuedLink] { queue.filter { $0.source == .aiPick } }
     private var manual: [QueuedLink] { queue.filter { $0.source != .aiPick } }
+    private var todaysEdition: DailyEdition? { editions.first { Calendar.current.isDateInToday($0.date) } }
 
     private var avgAgeDays: Double? {
         guard !queue.isEmpty else { return nil }
@@ -61,7 +64,7 @@ struct HomeView: View {
             ZStack {
                 appTheme.background.ignoresSafeArea()
 
-                if queue.isEmpty {
+                if queue.isEmpty && todaysEdition == nil {
                     emptyState
                 } else {
                     VStack(spacing: 0) {
@@ -82,6 +85,26 @@ struct HomeView: View {
                                             bottom: 4,
                                             trailing: AppTheme.pagePadding
                                         ))
+                                }
+                                .listSectionSeparator(.hidden)
+                            }
+
+                            // Daily Edition card
+                            if let edition = todaysEdition {
+                                Section {
+                                    DailyEditionCard(edition: edition) {
+                                        showingEdition = edition
+                                    }
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(
+                                        top: 5,
+                                        leading: AppTheme.pagePadding,
+                                        bottom: 5,
+                                        trailing: AppTheme.pagePadding
+                                    ))
+                                } header: {
+                                    editionHeader
                                 }
                                 .listSectionSeparator(.hidden)
                             }
@@ -204,6 +227,9 @@ struct HomeView: View {
         .fullScreenCover(item: $activeLink) { link in
             ReaderView(source: .queued(link))
         }
+        .fullScreenCover(item: $showingEdition) { edition in
+            DailyEditionView(edition: edition)
+        }
         .sheet(item: $safariURL, onDismiss: {
             guard let link = substackLink else { return }
             let parsedURL = URL(string: link.url)
@@ -296,6 +322,27 @@ struct HomeView: View {
             context.insert(day)
         }
         try? context.save()
+    }
+
+    // MARK: - Edition header
+
+    private var editionHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "newspaper")
+                .font(.system(size: 10))
+                .foregroundStyle(appTheme.accent)
+
+            Text("DAILY EDITION")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.accent)
+                .kerning(2)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .listRowInsets(EdgeInsets())
+        .background(appTheme.background)
     }
 
     // MARK: - Picks header

@@ -22,9 +22,12 @@ struct NotificationScheduler {
 
     // MARK: - Notification IDs
 
+    static let editionEnabledKey = "notifications.edition.enabled"
+
     private static let morningID    = "je.notification.morning"
     private static let eveningID    = "je.notification.evening"
     private static let streakLostID = "je.notification.streakLost"
+    private static let editionID    = "je.notification.edition"
 
     // MARK: - Permission
 
@@ -100,6 +103,19 @@ struct NotificationScheduler {
                                 hour: 9,
                                 minute: 0)
             }
+        }
+    }
+
+    // MARK: - Daily Edition
+
+    static func fireEditionReady(count: Int) {
+        guard UserDefaults.standard.bool(forKey: editionEnabledKey) else { return }
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else { return }
+            let content = makeContent(body: "Today's Edition is ready. \(count) article\(count == 1 ? "" : "s").")
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            let request = UNNotificationRequest(identifier: editionID, content: content, trigger: trigger)
+            UNUserNotificationCenter.current().add(request)
         }
     }
 

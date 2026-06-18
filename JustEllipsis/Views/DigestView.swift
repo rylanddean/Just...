@@ -19,7 +19,7 @@ struct DigestView: View {
     @AppStorage("digest.hideNoise")                   private var hideNoise:         Bool = false
     @AppStorage("digest.hideSeen")                    private var hideSeen:          Bool = false
     @AppStorage(RSSFetchService.retentionDaysKey)     private var retentionDays:     Int  = RSSFetchService.defaultRetentionDays
-    @AppStorage("digest.brainRanked")                 private var brainRanked:       Bool = false
+    @AppStorage("digest.brainMode")                   private var brainMode:         Bool = false
 
     @Environment(DigestRelevanceStore.self) private var relevanceStore
 
@@ -35,6 +35,15 @@ struct DigestView: View {
     @State private var selectedTopic: String = "All"
     @State private var hiddenSeenIDs: Set<UUID> = []
     @State private var activeDigestArticle: RSSArticle?
+    @State private var showingFilters = false
+
+    private var hasEnoughBrain: Bool {
+        brainEntries.filter { $0.dna != nil }.count >= 5
+    }
+
+    private var isFilterActive: Bool {
+        hideSeen || (gradingEnabled && hideNoise) || brainMode || selectedTopic != "All"
+    }
 
     // Non-@Observable helpers — mutations don't trigger SwiftUI re-renders.
     @State private var seenBatcher     = SeenBatcher()
@@ -132,7 +141,7 @@ struct DigestView: View {
     // MARK: - Brain Ranking
 
     private func ranked(_ articles: [RSSArticle]) -> [RSSArticle] {
-        guard brainRanked else { return articles }
+        guard brainMode else { return articles }
         return articles.sorted { a, b in
             let sa = relevanceStore.score(for: a.id)
             let sb = relevanceStore.score(for: b.id)
@@ -142,7 +151,7 @@ struct DigestView: View {
     }
 
     private func triggerScoring() {
-        guard brainRanked else { return }
+        guard brainMode else { return }
         let concepts = BrainViewModel.recentConcepts(entries: Array(brainEntries))
         relevanceStore.computeScores(for: Array(articles), concepts: concepts)
     }
@@ -270,33 +279,38 @@ struct DigestView: View {
             return article.topics.contains(selectedTopic)
         }
 
+        let focusFilter: (RSSArticle) -> Bool = { [self] article in
+            guard brainMode && hasEnoughBrain else { return true }
+            return relevanceStore.score(for: article.id) > 0
+        }
+
         let recs = recommendations?.filter(topicMatch)
         let recURLs: Set<String> = recs.map { Set($0.map(\.url)) } ?? []
 
-        if let recs, !recs.isEmpty {
+        if let recs, !recs.isEmpty, !brainMode {
             items.append(.brainCarousel(recs))
         }
 
-        let today = ranked(buckets.today.filter { !recURLs.contains($0.url) && topicMatch($0) })
+        let today = ranked(buckets.today.filter { !recURLs.contains($0.url) && topicMatch($0) && focusFilter($0) })
         if !today.isEmpty {
             items.append(.dateHeader("TODAY"))
             items.append(contentsOf: today.map { .article($0) })
         }
 
-        let yesterday = ranked(buckets.yesterday.filter { !recURLs.contains($0.url) && topicMatch($0) })
+        let yesterday = ranked(buckets.yesterday.filter { !recURLs.contains($0.url) && topicMatch($0) && focusFilter($0) })
         if !yesterday.isEmpty {
             items.append(.dateHeader("YESTERDAY"))
             items.append(contentsOf: yesterday.map { .article($0) })
         }
 
-        let earlier = ranked(buckets.earlier.filter { !recURLs.contains($0.url) && topicMatch($0) })
+        let earlier = ranked(buckets.earlier.filter { !recURLs.contains($0.url) && topicMatch($0) && focusFilter($0) })
         if !earlier.isEmpty {
             items.append(.dateHeader("EARLIER"))
             items.append(contentsOf: earlier.map { .article($0) })
         }
 
         let scrapedSections = buckets.scraped.compactMap { feed, articles -> (RSSFeed, [RSSArticle])? in
-            let filtered = articles.filter { !recURLs.contains($0.url) && topicMatch($0) }
+            let filtered = articles.filter { !recURLs.contains($0.url) && topicMatch($0) && focusFilter($0) }
             return filtered.isEmpty ? nil : (feed, filtered)
         }
         if !scrapedSections.isEmpty {
@@ -331,10 +345,10 @@ struct DigestView: View {
                             .padding(.bottom, 4)
                     }
 
-                    tagFilterArea(topics: buckets.topics, hasUntagged: buckets.hasUntagged)
-
                     if !buckets.inWindow {
                         emptyState
+                    } else if items.isEmpty && brainMode {
+                        brainModeEmptyState
                     } else if items.isEmpty && hideSeen && selectedTopic == "All" {
                         seenCompleteState
                     } else if items.isEmpty {
@@ -349,11 +363,11 @@ struct DigestView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        hideSeen.toggle()
+                        showingFilters = true
                     } label: {
-                        Image(systemName: hideSeen ? "eye.slash" : "eye")
+                        Image(systemName: "line.3.horizontal.decrease")
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(hideSeen ? appTheme.accent : appTheme.textFaint)
+                            .foregroundStyle(isFilterActive ? appTheme.accent : appTheme.textFaint)
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -385,6 +399,10 @@ struct DigestView: View {
             .task {
                 weatherService.refresh()
             }
+            .task {
+                guard articles.isEmpty, !isProcessing else { return }
+                await refetch()
+            }
             .fullScreenCover(item: $activeDigestArticle) { article in
                 let source: ReadingSource = {
                     if let link = queue.first(where: { $0.url == article.url }) {
@@ -396,11 +414,25 @@ struct DigestView: View {
                 ReaderView(source: source)
             }
             .onAppear { triggerScoring() }
-            .onChange(of: brainRanked) { _, enabled in
+            .onChange(of: brainMode) { _, enabled in
                 guard enabled else { return }
                 triggerScoring()
             }
             .onChange(of: articles.count) { _, _ in triggerScoring() }
+            .sheet(isPresented: $showingFilters) {
+                DigestFilterSheet(
+                    hideSeen: $hideSeen,
+                    hideNoise: $hideNoise,
+                    brainMode: $brainMode,
+                    selectedTopic: $selectedTopic,
+                    topics: buckets.topics,
+                    hasUntagged: buckets.hasUntagged,
+                    gradingEnabled: gradingEnabled,
+                    hasEnoughBrain: hasEnoughBrain,
+                    onBrainModeEnabled: triggerScoring,
+                    onDismiss: { showingFilters = false }
+                )
+            }
         }
     }
 
@@ -568,67 +600,26 @@ struct DigestView: View {
         .tint(appTheme.accent)
     }
 
-    // MARK: - Filter area
+    private var brainModeEmptyState: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                Text("Nothing matched your Brain.")
+                    .font(AppTheme.sansSerif(16, weight: .medium))
+                    .foregroundStyle(appTheme.heading)
 
-    @ViewBuilder
-    private func tagFilterArea(topics: [String], hasUntagged: Bool) -> some View {
-        if IntelligenceService.isAvailable {
-            if hasUntagged {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        Text("All")
-                            .font(AppTheme.sansSerif(13, weight: .semibold))
-                            .foregroundStyle(appTheme.background)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(appTheme.accent)
-                            .clipShape(Capsule())
-
-                        HStack(spacing: 6) {
-                            ProgressView()
-                                .controlSize(.mini)
-                                .tint(appTheme.textFaint)
-                            Text("Generating tag filters…")
-                                .font(AppTheme.sansSerif(13))
-                                .foregroundStyle(appTheme.textFaint)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(appTheme.surface)
-                        .clipShape(Capsule())
-                    }
-                    .padding(.horizontal, AppTheme.pagePadding)
-                }
-                .padding(.vertical, 10)
-                .background(appTheme.background)
-            } else if topics.count > 1 {
-                topicFilterBar(topics: topics)
+                Text("Your Brain hasn't encountered these articles yet.")
+                    .font(AppTheme.sansSerif(14))
+                    .foregroundStyle(appTheme.textFaint)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 80)
         }
-    }
-
-    private func topicFilterBar(topics: [String]) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(topics, id: \.self) { topic in
-                    Button {
-                        selectedTopic = topic
-                    } label: {
-                        Text(topic)
-                            .font(AppTheme.sansSerif(13, weight: selectedTopic == topic ? .semibold : .regular))
-                            .foregroundStyle(selectedTopic == topic ? appTheme.background : appTheme.textFaint)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(selectedTopic == topic ? appTheme.accent : appTheme.surface)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, AppTheme.pagePadding)
-        }
-        .padding(.vertical, 10)
-        .background(appTheme.background)
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .refreshable { await refetch() }
+        .tint(appTheme.accent)
     }
 
     private var filteredEmptyState: some View {
@@ -948,5 +939,137 @@ private struct DigestArticleRow: View {
         .onChange(of: isQueued) { _, queued in
             if !queued { justAdded = false }
         }
+    }
+}
+
+// MARK: - Filter sheet
+
+private struct DigestFilterSheet: View {
+    @Binding var hideSeen: Bool
+    @Binding var hideNoise: Bool
+    @Binding var brainMode: Bool
+    @Binding var selectedTopic: String
+
+    let topics: [String]
+    let hasUntagged: Bool
+    let gradingEnabled: Bool
+    let hasEnoughBrain: Bool
+    let onBrainModeEnabled: () -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.appTheme) private var appTheme
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if IntelligenceService.isAvailable && hasEnoughBrain {
+                        sectionHeader("BRAIN")
+                        toggleRow("Brain Mode", subtitle: "Filter and rank by what your Brain knows.", isOn: $brainMode)
+                            .onChange(of: brainMode) { _, on in if on { onBrainModeEnabled() } }
+                        separator
+                    }
+
+                    sectionHeader("VISIBILITY")
+                    toggleRow("Hide seen", isOn: $hideSeen)
+                    if gradingEnabled && IntelligenceService.isAvailable {
+                        separator
+                        toggleRow("Hide noise", isOn: $hideNoise)
+                    }
+
+                    if topics.count > 1 || hasUntagged {
+                        separator
+                        sectionHeader("TOPICS")
+                        if hasUntagged {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.mini).tint(appTheme.textFaint)
+                                Text("Generating topics…")
+                                    .font(AppTheme.sansSerif(13))
+                                    .foregroundStyle(appTheme.textFaint)
+                            }
+                            .padding(.horizontal, AppTheme.pagePadding)
+                            .padding(.vertical, 14)
+                        } else {
+                            ForEach(topics, id: \.self) { topic in
+                                Button {
+                                    selectedTopic = topic
+                                } label: {
+                                    HStack {
+                                        Text(topic)
+                                            .font(AppTheme.sansSerif(15))
+                                            .foregroundStyle(appTheme.heading)
+                                        Spacer()
+                                        if selectedTopic == topic {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 13, weight: .semibold))
+                                                .foregroundStyle(appTheme.accent)
+                                        }
+                                    }
+                                    .padding(.horizontal, AppTheme.pagePadding)
+                                    .padding(.vertical, 14)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                if topic != topics.last {
+                                    separator
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 32)
+            }
+            .scrollContentBackground(.hidden)
+            .background(appTheme.background)
+            .navigationTitle("Filter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(appTheme.background, for: .navigationBar)
+            .toolbarColorScheme(appTheme.colorScheme == .dark ? .dark : .light, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { onDismiss() }
+                        .font(AppTheme.sansSerif(15, weight: .medium))
+                        .foregroundStyle(appTheme.accent)
+                }
+            }
+        }
+    }
+
+    private func sectionHeader(_ label: String) -> some View {
+        Text(label)
+            .font(AppTheme.sansSerif(11, weight: .medium))
+            .foregroundStyle(appTheme.textFaint)
+            .kerning(2)
+            .padding(.horizontal, AppTheme.pagePadding)
+            .padding(.top, 20)
+            .padding(.bottom, 8)
+    }
+
+    private func toggleRow(_ label: String, subtitle: String? = nil, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label)
+                    .font(AppTheme.sansSerif(15))
+                    .foregroundStyle(appTheme.heading)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(AppTheme.sansSerif(12))
+                        .foregroundStyle(appTheme.textFaint)
+                }
+            }
+            Spacer()
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .tint(appTheme.accent)
+        }
+        .padding(.horizontal, AppTheme.pagePadding)
+        .padding(.vertical, 12)
+    }
+
+    private var separator: some View {
+        Divider()
+            .background(appTheme.separator)
+            .padding(.horizontal, AppTheme.pagePadding)
     }
 }

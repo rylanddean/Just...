@@ -24,6 +24,10 @@ struct AdvancedSettingsView: View {
     @AppStorage("digest.hideNoise") private var hideNoise:      Bool = false
 
     @Query private var allArticles: [RSSArticle]
+    @Query(sort: \DailyEdition.date, order: .reverse) private var editions: [DailyEdition]
+
+    @State private var editionGenerationState: EditionState = .idle
+    private enum EditionState: Equatable { case idle, running }
 
     private enum DialogKind: Identifiable {
         case clearArticles, deduplicateArticles, resetEverything
@@ -78,6 +82,7 @@ struct AdvancedSettingsView: View {
                     processingSection
                     readingSection
                     dangerSection
+                    developerSection
                 }
                 .padding(AppTheme.pagePadding)
                 .padding(.top, 8)
@@ -596,5 +601,66 @@ struct AdvancedSettingsView: View {
         try? context.delete(model: RSSFeed.self)
         try? context.delete(model: RSSArticle.self)
         try? context.save()
+    }
+
+    // MARK: - Developer Section
+
+    private var developerSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("DEVELOPER")
+                .font(AppTheme.sansSerif(11, weight: .medium))
+                .foregroundStyle(appTheme.textFaint)
+                .tracking(2)
+
+            VStack(alignment: .leading, spacing: 10) {
+                if let edition = editions.first(where: { Calendar.current.isDateInToday($0.date) }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Today's edition")
+                                .font(AppTheme.sansSerif(14))
+                                .foregroundStyle(appTheme.heading)
+                            Text("\(edition.totalCount) articles · index \(edition.currentIndex)\(edition.isComplete ? " · complete" : "")")
+                                .font(AppTheme.mono(11))
+                                .foregroundStyle(appTheme.textFaint)
+                        }
+                        Spacer()
+                    }
+                    Divider().background(appTheme.separator)
+                }
+
+                Button {
+                    generateEditionNow()
+                } label: {
+                    HStack(spacing: 8) {
+                        if editionGenerationState == .running {
+                            ProgressView()
+                                .tint(appTheme.accent)
+                                .scaleEffect(0.8)
+                        }
+                        Text(editionGenerationState == .running ? "Generating…" : "Generate Edition Now")
+                            .font(AppTheme.sansSerif(14, weight: editionGenerationState == .idle ? .medium : .regular))
+                            .foregroundStyle(editionGenerationState == .idle ? appTheme.accent : appTheme.textFaint)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(editionGenerationState == .running)
+            }
+        }
+    }
+
+    private func generateEditionNow() {
+        editionGenerationState = .running
+        // Clear any existing edition for today so the guard doesn't skip generation.
+        for edition in editions where Calendar.current.isDateInToday(edition.date) {
+            context.delete(edition)
+        }
+        try? context.save()
+
+        Task {
+            let actor = RSSFetchActor(modelContainer: context.container)
+            await actor.generateDailyEditionIfNeeded()
+            editionGenerationState = .idle
+        }
     }
 }

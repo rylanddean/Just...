@@ -4,8 +4,8 @@
     {
       "name": "docs",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "3456", "--directory", "docs"],
-      "port": 3456
+      "runtimeArgs": ["-m", "http.server", "3458", "--directory", "docs"],
+      "port": 3458
     },
     {
       "name": "safari-extension-popup",

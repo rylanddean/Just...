@@ -441,6 +441,88 @@ actor RSSFetchActor {
 
         promotePicksToQueue(picks: picks)
         runAutoArchive()
+        await generateDailyEditionIfNeeded()
+    }
+
+    // Generate a Daily Edition from today's best articles if one doesn't exist yet.
+    func generateDailyEditionIfNeeded() async {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let existing = (try? modelContext.fetch(FetchDescriptor<DailyEdition>())) ?? []
+        guard !existing.contains(where: { calendar.isDateInToday($0.date) }) else { return }
+
+        let brainEntries = (try? modelContext.fetch(FetchDescriptor<BrainEntry>())) ?? []
+        // BrainViewModel.recentConcepts is @MainActor-isolated — inline the logic here.
+        let concepts: [String] = {
+            var freq: [String: Int] = [:]
+            brainEntries
+                .filter { $0.dna != nil }
+                .sorted { $0.readAt > $1.readAt }
+                .prefix(20)
+                .forEach { entry in
+                    entry.dna?.components(separatedBy: " · ")
+                        .map { $0.trimmingCharacters(in: .whitespaces) }
+                        .filter { !$0.isEmpty }
+                        .forEach { freq[$0, default: 0] += 1 }
+                }
+            return freq.sorted { $0.value > $1.value }.prefix(5).map(\.key)
+        }()
+
+        let cutoff = Date().addingTimeInterval(-48 * 3600)
+        let articles = ((try? modelContext.fetch(FetchDescriptor<RSSArticle>())) ?? [])
+            .filter { a in
+                a.publishedAt >= cutoff && a.qualityGrade != .noise && !a.isQueued
+            }
+
+        guard !articles.isEmpty else { return }
+
+        struct Candidate {
+            let article: RSSArticle
+            let score: Double
+        }
+
+        let scored = articles.map { article -> Candidate in
+            let qualityScore: Double
+            switch article.qualityGrade {
+            case .strong: qualityScore = 1.0
+            case .worthIt: qualityScore = 0.6
+            case .noise: qualityScore = 0.0
+            case nil: qualityScore = 0.3
+            }
+            let relevance = concepts.isEmpty
+                ? 0.5
+                : IntelligenceService.scoreRelevance(title: article.displayTitle, concepts: concepts)
+            return Candidate(article: article, score: qualityScore * 0.6 + relevance * 0.4)
+        }.sorted { $0.score > $1.score }
+
+        var seenFeeds = Set<UUID>()
+        var picks: [Candidate] = []
+        for candidate in scored {
+            guard !seenFeeds.contains(candidate.article.feedID) else { continue }
+            seenFeeds.insert(candidate.article.feedID)
+            picks.append(candidate)
+            if picks.count >= 5 { break }
+        }
+
+        guard picks.count >= 3 else { return }
+
+        let edition = DailyEdition()
+        edition.date = today
+        edition.generatedAt = Date()
+        for pick in picks {
+            let a = pick.article
+            edition.articleURLs.append(a.url)
+            edition.articleTitles.append(a.displayTitle)
+            let domain = URL(string: a.url).flatMap { $0.host }.map {
+                $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0
+            } ?? a.url
+            edition.articleDomains.append(domain)
+            edition.articleFeedIDStrings.append(a.feedID.uuidString)
+            edition.articleSummaries.append(a.summary ?? "")
+        }
+        modelContext.insert(edition)
+        try? modelContext.save()
+        NotificationScheduler.fireEditionReady(count: picks.count)
     }
 
     // Insert AI picks into the queue; re-fetches originals by persistentModelID to mark isQueued.

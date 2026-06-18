@@ -16,9 +16,6 @@ struct SettingsView: View {
     @AppStorage(NightModeService.overrideKey)           private var nightOverride:    String = "auto"
     @AppStorage("activityRings.enabled")                private var activityRingsEnabled: Bool = false
     @AppStorage("rewrite.enabled")                      private var rewriteEnabled:   Bool = true
-    @AppStorage("digest.brainRanked")                   private var brainRanked:      Bool = false
-
-    @Query private var brainEntries: [BrainEntry]
 
     @AppStorage(NotificationScheduler.morningEnabledKey) private var morningEnabled:  Bool = false
     @AppStorage(NotificationScheduler.morningHourKey)    private var morningHour:     Int  = NotificationScheduler.defaultMorningHour
@@ -26,6 +23,7 @@ struct SettingsView: View {
     @AppStorage(NotificationScheduler.eveningEnabledKey) private var eveningEnabled:  Bool = false
     @AppStorage(NotificationScheduler.eveningHourKey)    private var eveningHour:     Int  = NotificationScheduler.defaultEveningHour
     @AppStorage(NotificationScheduler.eveningMinuteKey)  private var eveningMinute:   Int  = NotificationScheduler.defaultEveningMinute
+    @AppStorage(NotificationScheduler.editionEnabledKey) private var editionEnabled:  Bool = false
 
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
 
@@ -58,10 +56,6 @@ struct SettingsView: View {
 
     private var buildNumber: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
-    }
-
-    private var insufficientBrainSignal: Bool {
-        brainEntries.filter { $0.dna != nil }.count < 5
     }
 
     var body: some View {
@@ -433,6 +427,26 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                Divider().background(appTheme.separator)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Daily Edition")
+                            .font(AppTheme.sansSerif(15))
+                            .foregroundStyle(appTheme.heading)
+                        Text("Notify when today's edition is ready.")
+                            .font(AppTheme.sansSerif(12))
+                            .foregroundStyle(appTheme.textFaint)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $editionEnabled)
+                        .labelsHidden()
+                        .tint(appTheme.accent)
+                        .onChange(of: editionEnabled) { _, enabled in
+                            if enabled { Task { await requestPermissionIfNeeded() } }
+                        }
+                }
             }
         }
         .task {
@@ -477,36 +491,6 @@ struct SettingsView: View {
                     .disabled(!IntelligenceService.isAvailable)
             }
 
-            Divider()
-                .background(appTheme.separator)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Rank by Brain relevance")
-                        .font(AppTheme.sansSerif(15))
-                        .foregroundStyle(
-                            IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint
-                        )
-                    if IntelligenceService.isAvailable && brainRanked && insufficientBrainSignal {
-                        Text("Your Brain needs more entries to influence ranking.")
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
-                    } else {
-                        Text(
-                            IntelligenceService.isAvailable
-                                ? "Articles that match your Brain's recent reading rise to the top."
-                                : "Requires Apple Intelligence."
-                        )
-                        .font(AppTheme.sansSerif(12))
-                        .foregroundStyle(appTheme.textFaint)
-                    }
-                }
-                Spacer()
-                Toggle("", isOn: $brainRanked)
-                    .labelsHidden()
-                    .tint(appTheme.accent)
-                    .disabled(!IntelligenceService.isAvailable)
-            }
         }
     }
 
