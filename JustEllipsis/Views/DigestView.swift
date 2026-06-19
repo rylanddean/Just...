@@ -31,11 +31,13 @@ struct DigestView: View {
         }
     }
 
-    @State private var isProcessing = false
+    @State private var showingProcessing = false
     @State private var selectedTopic: String = "All"
     @State private var hiddenSeenIDs: Set<UUID> = []
     @State private var activeDigestArticle: RSSArticle?
     @State private var showingFilters = false
+
+    private var isProcessing: Bool { pipelineTracker.isRunning || gradingTracker.isRunning }
 
     private var hasEnoughBrain: Bool {
         brainEntries.filter { $0.dna != nil }.count >= 5
@@ -371,9 +373,7 @@ struct DigestView: View {
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        triggerProcessing()
-                    } label: {
+                    Group {
                         if isProcessing {
                             ProgressView()
                                 .tint(appTheme.accent)
@@ -383,7 +383,15 @@ struct DigestView: View {
                                 .foregroundStyle(appTheme.accent)
                         }
                     }
-                    .disabled(isProcessing)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        ExclusiveGesture(
+                            LongPressGesture(minimumDuration: 0.5)
+                                .onEnded { _ in showingProcessing = true },
+                            TapGesture()
+                                .onEnded { triggerProcessing() }
+                        )
+                    )
                 }
             }
             .toolbarBackground(appTheme.background, for: .navigationBar)
@@ -408,6 +416,9 @@ struct DigestView: View {
                 let fetchInFlight = lastStarted.map { Date().timeIntervalSince($0) < 120 } ?? false
                 guard (articles.isEmpty || needsRefresh), !fetchInFlight else { return }
                 await refetch()
+            }
+            .sheet(isPresented: $showingProcessing) {
+                ProcessingSheet()
             }
             .fullScreenCover(item: $activeDigestArticle) { article in
                 let source: ReadingSource = {
@@ -530,25 +541,8 @@ struct DigestView: View {
         }
     }
 
-    private func refetch() async {
-        selectedTopic = "All"
-        isProcessing = true
-        let processingTask = await RSSFetchService.fetchForDisplay(
-            container: context.container,
-            tracker: gradingTracker,
-            pipelineTracker: pipelineTracker
-        )
-        // Pull-to-refresh spinner stops here; processing continues in the background.
-        // Track the task so the sparkles button stays in its loading state until done.
-        Task { @MainActor in
-            await processingTask.value
-            isProcessing = false
-        }
-    }
-
     private func triggerProcessing() {
         guard !isProcessing else { return }
-        isProcessing = true
         let container = context.container
         Task { @MainActor in
             await RSSFetchService.runPipeline(
@@ -556,8 +550,16 @@ struct DigestView: View {
                 tracker: gradingTracker,
                 pipelineTracker: pipelineTracker
             )
-            isProcessing = false
         }
+    }
+
+    private func refetch() async {
+        selectedTopic = "All"
+        _ = await RSSFetchService.fetchForDisplay(
+            container: context.container,
+            tracker: gradingTracker,
+            pipelineTracker: pipelineTracker
+        )
     }
 
     // MARK: - Empty states

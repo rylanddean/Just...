@@ -94,32 +94,6 @@ struct SettingsView: View {
         return dupes
     }
 
-    private var gradingProgressLabel: String {
-        let total  = allArticles.count
-        let graded = allArticles.filter { $0.qualityGrade != nil }.count
-        guard total > 0 else { return "" }
-        return "\(graded) of \(total) graded (\(Int((Double(graded) / Double(total)) * 100))%)"
-    }
-
-    private var gradeCounts: (strong: Int, worthIt: Int, noise: Int, ungraded: Int) {
-        var s = 0, w = 0, n = 0, u = 0
-        for a in allArticles {
-            switch a.qualityGrade {
-            case .strong:  s += 1
-            case .worthIt: w += 1
-            case .noise:   n += 1
-            case nil:      u += 1
-            }
-        }
-        return (s, w, n, u)
-    }
-
-    private var pendingProcessingCount: Int {
-        allArticles.filter { a in
-            a.topics.isEmpty || (a.feedDescription != nil && a.summary == nil)
-        }.count
-    }
-
     // MARK: - Body
 
     var body: some View {
@@ -743,99 +717,6 @@ struct SettingsView: View {
 
     private var developerSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                sectionHeader("PROCESSING")
-                Spacer()
-                if IntelligenceService.isAvailable && !pipelineTracker.isRunning {
-                    Button("Process now") {
-                        RSSFetchService.pipelineInProcess(
-                            container: context.container,
-                            pipelineTracker: pipelineTracker
-                        )
-                    }
-                    .font(AppTheme.sansSerif(13, weight: .medium))
-                    .foregroundStyle(appTheme.accent)
-                }
-            }
-
-            if !IntelligenceService.isAvailable {
-                Text("Requires Apple Intelligence.")
-                    .font(AppTheme.sansSerif(13))
-                    .foregroundStyle(appTheme.textFaint)
-            } else if pipelineTracker.isRunning {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.75)
-                        .tint(appTheme.accent)
-                    Text("\(pipelineTracker.phase) \(pipelineTracker.current) of \(pipelineTracker.total)…")
-                        .font(AppTheme.sansSerif(13))
-                        .foregroundStyle(appTheme.textFaint)
-                    Spacer()
-                }
-            } else {
-                if let error = pipelineTracker.lastError {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.circle")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppTheme.danger)
-                        Text(error)
-                            .font(AppTheme.sansSerif(13))
-                            .foregroundStyle(AppTheme.danger.opacity(0.85))
-                        Spacer()
-                    }
-                }
-                VStack(spacing: 8) {
-                    if pendingProcessingCount > 0 {
-                        statRow("Pending", value: "\(pendingProcessingCount) articles")
-                    }
-                    if let tagSummary = pipelineTracker.lastTagSummary {
-                        statRow("Tags", value: tagSummary)
-                    }
-                    if let summarySummary = pipelineTracker.lastSummarizeSummary {
-                        statRow("Summaries", value: summarySummary)
-                    }
-                    if let runAt = pipelineTracker.lastRunAt {
-                        statRow("Last run", value: lastRunLabel(runAt, duration: pipelineTracker.lastRunDuration))
-                    }
-                }
-            }
-
-            Divider().background(appTheme.separator)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Article grading")
-                        .font(AppTheme.sansSerif(15))
-                        .foregroundStyle(IntelligenceService.isAvailable ? appTheme.heading : appTheme.textFaint)
-                    if !IntelligenceService.isAvailable {
-                        Text("Requires Apple Intelligence.")
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
-                    } else if gradingEnabled && !allArticles.isEmpty {
-                        Text(gradingProgressLabel)
-                            .font(AppTheme.sansSerif(12))
-                            .foregroundStyle(appTheme.textFaint)
-                    }
-                }
-                Spacer()
-                Toggle("", isOn: $gradingEnabled)
-                    .labelsHidden()
-                    .tint(appTheme.accent)
-                    .disabled(!IntelligenceService.isAvailable)
-                    .onChange(of: gradingEnabled) { _, enabled in
-                        if enabled {
-                            RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
-                        }
-                    }
-            }
-
-            if gradingEnabled && IntelligenceService.isAvailable {
-                gradingActionRow
-                gradeBreakdown
-            }
-
-            Divider().background(appTheme.separator)
-
             sectionHeader("EDITION")
 
             VStack(alignment: .leading, spacing: 10) {
@@ -872,112 +753,6 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
                 .disabled(editionGenerationState == .running)
             }
-        }
-    }
-
-    // MARK: - Grading subviews
-
-    @ViewBuilder
-    private var gradingActionRow: some View {
-        if gradingTracker.isRunning {
-            HStack(spacing: 8) {
-                ProgressView()
-                    .scaleEffect(0.75)
-                    .tint(appTheme.accent)
-                Text("Grading…")
-                    .font(AppTheme.sansSerif(13))
-                    .foregroundStyle(appTheme.textFaint)
-                Spacer()
-            }
-            .padding(.leading, 16)
-        } else if let error = gradingTracker.lastError {
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.circle")
-                    .font(.system(size: 13))
-                    .foregroundStyle(AppTheme.danger)
-                Text(error)
-                    .font(AppTheme.sansSerif(13))
-                    .foregroundStyle(AppTheme.danger.opacity(0.85))
-                Spacer()
-                Button("Retry") {
-                    gradingTracker.lastError = nil
-                    RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
-                }
-                .font(AppTheme.sansSerif(13, weight: .medium))
-                .foregroundStyle(appTheme.accent)
-            }
-            .padding(.leading, 16)
-        } else {
-            let ungradedCount = allArticles.filter { $0.qualityGrade == nil }.count
-            if ungradedCount > 0 {
-                HStack {
-                    Spacer()
-                    Button("Grade now") {
-                        RSSFetchService.gradeInProcess(container: context.container, tracker: gradingTracker)
-                    }
-                    .font(AppTheme.sansSerif(13, weight: .medium))
-                    .foregroundStyle(appTheme.accent)
-                }
-                .padding(.leading, 16)
-            }
-        }
-    }
-
-    private var gradeBreakdown: some View {
-        VStack(spacing: 6) {
-            gradeRow(label: "Strong",   grade: .strong,  count: gradeCounts.strong)
-            gradeRow(label: "Worth it", grade: .worthIt, count: gradeCounts.worthIt)
-            gradeRow(label: "Noise",    grade: .noise,   count: gradeCounts.noise)
-            ungradedRow(count: gradeCounts.ungraded)
-        }
-        .padding(.leading, 16)
-    }
-
-    private func gradeRow(label: String, grade: ArticleQualityGrade, count: Int) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            HStack(spacing: 3) {
-                ForEach(0..<3, id: \.self) { i in
-                    Circle()
-                        .fill(i < grade.filledCount ? grade.color : grade.color.opacity(0.2))
-                        .frame(width: 5, height: 5)
-                }
-            }
-            .frame(width: 22)
-            .padding(.top, 3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(AppTheme.sansSerif(13))
-                    .foregroundStyle(appTheme.textFaint)
-                Text(grade.rationale)
-                    .font(AppTheme.sansSerif(11))
-                    .foregroundStyle(appTheme.textFaint.opacity(0.6))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer()
-            Text("\(count)")
-                .font(AppTheme.sansSerif(13).monospacedDigit())
-                .foregroundStyle(appTheme.textFaint)
-                .padding(.top, 1)
-        }
-    }
-
-    private func ungradedRow(count: Int) -> some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 3) {
-                ForEach(0..<3, id: \.self) { _ in
-                    Circle()
-                        .fill(appTheme.accent.opacity(0.2))
-                        .frame(width: 5, height: 5)
-                }
-            }
-            .frame(width: 22)
-            Text("Ungraded")
-                .font(AppTheme.sansSerif(13))
-                .foregroundStyle(appTheme.textFaint)
-            Spacer()
-            Text("\(count)")
-                .font(AppTheme.sansSerif(13).monospacedDigit())
-                .foregroundStyle(appTheme.textFaint)
         }
     }
 
@@ -1225,23 +1000,6 @@ struct SettingsView: View {
         }
     }
 
-    private func lastRunLabel(_ date: Date, duration: TimeInterval?) -> String {
-        let timeStr = date.formatted(date: .omitted, time: .shortened)
-        let cal = Calendar.current
-        let label: String
-        if cal.isDateInToday(date) {
-            label = "today at \(timeStr)"
-        } else if cal.isDateInYesterday(date) {
-            label = "yesterday at \(timeStr)"
-        } else {
-            label = date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
-        }
-        guard let dur = duration, dur >= 1 else { return label }
-        let mins = Int(dur / 60)
-        let secs = Int(dur) % 60
-        let durStr = mins > 0 ? "\(mins)m \(secs)s" : "\(secs)s"
-        return "\(label) · \(durStr)"
-    }
 }
 
 // MARK: - Theme Tile

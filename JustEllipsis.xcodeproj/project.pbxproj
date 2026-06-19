@@ -62,6 +62,7 @@
 		8E1BE92B94CA4B8994C63448 /* JustEllipsisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D4D5D0A4506AEBE3AD5EE60 /* JustEllipsisApp.swift */; };
 		942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD402C01934293F01520002 /* PendingLinkStore.swift */; };
 		949A68996476CD7276C0382C /* AddLinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA108705DC55D44129CFA2E /* AddLinkView.swift */; };
+		955A47EAB9332B95446BF295 /* ProcessingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 265B23769F68DF52DA6EE3CF /* ProcessingSheet.swift */; };
 		963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FFDB49A234476554B1FE83 /* QueuedLink.swift */; };
 		9849593C087887E7D973C4C3 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC9E572634F88976268D3AB9 /* OnboardingView.swift */; };
 		9932C7DAB285A83EFBD5BC7D /* LocalLinkServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48A89B62E0CCEAE1C4044D35 /* LocalLinkServer.swift */; };
@@ -152,6 +153,7 @@
 		21D9A172B3F2166183D4F058 /* ArticleQualityGrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleQualityGrade.swift; sourceTree = "<group>"; };
 		240FD0EB3E88A4A61B488C25 /* MacLinkReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacLinkReceiver.swift; sourceTree = "<group>"; };
 		2582F111A71090C5631859A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		265B23769F68DF52DA6EE3CF /* ProcessingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingSheet.swift; sourceTree = "<group>"; };
 		2AD233BD2BF3D30185F6E65C /* JustEllipsisMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustEllipsisMacApp.swift; sourceTree = "<group>"; };
 		2D03466EC4C3263BF1837381 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		2E682902D7E4F05A13644A84 /* PrefetchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchService.swift; sourceTree = "<group>"; };
@@ -379,6 +381,7 @@
 				72D2545A7CBD9D262E9586CA /* MicroReflectView.swift */,
 				E90154528A49086081972846 /* NewsletterDirectoryView.swift */,
 				EC9E572634F88976268D3AB9 /* OnboardingView.swift */,
+				265B23769F68DF52DA6EE3CF /* ProcessingSheet.swift */,
 				646F64DBC62E5B05B45AC067 /* ReaderView.swift */,
 				F232598215B53DB59A71324A /* ReflectView.swift */,
 				1F314B2513A0B75D17496E9C /* RereadView.swift */,
@@ -701,6 +704,7 @@
 				942874AC49D2F0E3D0996F97 /* PendingLinkStore.swift in Sources */,
 				CD21E42FF24671E4C93487BC /* PipelineProgressTracker.swift in Sources */,
 				A2B143A00787D4144D1E41B7 /* PrefetchService.swift in Sources */,
+				955A47EAB9332B95446BF295 /* ProcessingSheet.swift in Sources */,
 				963D9D1916E2123D1DABC838 /* QueuedLink.swift in Sources */,
 				3DD130E2765D12ACF2CE3E50 /* QuoteEntry.swift in Sources */,
 				4B13C26BA23068BA674FDD03 /* RSSArticle.swift in Sources */,
@@ -766,7 +770,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
 				SDKROOT = macosx;
 			};
@@ -787,7 +791,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -888,7 +892,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.shareextension;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -910,7 +914,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -930,7 +934,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.shareextension;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -968,7 +972,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rylandean.justellipsis.mac;
 				SDKROOT = macosx;
 			};
