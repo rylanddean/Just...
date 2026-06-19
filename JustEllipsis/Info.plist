@@ -83,7 +83,7 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string>Activity ring progress appears once you've met your daily reading goal — a quiet reminder to also move.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Just… reads activity ring data but does not write or modify any health information.</string>
+	<string>Just… logs a Mindful Minutes entry when you complete your daily reading goal, contributing to your Activity rings.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Just… uses your location once a day to show today's weather in the Digest. It is never stored or shared.</string>
 	<key>NSMicrophoneUsageDescription</key>
@@ -102,8 +102,6 @@
 		<integer>1</integer>
 		<integer>2</integer>
 	</array>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<false/>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiresFullScreen</key>
